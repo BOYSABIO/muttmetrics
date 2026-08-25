@@ -21,7 +21,8 @@ This is a learning project built production-style: small issues, migrations for 
 ```bash
 pip install -e ".[dev]"
 ruff check .
-ruff format .
+ruff format .          # apply
+ruff format --check .  # CI uses this (fails if unformatted)
 pytest
 ```
 

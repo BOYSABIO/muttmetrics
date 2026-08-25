@@ -19,6 +19,7 @@ MuttMetrics does **not** manage bookings, invoices, payments, or customer messag
 ```
 docs/about.md            # local-only design doc (gitignored)
 docs/adr/                # architecture decision records (why we chose X)
+docs/learnings/          # concept notes while building (how things work)
 src/muttmetrics/         # Python package (grows with milestones)
 tests/                   # pytest
 ```
@@ -35,6 +36,7 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
 ruff check .
+ruff format --check .
 ```
 
 Database, migrations, and seed land in **M1** (see milestones). Do not invent a parallel schema outside Alembic.
