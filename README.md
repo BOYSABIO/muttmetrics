@@ -3,7 +3,7 @@
 > A data layer for a real grooming business. Not a booking system — an intelligence layer that answers: **what am I actually walking into, and how long will it really take?**
 
 **Status:** Scaffold. Schema and capture come next — see GitHub milestones.  
-**Design doc:** [`about.md`](./about.md) (thesis, data model, build sequence, non-goals).  
+**Design doc:** `about.md` lives locally only (gitignored) — thesis, full data model, build sequence. Public source of truth for *what to build* is the GitHub milestones/issues.  
 **Stack:** Python · Postgres · SQLAlchemy 2.x · Alembic · FastAPI (thin API when needed).
 
 ## Thesis (one line)
@@ -17,8 +17,8 @@ MuttMetrics does **not** manage bookings, invoices, payments, or customer messag
 ## Repo layout
 
 ```
-about.md                 # living product/design doc
-docs/adr/                # architecture decision records
+about.md                 # local-only design doc (gitignored)
+docs/adr/                # architecture decision records (why we chose X)
 src/muttmetrics/         # Python package (grows with milestones)
 tests/                   # pytest
 ```

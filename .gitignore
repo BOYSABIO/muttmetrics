@@ -40,3 +40,6 @@ Thumbs.db
 
 # Cursor
 .cursor/
+
+# Local product/design doc (too detailed for the public repo — keep on disk only)
+about.md
