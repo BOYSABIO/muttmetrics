@@ -1,0 +1,11 @@
+# https://pre-commit.com
+# Install once per clone: pip install -e ".[dev]" && pre-commit install
+# Run on all files: pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
