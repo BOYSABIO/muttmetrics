@@ -28,7 +28,7 @@ pytest
 
 ## Design source of truth
 
-Product intent for day-to-day work lives in **GitHub issues/milestones**. The long-form design doc `docs/about.md` is local-only (gitignored) and may be more detailed than what belongs in public. If an issue and `docs/about.md` disagree, update the issue or open an ADR — do not silently invent a third model.
+Product intent for day-to-day work lives in **GitHub issues/milestones**. Public framing (goals, non-goals, later ambition) is [`docs/VISION.md`](./docs/VISION.md). Deep local design notes may exist off-repo; if an issue and VISION disagree on boundaries, update the issue or open an ADR — do not silently invent a third model.
 
 ## Issues
 
