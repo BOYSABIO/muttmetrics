@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16
+    container_name: muttmetrics-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: muttmetrics
+      POSTGRES_PASSWORD: muttmetrics
+      POSTGRES_DB: muttmetrics
+    ports:
+      - 5432:5432
+    volumes:
+      - muttmetrics_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U muttmetrics -d muttmetrics"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  muttmetrics_pgdata:

@@ -31,11 +31,57 @@ pytest
 
 After `pre-commit install`, each `git commit` runs ruff lint (with autofix) and ruff format on staged files. If something was fixed, stage again and recommit. CI still runs the same checks as the backstop.
 
+## Local Postgres (Docker Compose)
+
+**Primary dev path** — offline, reproducible, matches credentials in `.env.example`.
+
+**Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) running.
+
+```bash
+cp .env.example .env          # Windows: copy .env.example .env
+docker compose up -d          # start db service
+docker compose ps             # wait for STATUS (healthy)
+alembic upgrade head          # create tables
+```
+
+Verify:
+
+```bash
+docker compose exec db psql -U muttmetrics -d muttmetrics -c "\dt"
+```
+
+Day-to-day:
+
+```bash
+docker compose stop           # stop, keep data
+docker compose down           # remove container, keep volume
+docker compose down -v        # wipe data — then alembic upgrade head again
+docker compose logs db        # debug startup
+```
+
+If port 5432 is in use, stop any old `muttmetrics-pg` container or native Postgres.
+
+### Alternative: Neon (hosted)
+
+For a shared or staging database later — not required for local dev.
+
+1. Create a free project at [neon.tech](https://neon.tech).
+2. Copy the **pooled** Postgres connection string.
+3. Convert to SQLAlchemy/psycopg format in `.env`:
+
+   ```env
+   DATABASE_URL=postgresql+psycopg://user:pass@ep-....neon.tech/neondb?sslmode=require
+   ```
+
+4. Run `alembic upgrade head` against that URL (same migrations, different host).
+
+Do not commit Neon URLs or passwords. Keep `.env` gitignored.
+
 ## Database and migrations
 
 Schema is defined in SQLAlchemy models (`src/muttmetrics/models/`) and applied with [Alembic](https://alembic.sqlalchemy.org/). See [`docs/schema.md`](./docs/schema.md) for the entity diagram.
 
-**Prerequisites:** Copy `.env.example` to `.env` and have Postgres running at `DATABASE_URL` (local Docker or native install — issue #10 documents the preferred path).
+**Prerequisites:** `.env` from `.env.example` and Postgres running (see **Local Postgres** above).
 
 ```bash
 # Apply all migrations (fresh clone or after pull)
