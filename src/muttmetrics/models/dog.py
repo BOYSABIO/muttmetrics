@@ -11,6 +11,7 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -40,6 +41,9 @@ class Dog(Base):
             "handling_score IS NULL OR (handling_score >= 1 AND handling_score <= 5)",
             name="ck_dog_handling_score",
         ),
+        Index("ix_dog_owner_id", "owner_id"),
+        Index("ix_dog_breed_id", "breed_id"),
+        Index("ix_dog_breed_secondary_id", "breed_secondary_id"),
     )
 
     # Identity + Ownership

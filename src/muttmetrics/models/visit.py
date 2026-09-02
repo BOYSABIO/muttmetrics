@@ -11,6 +11,7 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -49,6 +50,11 @@ class Visit(Base):
             "status IS NULL OR status IN ('completed', 'cancelled', 'no_show')",
             name="ck_visit_status",
         ),
+        Index("ix_visit_dog_id", "dog_id"),
+        Index("ix_visit_owner_id", "owner_id"),
+        Index("ix_visit_visit_date", "visit_date"),
+        Index("ix_visit_booked_service_id", "booked_service_id"),
+        Index("ix_visit_actual_service_id", "actual_service_id"),
     )
 
     # Identity

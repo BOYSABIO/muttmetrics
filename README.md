@@ -3,7 +3,7 @@
 Duration intelligence for a dog grooming business: structured visit data and P50/P90 duration ranges so the day can be packed against variance — not a booking or CRM system.
 
 **Stack:** Python · Postgres · SQLAlchemy 2.x · Alembic · FastAPI  
-**Status:** M1 in progress — initial Alembic migration ([#8](https://github.com/BOYSABIO/muttmetrics/issues/8)); CI Postgres + migrate ([#12](https://github.com/BOYSABIO/muttmetrics/issues/12)) next  
+**Status:** M1 in progress — schema + query indexes ([#8](https://github.com/BOYSABIO/muttmetrics/issues/8), [#9](https://github.com/BOYSABIO/muttmetrics/issues/9)); seed + CI Postgres ([#11](https://github.com/BOYSABIO/muttmetrics/issues/11)–[#12](https://github.com/BOYSABIO/muttmetrics/issues/12)) next  
 **Product framing:** [`docs/VISION.md`](docs/VISION.md) (goals, non-goals, later ambition)  
 **Data model:** [`docs/schema.md`](docs/schema.md) (tables, relationships, column groups)
 
