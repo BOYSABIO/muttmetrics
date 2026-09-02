@@ -111,9 +111,23 @@ Reference tables only — no FKs to other entities. See model files for full col
 ## Implementation notes
 
 - **Arrays:** list fields use Postgres `ARRAY(Text)`, not JSON (`fear_triggers`, `matting_locations`, photo URL lists, etc.).
-- **CHECK constraints** (in models now; DB constraints in #8): `dog.handling_score` 1–5; `visit.condition_score` 0–5; `visit.behaviour_this_visit` 1–5; `visit.status` ∈ `completed`, `cancelled`, `no_show`.
+- **CHECK constraints** (initial migration #8): `dog.handling_score` 1–5; `visit.condition_score` 0–5; `visit.behaviour_this_visit` 1–5; `visit.status` ∈ `completed`, `cancelled`, `no_show`. Postgres rejects invalid values even if application code bugs — e.g. `condition_score = 99` fails with `ck_visit_condition_score`.
+- **Query indexes** (migration `bba4e6f67c96`, issue #9): FK columns on `dog` and `visit`, plus `visit.visit_date` — for owner/dog listings, visit history, day packing, and service-mix queries.
 - **Required columns:** `owner.name`, `dog.name`, `visit.visit_date`, `visit.actual_minutes`.
-- **Migrations:** not yet — issue #8. Models import without a live database.
+- **Migrations:** Alembic — `alembic upgrade head` applies schema. See [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+
+### Indexes (issue #9)
+
+| Index | Table | Column | Query path |
+|-------|-------|--------|------------|
+| `ix_dog_owner_id` | dog | `owner_id` | List dogs per owner |
+| `ix_dog_breed_id` | dog | `breed_id` | Breed analytics |
+| `ix_dog_breed_secondary_id` | dog | `breed_secondary_id` | Mix breeds |
+| `ix_visit_dog_id` | visit | `dog_id` | Dog visit history; recompute dog stats |
+| `ix_visit_owner_id` | visit | `owner_id` | Owner visit history; recompute owner stats |
+| `ix_visit_visit_date` | visit | `visit_date` | Day view, date-range filters |
+| `ix_visit_booked_service_id` | visit | `booked_service_id` | Booked service mix |
+| `ix_visit_actual_service_id` | visit | `actual_service_id` | Actual outcome / pivot analysis |
 
 ## Source
 
