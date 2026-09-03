@@ -8,6 +8,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: muttmetrics
+          POSTGRES_PASSWORD: muttmetrics
+          POSTGRES_DB: muttmetrics
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U muttmetrics -d muttmetrics"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg://muttmetrics:muttmetrics@localhost:5432/muttmetrics
     steps:
       - uses: actions/checkout@v4
 
@@ -23,6 +39,28 @@ jobs:
 
       - name: Ruff format
         run: ruff format --check .
+
+      - name: Run migrations
+        run: alembic upgrade head
+      
+      - name: Seed reference data
+        run: python -m muttmetrics.seed
+      
+      - name: Smoke test database
+        run: |
+          python -c "
+          from sqlalchemy import create_engine, text
+          from muttmetrics.config import get_settings
+          url = get_settings().database_url
+          with create_engine(url).connect() as conn:
+              n_svc = conn.execute(text('SELECT COUNT(*) FROM service')).scalar_one()
+              n_brd = conn.execute(text('SELECT COUNT(*) FROM breed')).scalar_one()
+              n_high = conn.execute(text('SELECT COUNT(*) FROM breed WHERE matting_risk >= 4')).scalar_one()
+              assert n_svc == 5, n_svc
+              assert n_brd == 11, n_brd
+              assert n_high >= 6, n_high
+              print(f'OK: {n_svc} services, {n_brd} breeds, {n_high} high matting-risk')
+          "
 
       - name: Pytest
         run: pytest
