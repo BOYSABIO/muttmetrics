@@ -71,7 +71,7 @@ erDiagram
 | `dog` | Slow-changing physical + temperament priors per pet. | → `owner`, → `breed` (×2 for mixes), → many `visit` |
 | `visit` | **Fact table** — one row per groom; training labels live here. | → `dog`, `owner`, → `service` (booked + actual) |
 | `breed` | Reference priors for cold start (coat, duration, matting risk). | ← `dog.breed_id`, `dog.breed_secondary_id` |
-| `service` | Reference groom types (slug, minutes, price). | ← `visit.booked_service_id`, `visit.actual_service_id` |
+| `service` | Reference groom types (slug, minutes, **price floor**). | ← `visit.booked_service_id`, `visit.actual_service_id` |
 
 ## Column groups (by table)
 
@@ -114,7 +114,9 @@ Reference tables only — no FKs to other entities. See model files for full col
 - **CHECK constraints** (initial migration #8): `dog.handling_score` 1–5; `visit.condition_score` 0–5; `visit.behaviour_this_visit` 1–5; `visit.status` ∈ `completed`, `cancelled`, `no_show`. Postgres rejects invalid values even if application code bugs — e.g. `condition_score = 99` fails with `ck_visit_condition_score`.
 - **Query indexes** (migration `bba4e6f67c96`, issue #9): FK columns on `dog` and `visit`, plus `visit.visit_date` — for owner/dog listings, visit history, day packing, and service-mix queries.
 - **Required columns:** `owner.name`, `dog.name`, `visit.visit_date`, `visit.actual_minutes`.
+- **Service prices:** `service.price_base` is a catalog **floor / placeholder** (seed). Size bands live on `dog`; on-the-spot charge on `visit.quoted_price` / `final_price` / `tip`.
 - **Migrations:** Alembic — `alembic upgrade head` applies schema. See [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+- **Seed:** `python -m muttmetrics.seed` upserts breeds + services (idempotent).
 
 ### Indexes (issue #9)
 
