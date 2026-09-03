@@ -3,7 +3,7 @@
 Duration intelligence for a dog grooming business: structured visit data and P50/P90 duration ranges so the day can be packed against variance — not a booking or CRM system.
 
 **Stack:** Python · Postgres · SQLAlchemy 2.x · Alembic · FastAPI  
-**Status:** M1 in progress — schema migrated locally ([#8](https://github.com/BOYSABIO/muttmetrics/issues/8)–[#9](https://github.com/BOYSABIO/muttmetrics/issues/9)); local Postgres docs ([#10](https://github.com/BOYSABIO/muttmetrics/issues/10)) in progress  
+**Status:** M1 in progress — schema + seed ([#8](https://github.com/BOYSABIO/muttmetrics/issues/8)–[#11](https://github.com/BOYSABIO/muttmetrics/issues/11)); CI migrate ([#12](https://github.com/BOYSABIO/muttmetrics/issues/12)) next  
 **Product framing:** [`docs/VISION.md`](docs/VISION.md) (goals, non-goals, later ambition)  
 **Data model:** [`docs/schema.md`](docs/schema.md) (tables, relationships, column groups)
 
@@ -33,6 +33,7 @@ pip install -e ".[dev]"
 
 docker compose up -d    # Postgres — wait until healthy (docker compose ps)
 alembic upgrade head    # apply schema
+python -m muttmetrics.seed  # breed + service reference data (idempotent)
 pytest
 ruff check .
 ruff format --check .

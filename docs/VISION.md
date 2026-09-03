@@ -45,6 +45,8 @@ Ideas we intend to keep alive. Many are already filed under milestone **M10 — 
 | Retail | Product recommendations as the end of care advice — not banners |
 | Multi-salon | Only if the single-shop loop is proven |
 | Content | Before/after cards, equipment ROI from utilization data |
+| Consumables / inventory | Shampoo, conditioner, creams, tools — COGS and equipment ROI adjacency (icebox) |
+| Salon cost base / P&L context | Rent, utilities, and similar fixed costs as analytics context for pricing and capacity — **not** invoicing or payments |
 
 The ambitious end-state is still an **intelligence layer** on owned data — not a full salon OS.
 
