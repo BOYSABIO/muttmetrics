@@ -22,10 +22,15 @@ class Settings(BaseSettings):
         description="SQLAlchemy database URL",
     )
 
+    api_key: str = Field(
+        ...,
+        description="Shared secret for X-API-Key header auth",
+    )
+
 
 def get_settings() -> Settings:
     """
-    Load settings from the environment.
+    Load settings from the environment. (API-Key + Postgres)
 
     Raises:
         ValidationError: if required settings such as DATABASE_URL are missing.
