@@ -4,7 +4,7 @@ This is a learning project built production-style: small issues, migrations for 
 
 ## Workflow
 
-1. Pick an open issue under the current milestone (start with **M1** after foundation).
+1. Pick an open issue under the current milestone (M3 capture after schema).
 2. Branch from `main`: `feat/<issue-number>-short-slug` or `chore/...`.
 3. Keep PRs small enough to review in one sitting.
 4. Do not commit `.env`, real client CSVs, or DB dumps.
@@ -139,13 +139,42 @@ uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --por
 
 | URL | Who | What |
 |-----|-----|------|
-| `http://127.0.0.1:8000/health` | Ops / smoke | Liveness JSON — **does not** need Postgres |
+| `http://127.0.0.1:8000/health` | Ops / smoke | Liveness JSON — **public**, no API key, no Postgres |
+| `http://127.0.0.1:8000/ping` | Spencer smoke | Auth check — requires `X-API-Key` |
 | `http://127.0.0.1:8000/docs` | Spencer | OpenAPI test console — **not** Sebastian’s UI |
 | Phone capture form | Sebastian | Later ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) |
 
 `muttmetrics.api.app:app` means: import module `muttmetrics.api.app`, use variable `app`. That file must sit at `src/muttmetrics/api/app.py` — not under `routes/`.
 
-Stop with `Ctrl+C`. Auth and `POST /visits` come in follow-up issues.
+Stop with `Ctrl+C`.
+
+### API auth (#19)
+
+Protected routes use a shared secret from `.env`:
+
+```http
+X-API-Key: <same value as API_KEY in .env>
+```
+
+| Piece | Role |
+|-------|------|
+| `API_KEY` in `.env` | Server-side secret (required; see `.env.example`) |
+| Header `X-API-Key` | What callers send |
+| `require_api_key` in `src/muttmetrics/api/deps.py` | FastAPI dependency — 401 if missing/wrong |
+| `GET /health` | Stays **public** (no key) |
+| `GET /ping` | Protected practice route; later `POST /visits` will use the same dependency |
+
+In `/docs`, use **Authorize** and set `X-API-Key` to your `.env` value before calling protected endpoints.
+
+Quick checks:
+
+```bash
+curl.exe -s -w "`nHTTP %{http_code}`n" http://127.0.0.1:8000/health
+curl.exe -s -w "`nHTTP %{http_code}`n" http://127.0.0.1:8000/ping
+curl.exe -s -w "`nHTTP %{http_code}`n" -H "X-API-Key: dev-change-me" http://127.0.0.1:8000/ping
+```
+
+Never commit real `.env` values. CI/tests set `API_KEY` via monkeypatch.
 
 ## Design source of truth
 

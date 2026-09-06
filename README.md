@@ -3,7 +3,7 @@
 Duration intelligence for a dog grooming business: structured visit data and P50/P90 duration ranges so the day can be packed against variance — not a booking or CRM system.
 
 **Stack:** Python · Postgres · SQLAlchemy 2.x · Alembic · FastAPI  
-**Status:** M1 done (schema, seed, CI migrate+seed). Next: **M3 capture** — FastAPI + phone form ([#18](https://github.com/BOYSABIO/muttmetrics/issues/18)+); CSV backfill deferred  
+**Status:** M3 capture in progress — FastAPI + API key auth ([#18](https://github.com/BOYSABIO/muttmetrics/issues/18)–[#19](https://github.com/BOYSABIO/muttmetrics/issues/19)); next `POST /visits` ([#20](https://github.com/BOYSABIO/muttmetrics/issues/20)) + phone form ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)). CSV backfill deferred.  
 **Product framing:** [`docs/VISION.md`](docs/VISION.md) (capture-first, non-goals, later ambition)  
 **Data model:** [`docs/schema.md`](docs/schema.md) (tables, relationships, column groups)
 
@@ -30,8 +30,9 @@ python -m venv .venv
 
 pip install -e ".[dev]"
 # copy .env.example to .env (Windows: copy .env.example .env)
+# .env must include DATABASE_URL and API_KEY
 
-docker compose up -d    # Postgres — wait until healthy (docker compose ps)
+docker compose up -d    # Postgres — container muttmetrics-db (not the old muttmetrics-pg)
 alembic upgrade head    # apply schema
 python -m muttmetrics.seed  # breed + service reference data (idempotent)
 

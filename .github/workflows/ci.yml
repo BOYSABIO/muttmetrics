@@ -24,6 +24,7 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql+psycopg://muttmetrics:muttmetrics@localhost:5432/muttmetrics
+      API_KEY: ci-test-key-not-for-production
     steps:
       - uses: actions/checkout@v4
 
