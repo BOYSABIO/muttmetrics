@@ -15,7 +15,7 @@ docs/schema.md     # ER diagram + table reference
 docs/adr/          # architecture decisions
 docker-compose.yml # local Postgres (primary dev path)
 alembic/           # migration scripts (Alembic)
-src/muttmetrics/   # package (models in models/)
+src/muttmetrics/   # package (models/, api/, seed/, …)
 tests/
 ```
 
@@ -34,12 +34,18 @@ pip install -e ".[dev]"
 docker compose up -d    # Postgres — wait until healthy (docker compose ps)
 alembic upgrade head    # apply schema
 python -m muttmetrics.seed  # breed + service reference data (idempotent)
+
+# API — OpenAPI UI at http://127.0.0.1:8000/docs  (developer console, not salon UI)
+python -m muttmetrics.api
+# or: muttmetrics-api
+# (reloads src/ only — safe on Windows; bare `uvicorn --reload` can hang)
+
 pytest
 ruff check .
 ruff format --check .
 ```
 
-More detail: [`CONTRIBUTING.md`](./CONTRIBUTING.md) (Postgres, Alembic, Neon alternative). ORM models: [`docs/schema.md`](docs/schema.md).
+More detail: [`CONTRIBUTING.md`](./CONTRIBUTING.md) (Postgres, Alembic, API, Neon). ORM models: [`docs/schema.md`](docs/schema.md).
 
 ## Privacy
 

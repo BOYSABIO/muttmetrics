@@ -120,6 +120,33 @@ python -m muttmetrics.seed
 
 `service.price_base` values are **floors / placeholders**; size and on-the-spot pricing live on dog/visit rows. Edit `src/muttmetrics/seed/data.py` and re-run to update.
 
+## Running the API
+
+The HTTP app lives in `src/muttmetrics/api/`. Preferred local start (safe reload defaults):
+
+```bash
+python -m muttmetrics.api
+# equivalent after pip install -e .: muttmetrics-api
+```
+
+That runs uvicorn with `--reload` scoped to `src/` so WatchFiles does **not** watch `.venv` (which can hang on Windows).
+
+Raw uvicorn if you need custom flags:
+
+```bash
+uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --port 8000
+```
+
+| URL | Who | What |
+|-----|-----|------|
+| `http://127.0.0.1:8000/health` | Ops / smoke | Liveness JSON — **does not** need Postgres |
+| `http://127.0.0.1:8000/docs` | Spencer | OpenAPI test console — **not** Sebastian’s UI |
+| Phone capture form | Sebastian | Later ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) |
+
+`muttmetrics.api.app:app` means: import module `muttmetrics.api.app`, use variable `app`. That file must sit at `src/muttmetrics/api/app.py` — not under `routes/`.
+
+Stop with `Ctrl+C`. Auth and `POST /visits` come in follow-up issues.
+
 ## Design source of truth
 
 Product intent for day-to-day work lives in **GitHub issues/milestones**. Public framing (goals, non-goals, later ambition) is [`docs/VISION.md`](./docs/VISION.md). Deep local design notes may exist off-repo; if an issue and VISION disagree on boundaries, update the issue or open an ADR — do not silently invent a third model.
