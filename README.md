@@ -3,7 +3,7 @@
 Duration intelligence for a dog grooming business: structured visit data and P50/P90 duration ranges so the day can be packed against variance — not a booking or CRM system.
 
 **Stack:** Python · Postgres · SQLAlchemy 2.x · Alembic · FastAPI  
-**Status:** M3 capture in progress — FastAPI + API key auth ([#18](https://github.com/BOYSABIO/muttmetrics/issues/18)–[#19](https://github.com/BOYSABIO/muttmetrics/issues/19)); next `POST /visits` ([#20](https://github.com/BOYSABIO/muttmetrics/issues/20)) + phone form ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)). CSV backfill deferred.  
+**Status:** M3 capture — FastAPI, API key auth, `POST /visits` ([#18](https://github.com/BOYSABIO/muttmetrics/issues/18)–[#20](https://github.com/BOYSABIO/muttmetrics/issues/20)). Next: create-or-get dog/owner ([#21](https://github.com/BOYSABIO/muttmetrics/issues/21)), phone form ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)). CSV backfill deferred.  
 **Product framing:** [`docs/VISION.md`](docs/VISION.md) (capture-first, non-goals, later ambition)  
 **Data model:** [`docs/schema.md`](docs/schema.md) (tables, relationships, column groups)
 

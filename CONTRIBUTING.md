@@ -141,6 +141,7 @@ uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --por
 |-----|-----|------|
 | `http://127.0.0.1:8000/health` | Ops / smoke | Liveness JSON — **public**, no API key, no Postgres |
 | `http://127.0.0.1:8000/ping` | Spencer smoke | Auth check — requires `X-API-Key` |
+| `http://127.0.0.1:8000/visits` | Capture | `POST` create visit — requires `X-API-Key` + Postgres |
 | `http://127.0.0.1:8000/docs` | Spencer | OpenAPI test console — **not** Sebastian’s UI |
 | Phone capture form | Sebastian | Later ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) |
 
@@ -162,7 +163,8 @@ X-API-Key: <same value as API_KEY in .env>
 | Header `X-API-Key` | What callers send |
 | `require_api_key` in `src/muttmetrics/api/deps.py` | FastAPI dependency — 401 if missing/wrong |
 | `GET /health` | Stays **public** (no key) |
-| `GET /ping` | Protected practice route; later `POST /visits` will use the same dependency |
+| `GET /ping` | Protected practice route |
+| `POST /visits` | Protected capture route (same dependency) |
 
 In `/docs`, use **Authorize** and set `X-API-Key` to your `.env` value before calling protected endpoints.
 
@@ -170,11 +172,33 @@ Quick checks:
 
 ```bash
 curl.exe -s -w "`nHTTP %{http_code}`n" http://127.0.0.1:8000/health
-curl.exe -s -w "`nHTTP %{http_code}`n" http://127.0.0.1:8000/ping
 curl.exe -s -w "`nHTTP %{http_code}`n" -H "X-API-Key: dev-change-me" http://127.0.0.1:8000/ping
 ```
 
 Never commit real `.env` values. CI/tests set `API_KEY` via monkeypatch.
+
+### POST /visits (#20)
+
+Creates one `visit` row after a groom. Dog and owner must **already exist** (create-or-get is [#21](https://github.com/BOYSABIO/muttmetrics/issues/21)).
+
+**Required JSON fields:** `dog_id`, `owner_id`, `visit_date`, `actual_minutes` (> 0).  
+**Optional:** `condition_score` (0–5), service ids, prices, photo URL lists, `what_surprised_me`, `status`.
+
+| Status | Meaning |
+|--------|---------|
+| 201 | Visit created — body includes `visit_id` |
+| 401 | Missing/wrong API key |
+| 404 | Unknown `dog_id` or `owner_id` |
+| 422 | Validation failed (e.g. `actual_minutes: 0`) |
+
+Postgres must be up (`docker compose up -d`) and migrated. Seed one demo pair if needed:
+
+```bash
+docker compose exec db psql -U muttmetrics -d muttmetrics -c "INSERT INTO owner (name) VALUES ('Demo Owner') RETURNING owner_id;"
+docker compose exec db psql -U muttmetrics -d muttmetrics -c "INSERT INTO dog (owner_id, name) VALUES (1, 'Demo Dog') RETURNING dog_id;"
+```
+
+In `/docs`: Authorize → **POST /visits** → use those ids. On Windows PowerShell, prefer `/docs` or `Invoke-RestMethod` over hand-escaped `curl -d "{\"...\"}"` (easy 422 from mangled JSON).
 
 ## Design source of truth
 
