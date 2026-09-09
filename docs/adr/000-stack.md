@@ -16,14 +16,14 @@
 | Migrations | Alembic |
 | API (when needed) | FastAPI |
 | Hosted DB (target) | Neon (or equivalent) — documented in M1 |
-| Frontend | Deferred; TypeScript/Next when owner-facing surfaces land (M9) |
+| Frontend | Staged: **A** FastAPI HTML/Jinja capture (#63) → **B** Vite+React+TS capture SPA (#69) → **C** Next for owner-facing (#41, M9). Python API stays the source of truth. |
 
 ### Consequences
 
 - One Python environment for API, ETL, notebooks, and models.
 - Schema changes always go through Alembic — no hand-edited prod SQL as source of truth.
 - Prisma / Node ORM is explicitly out of scope for the core service.
-- Owner-facing UI can still be TypeScript later; it consumes the Python API.
+- Capture UI may move from HTML to React without a backend rewrite; Next is for owner/multi-page surfaces, not a requirement for the first visit form.
 
 ### Alternatives considered
 

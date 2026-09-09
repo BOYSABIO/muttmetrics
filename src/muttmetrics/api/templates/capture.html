@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>MuttMetrics Capture</title>
+    </head>
+    <body>
+        <h1>{{ heading }}</h1>
+        
+        {% if error %}
+        <p style="color: darkred;">{{ error }}</p>
+        {% endif %}
+
+        <form method="post" action="/capture">
+            <p>
+                <label for="owner_name">Owner name</label><br />
+                <input
+                    id="owner_name"
+                    name="owner_name"
+                    type="text"
+                    required
+                />
+            </p>
+            <p>
+                <label for="dog_name">Dog name</label><br />
+                <input id="dog_name" name="dog_name" type="text" required />
+            </p>
+            <p>
+                <label for="visit_date">Visit date</label><br />
+                <input id="visit_date" name="visit_date" type="date" required />
+            </p>
+            <p>
+                <label for="actual_minutes">Actual minutes</label><br />
+                <input
+                    id="actual_minutes"
+                    name="actual_minutes"
+                    type="number"
+                    min="1"
+                    required
+                />
+            </p>
+            <p>
+                <label for="condition_score">Condition (0-5, optional)</label><br />
+                <input
+                    id="condition_score"
+                    name="condition_score"
+                    type="number"
+                    min="0"
+                    max="5"
+                />
+            </p>
+            <p>
+                <label for="what_surprised_me">What surprised me (optional)</label><br />
+                <input id="what_surprised_me" name="what_surprised_me" type="text" />
+            </p>
+            <p>
+                <button type="submit">Save visit</button>
+            </p>
+        </form>
+    </body>
+</html>

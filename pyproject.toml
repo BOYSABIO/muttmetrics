@@ -17,6 +17,8 @@ dependencies = [
   "pydantic-settings>=2.0",
   "fastapi>=0.115",
   "uvicorn[standard]>=0.30",
+  "jinja2>=3.1",
+  "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
@@ -32,6 +34,10 @@ muttmetrics-api = "muttmetrics.api.__main__:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/muttmetrics"]
+
+# HTML templates are not .py — include them in the wheel so Jinja finds them when installed
+[tool.hatch.build.targets.wheel.force-include]
+"src/muttmetrics/api/templates" = "muttmetrics/api/templates"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
