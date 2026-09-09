@@ -26,7 +26,7 @@ Compliance (visit rows actually exist) is the product gate. Fancy UI and booking
 4. **Analytics** — overrun, pivots, €/hour by condition — findings Sebastian can act on
 5. **Day packing** — “can I take a third dog?” against summed P90
 
-Stack for that path: Python, Postgres, SQLAlchemy, Alembic, FastAPI. Groomer capture UI starts as a thin HTML form; owner-facing surfaces may graduate to TypeScript later.
+Stack for that path: Python, Postgres, SQLAlchemy, Alembic, FastAPI. Groomer capture UI path (teach + build): **A** thin HTML/Jinja ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) → **B** Vite + React + TS SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) → **C** Next graduate for owner surfaces ([#41](https://github.com/BOYSABIO/muttmetrics/issues/41)). Same Python API throughout.
 
 **OpenAPI `/docs`** is Spencer’s API test console — not Sebastian’s salon UI.
 
@@ -49,7 +49,7 @@ Ideas we intend to keep alive. Many are already filed under milestone **M10 — 
 
 | Theme | Direction |
 |--------|-----------|
-| Phone capture UI | Better mobile form after the ugly v0 that proves compliance |
+| Phone capture UI | v0 HTML (#63) → React/TS SPA (#69) after rows exist; Next is owner-layer (#41), not a rewrite of the API |
 | In-house booking / calendar | Website-facing booking integrated with how the salon already works — not a third-party suite |
 | WhatsApp | Optional intake/booking channel; **website remains primary** when booking exists |
 | CSV / bulk import | Optional tooling if historical dump is ever needed |

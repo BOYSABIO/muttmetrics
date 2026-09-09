@@ -3,7 +3,7 @@
 Duration intelligence for a dog grooming business: structured visit data and P50/P90 duration ranges so the day can be packed against variance — not a booking or CRM system.
 
 **Stack:** Python · Postgres · SQLAlchemy 2.x · Alembic · FastAPI  
-**Status:** M3 capture — FastAPI, auth, `POST /visits`, create-or-get owners/dogs ([#18](https://github.com/BOYSABIO/muttmetrics/issues/18)–[#21](https://github.com/BOYSABIO/muttmetrics/issues/21)). Next: phone form ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)). CSV backfill deferred.  
+**Status:** M3 capture — API + v0 phone form at `/capture` ([#18](https://github.com/BOYSABIO/muttmetrics/issues/18)–[#21](https://github.com/BOYSABIO/muttmetrics/issues/21), [#63](https://github.com/BOYSABIO/muttmetrics/issues/63)). Next UI: React SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)); compliance metric after live use ([#22](https://github.com/BOYSABIO/muttmetrics/issues/22), M4). CSV backfill deferred.  
 **Product framing:** [`docs/VISION.md`](docs/VISION.md) (capture-first, non-goals, later ambition)  
 **Data model:** [`docs/schema.md`](docs/schema.md) (tables, relationships, column groups)
 
@@ -36,10 +36,11 @@ docker compose up -d    # Postgres — container muttmetrics-db (not the old mut
 alembic upgrade head    # apply schema
 python -m muttmetrics.seed  # breed + service reference data (idempotent)
 
-# API — OpenAPI UI at http://127.0.0.1:8000/docs  (developer console, not salon UI)
+# API — OpenAPI at /docs (Spencer); phone form at /capture (Sebastian)
 python -m muttmetrics.api
 # or: muttmetrics-api
 # (reloads src/ only — safe on Windows; bare `uvicorn --reload` can hang)
+# Form: http://127.0.0.1:8000/capture
 
 pytest
 ruff check .

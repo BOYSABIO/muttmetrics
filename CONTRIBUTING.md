@@ -145,7 +145,7 @@ uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --por
 | `http://127.0.0.1:8000/dogs` | Onboarding | `POST` create-or-get dog by owner + name |
 | `http://127.0.0.1:8000/visits` | Capture | `POST` create visit — requires existing dog/owner ids |
 | `http://127.0.0.1:8000/docs` | Spencer | OpenAPI test console — **not** Sebastian’s UI |
-| Phone capture form | Sebastian | Later ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) |
+| `http://127.0.0.1:8000/capture` | Sebastian | v0 phone HTML form ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) |
 
 `muttmetrics.api.app:app` means: import module `muttmetrics.api.app`, use variable `app`. That file must sit at `src/muttmetrics/api/app.py` — not under `routes/`.
 
@@ -165,6 +165,7 @@ X-API-Key: <same value as API_KEY in .env>
 | Header `X-API-Key` | What callers send |
 | `require_api_key` in `src/muttmetrics/api/deps.py` | FastAPI dependency — 401 if missing/wrong |
 | `GET /health` | Stays **public** (no key) |
+| `GET /capture`, `POST /capture` | HTML form — **no** `X-API-Key` (v0; localhost/LAN trust) |
 | `GET /ping`, `POST /owners`, `POST /dogs`, `POST /visits` | Protected |
 
 In `/docs`, use **Authorize** and set `X-API-Key` to your `.env` value before calling protected endpoints.
@@ -178,11 +179,25 @@ curl.exe -s -w "`nHTTP %{http_code}`n" -H "X-API-Key: dev-change-me" http://127.
 
 Never commit real `.env` values. CI/tests set `API_KEY` via monkeypatch.
 
+### Phone capture form (#63)
+
+Sebastian-facing UI (not `/docs`). Same create-or-get + visit logic as the JSON API; different front door.
+
+| Piece | Role |
+|-------|------|
+| `GET /capture` | Jinja form (`api/templates/capture.html`) |
+| `POST /capture` | Form fields → `create_or_get_owner` / `_dog` → `Visit` → success HTML |
+| Deps | `jinja2`, `python-multipart` (form bodies) |
+
+**On the phone (local v0):** run the API on the LAN machine, open `http://<pc-lan-ip>:8000/capture` from the phone (same Wi‑Fi). No tunnel required for a first trial. Do not expose this to the public internet without auth — v0 has no API key on the form.
+
+**UI path:** A = this HTML form → B = Vite/React SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) → C = Next owner spike ([#41](https://github.com/BOYSABIO/muttmetrics/issues/41)).
+
 ### Create-or-get owners & dogs (#21)
 
-Onboarding is separate from visit capture. Helpers live in `src/muttmetrics/api/services/`.
+Onboarding helpers live in `src/muttmetrics/api/services/`. Prefer `/capture` for Sebastian; use JSON when scripting or using `/docs`.
 
-**Evening flow (no hand SQL):**
+**JSON evening flow (Spencer / tools):**
 
 1. `POST /owners` `{"name": "Anna Schmidt"}` → `owner_id` (**201** new / **200** existing)  
 2. `POST /dogs` `{"owner_id": …, "name": "Bella"}` → `dog_id` (**201** / **200**)  
