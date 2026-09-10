@@ -50,6 +50,15 @@ Verify:
 docker compose exec db psql -U muttmetrics -d muttmetrics -c "\dt"
 ```
 
+### Peeking at rows (Spencer)
+
+Same database the API uses. Two easy paths:
+
+1. **Terminal:** `docker compose exec db psql -U muttmetrics -d muttmetrics` then SQL (`SELECT * FROM visit ORDER BY visit_id DESC LIMIT 20;`).
+2. **Cursor/VS Code PostgreSQL extension:** connect with host **`localhost`** (not the word `muttmetrics`), port **`5432`**, user/password/database **`muttmetrics`**. “Server name” / host = machine address; “database name” = which DB on that server. Save password is fine for local-only.
+
+API tests commit real rows here (often with UUID suffixes in names) — that clutter is normal until you wipe the volume.
+
 Day-to-day:
 
 ```bash

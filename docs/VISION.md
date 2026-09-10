@@ -16,19 +16,21 @@ Start from an **empty database**. Grow row-by-row as grooms happen — that is t
 - **The plan:** after each groom, a **lightweight on-job form** (phone browser) writes a visit row
 - **CSV import** stays an optional escape hatch later if bulk load is ever needed — not how we start
 
-Compliance (visit rows actually exist) is the product gate. Fancy UI and booking come after that loop is real.
+Compliance (visit rows actually exist) is the product gate. **Usable capture UX comes before** analytics and booking.
 
 ## Near-term goals (build order)
 
 1. **Canonical schema** — owner / dog / visit (+ breed, service priors) — done for M1
-2. **Capture** — FastAPI `POST /visits`, then a minimal phone form; every completed groom becomes a row
-3. **Rules-based P50/P90** — honest priors before any ML; log prediction error from day one
-4. **Analytics** — overrun, pivots, €/hour by condition — findings Sebastian can act on
-5. **Day packing** — “can I take a third dog?” against summed P90
+2. **Capture API + v0 form** — FastAPI + Jinja `/capture` — done / shipping (#63)
+3. **Sebastian phone UX (M3)** — map in [#74](https://github.com/BOYSABIO/muttmetrics/issues/74): Vite + React + TS ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)), directory/pick ([#71](https://github.com/BOYSABIO/muttmetrics/issues/71)), guided visit + timer ([#72](https://github.com/BOYSABIO/muttmetrics/issues/72)). Into his hands **before** fancy analytics.
+4. **Compliance** — % of real grooms with a visit row (#22) after a week of live use (M4 gate)
+5. **Rules-based P50/P90** — honest priors before any ML (rest of M4)
+6. **Analytics** — overrun, pivots, €/hour — only with a living visit table (M5)
+7. **Day packing** — “can I take a third dog?” against summed P90 (M8)
 
-Stack for that path: Python, Postgres, SQLAlchemy, Alembic, FastAPI. Groomer capture UI path (teach + build): **A** thin HTML/Jinja ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) → **B** Vite + React + TS SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) → **C** Next graduate for owner surfaces ([#41](https://github.com/BOYSABIO/muttmetrics/issues/41)). Same Python API throughout.
+Stack for that path: Python, Postgres, SQLAlchemy, Alembic, FastAPI. Groomer UI: **A** Jinja ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) → **B** Vite + React + TS ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)+) → **C** Next for owner surfaces ([#41](https://github.com/BOYSABIO/muttmetrics/issues/41), M9). Same Python API throughout.
 
-**OpenAPI `/docs`** is Spencer’s API test console — not Sebastian’s salon UI.
+**OpenAPI `/docs`** is Spencer’s API test console — not Sebastian’s salon UI. Spencer can also peek rows via `psql` / editor Postgres ([#73](https://github.com/BOYSABIO/muttmetrics/issues/73)).
 
 ## Non-goals (for now)
 

@@ -3,7 +3,7 @@
 Duration intelligence for a dog grooming business: structured visit data and P50/P90 duration ranges so the day can be packed against variance — not a booking or CRM system.
 
 **Stack:** Python · Postgres · SQLAlchemy 2.x · Alembic · FastAPI  
-**Status:** M3 capture — API + v0 phone form at `/capture` ([#18](https://github.com/BOYSABIO/muttmetrics/issues/18)–[#21](https://github.com/BOYSABIO/muttmetrics/issues/21), [#63](https://github.com/BOYSABIO/muttmetrics/issues/63)). Next UI: React SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)); compliance metric after live use ([#22](https://github.com/BOYSABIO/muttmetrics/issues/22), M4). CSV backfill deferred.  
+**Status:** M3 — API + Jinja `/capture` ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63) / [PR #70](https://github.com/BOYSABIO/muttmetrics/pull/70)). Next: React SPA foundation ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)), then directory ([#71](https://github.com/BOYSABIO/muttmetrics/issues/71)) + guided visit/timer ([#72](https://github.com/BOYSABIO/muttmetrics/issues/72)). Priors/analytics after live use ([#22](https://github.com/BOYSABIO/muttmetrics/issues/22)+). CSV deferred.  
 **Product framing:** [`docs/VISION.md`](docs/VISION.md) (capture-first, non-goals, later ambition)  
 **Data model:** [`docs/schema.md`](docs/schema.md) (tables, relationships, column groups)
 
