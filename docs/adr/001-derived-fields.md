@@ -8,7 +8,7 @@
 
 ### Decision
 
-Three entities, two kinds of “not typed by Sebastian”:
+Three entities, two kinds of “not typed by the groomer”:
 
 - **`owner` / `dog`:** rolling snapshots of visit history. Store as **nullable columns**, **recompute via a job/CLI** after visits change. Never accept them as user input on APIs or CSV import.
 - **`visit`:** the **fact table** (one row per groom). Most fields are captured at the event. A small set is **system-computed at write/score time** and stored on that row — not a later aggregate job.

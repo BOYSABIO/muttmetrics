@@ -42,6 +42,8 @@ These rules are non-negotiable:
 - Never commit production database dumps
 - Never commit exported reports that contain owner PII
 - Never commit photo directories containing real client dogs
+- Never commit real service prices or price floors - they live in `data/private/pricing.json`
+- Never commit `.sql` scripts containing real owner, dog, or visit rows
 
 Current git protections already help:
 
@@ -75,7 +77,7 @@ The exact retention periods can be refined later, but the design principle is si
 
 ## Public-site follow-up
 
-If `wag-the-dog.vercel.app` or any salon-owned public property references or feeds this system, the salon's Datenschutzerklärung must eventually mention:
+If the salon’s public website or any salon-owned property references or feeds this system, the salon's Datenschutzerklärung must eventually mention:
 
 - what data is collected
 - why it is collected

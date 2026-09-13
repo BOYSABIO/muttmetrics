@@ -1,0 +1,8 @@
+{
+  "_comment": "Copy to data/private/pricing.json (gitignored) and replace with real floors. These numbers are synthetic.",
+  "nails": 0,
+  "teeth": 0,
+  "bath_trim": 0,
+  "full_groom": 0,
+  "de_mat": 0
+}
