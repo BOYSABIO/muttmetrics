@@ -1,4 +1,4 @@
-"""Sebastian-facing capture pages (HTML), not the JSON API."""
+"""Groomer-facing capture pages (HTML), not the JSON API."""
 
 from datetime import date
 from pathlib import Path

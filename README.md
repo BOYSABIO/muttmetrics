@@ -35,8 +35,9 @@ pip install -e ".[dev]"
 docker compose up -d    # Postgres — container muttmetrics-db (not the old muttmetrics-pg)
 alembic upgrade head    # apply schema
 python -m muttmetrics.seed  # breed + service reference data (idempotent)
+# optional: copy data/pricing.example.json → data/private/pricing.json for local floors
 
-# API — OpenAPI at /docs (Spencer); phone form at /capture (Sebastian)
+# API — OpenAPI at /docs (maintainer); phone form at /capture (groomer)
 python -m muttmetrics.api
 # or: muttmetrics-api
 # (reloads src/ only — safe on Windows; bare `uvicorn --reload` can hang)

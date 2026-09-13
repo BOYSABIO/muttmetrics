@@ -118,7 +118,7 @@ After migrations, load breed priors and the service catalog (idempotent — safe
 python -m muttmetrics.seed
 ```
 
-`service.price_base` values are **floors / placeholders**; size and on-the-spot pricing live on dog/visit rows. Edit `src/muttmetrics/seed/data.py` and re-run to update.
+Timing priors live in `src/muttmetrics/seed/data.py`. Catalog floors (`service.price_base`) are optional and **never committed** — copy [`data/pricing.example.json`](./data/pricing.example.json) to `data/private/pricing.json` (gitignored) and fill in real numbers. CI and any clone without that file seed `price_base` as NULL, which is valid. Re-running seed without the private file will null out previously seeded prices. On-the-spot charge still lives on `visit.quoted_price` / `final_price` / `tip`.
 
 ## Running the API
 
@@ -140,12 +140,12 @@ uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --por
 | URL | Who | What |
 |-----|-----|------|
 | `http://127.0.0.1:8000/health` | Ops / smoke | Liveness JSON — **public**, no API key, no Postgres |
-| `http://127.0.0.1:8000/ping` | Spencer smoke | Auth check — requires `X-API-Key` |
+| `http://127.0.0.1:8000/ping` | maintainer smoke | Auth check — requires `X-API-Key` |
 | `http://127.0.0.1:8000/owners` | Onboarding | `POST` create-or-get owner by name |
 | `http://127.0.0.1:8000/dogs` | Onboarding | `POST` create-or-get dog by owner + name |
 | `http://127.0.0.1:8000/visits` | Capture | `POST` create visit — requires existing dog/owner ids |
-| `http://127.0.0.1:8000/docs` | Spencer | OpenAPI test console — **not** Sebastian’s UI |
-| `http://127.0.0.1:8000/capture` | Sebastian | v0 phone HTML form ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) |
+| `http://127.0.0.1:8000/docs` | maintainer | OpenAPI test console — **not** the groomer’s UI |
+| `http://127.0.0.1:8000/capture` | groomer | v0 phone HTML form ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) |
 
 `muttmetrics.api.app:app` means: import module `muttmetrics.api.app`, use variable `app`. That file must sit at `src/muttmetrics/api/app.py` — not under `routes/`.
 
@@ -181,7 +181,7 @@ Never commit real `.env` values. CI/tests set `API_KEY` via monkeypatch.
 
 ### Phone capture form (#63)
 
-Sebastian-facing UI (not `/docs`). Same create-or-get + visit logic as the JSON API; different front door.
+Groomer-facing UI (not `/docs`). Same create-or-get + visit logic as the JSON API; different front door.
 
 | Piece | Role |
 |-------|------|
@@ -195,9 +195,9 @@ Sebastian-facing UI (not `/docs`). Same create-or-get + visit logic as the JSON 
 
 ### Create-or-get owners & dogs (#21)
 
-Onboarding helpers live in `src/muttmetrics/api/services/`. Prefer `/capture` for Sebastian; use JSON when scripting or using `/docs`.
+Onboarding helpers live in `src/muttmetrics/api/services/`. Prefer `/capture` for the groomer; use JSON when scripting or using `/docs`.
 
-**JSON evening flow (Spencer / tools):**
+**JSON evening flow (maintainer / tools):**
 
 1. `POST /owners` `{"name": "Anna Schmidt"}` → `owner_id` (**201** new / **200** existing)  
 2. `POST /dogs` `{"owner_id": …, "name": "Bella"}` → `dog_id` (**201** / **200**)  
