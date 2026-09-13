@@ -1,16 +1,16 @@
 """Hand-encoded reference rows for cold start.
 
-Service `price_base` values are FLOORS / placeholders from Sebastian (2026-09),
-not fixed tariffs. Real charge lives on visit.quoted_price / final_price / tip.
+Timing values (`base_minutes`, `buffer_minutes`) are domain estimates and are
+the point of this file. Relative order: nails < teeth < bath_trim < full_groom < de_mat.
 
-Size bands (kg) live on dog.weight_kg → size_band — not as separate service SKUs:
-  1–10 kg → s (€75+ full groom floor)
-  11–26 kg → m (€85+)
-  27–45 kg → l (€95+)
-  46 kg+  → xl (€105+)
+`price_base` is deliberately NULL here. Prices are the salon's commercial data and
+must never be committed - see docs/privacy.md. Real floors are loaded at seed time
+from `data/private/pricing.json` (gitignored); see `data/pricing.example.json` for
+the shape. Real charge always lives on visit.quoted_price / final_price / tip.
 
-Relative minutes: nails < teeth < bath_trim < full_groom < de_mat.
-Breed priors are domain guesses — edit and re-seed.
+Size bands (kg) live on dog.weight_kg -> size_band, not as separate service SKUs.
+
+Breed priors are domain guesses - edit and re-seed.
 """
 
 SEED_SERVICES: list[dict] = [
@@ -20,8 +20,7 @@ SEED_SERVICES: list[dict] = [
         "name_en": "Nail trim",
         "base_minutes": 15,
         "buffer_minutes": 5,
-        # Floor ~€5–10; often free if easy/quick (goodwill + tip on visit)
-        "price_base": 5,
+        "price_base": None,
     },
     {
         "slug": "teeth",
@@ -29,8 +28,7 @@ SEED_SERVICES: list[dict] = [
         "name_en": "Teeth cleaning",
         "base_minutes": 25,
         "buffer_minutes": 10,
-        # Floor ~€35–40; behaviour-dependent
-        "price_base": 35,
+        "price_base": None,
     },
     {
         "slug": "bath_trim",
@@ -38,8 +36,7 @@ SEED_SERVICES: list[dict] = [
         "name_en": "Bath and trim",
         "base_minutes": 50,
         "buffer_minutes": 15,
-        # Often upgrades into full-groom territory by size/coat
-        "price_base": 40,
+        "price_base": None,
     },
     {
         "slug": "full_groom",
@@ -47,8 +44,7 @@ SEED_SERVICES: list[dict] = [
         "name_en": "Full groom",
         "base_minutes": 90,
         "buffer_minutes": 30,
-        # Package: wash + trim + ears + teeth + nails. price_base = SMALL-dog floor.
-        "price_base": 75,
+        "price_base": None,
     },
     {
         "slug": "de_mat",
@@ -56,8 +52,7 @@ SEED_SERVICES: list[dict] = [
         "name_en": "De-mat",
         "base_minutes": 150,
         "buffer_minutes": 45,
-        # Heavier than full groom; placeholder until Sebastian validates €
-        "price_base": 100,
+        "price_base": None,
     },
 ]
 

@@ -4,13 +4,13 @@ Public product framing for this repo. Deep design notes stay local; **what to bu
 
 ## Thesis
 
-Sebastian caps at two grooms per day because he cannot predict which jobs will blow up. MuttMetrics converts that **variance tax** back into capacity by predicting a **duration range (P50 / P90)** per booking and packing the day against the sum of those ranges — not a single guess.
+A single-groomer salon caps its day because job duration is unpredictable. MuttMetrics converts that **variance tax** back into capacity by predicting a **duration range (P50 / P90)** per booking and packing the day against the sum of those ranges — not a single guess.
 
 Own the structured dog/visit data. Everything valuable in this project is a read on that data.
 
 ## Adoption path
 
-Start from an **empty database**. Grow row-by-row as grooms happen — that is the only low-friction way for Sebastian to adopt.
+Start from an **empty database**. Grow row-by-row as grooms happen — that is the only low-friction way for a working groomer to adopt.
 
 - **Not the plan:** evening Excel/CSV backfills of historical grooms as the primary path
 - **The plan:** after each groom, a **lightweight on-job form** (phone browser) writes a visit row
@@ -23,12 +23,12 @@ Compliance (visit rows actually exist) is the product gate. Fancy UI and booking
 1. **Canonical schema** — owner / dog / visit (+ breed, service priors) — done for M1
 2. **Capture** — FastAPI `POST /visits`, then a minimal phone form; every completed groom becomes a row
 3. **Rules-based P50/P90** — honest priors before any ML; log prediction error from day one
-4. **Analytics** — overrun, pivots, €/hour by condition — findings Sebastian can act on
+4. **Analytics** — overrun, pivots, €/hour by condition — findings the groomer can act on
 5. **Day packing** — “can I take a third dog?” against summed P90
 
 Stack for that path: Python, Postgres, SQLAlchemy, Alembic, FastAPI. Groomer capture UI path (teach + build): **A** thin HTML/Jinja ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) → **B** Vite + React + TS SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) → **C** Next graduate for owner surfaces ([#41](https://github.com/BOYSABIO/muttmetrics/issues/41)). Same Python API throughout.
 
-**OpenAPI `/docs`** is Spencer’s API test console — not Sebastian’s salon UI.
+**OpenAPI `/docs`** is the maintainer’s API test console — not the groomer’s salon UI.
 
 ## Non-goals (for now)
 

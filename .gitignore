@@ -28,6 +28,7 @@ htmlcov/
 *.sqlite3
 *.dump
 *.sql.gz
+# includes pricing.json — copy from data/pricing.example.json
 data/private/
 data/exports/
 
@@ -45,3 +46,8 @@ Thumbs.db
 about.md
 docs/learnings/
 docs/meetings/
+
+# Local SQL scratch - may contain real client rows
+scripts/first_visit.sql
+scripts/*.local.sql
+

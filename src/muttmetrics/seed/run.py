@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 from muttmetrics.db.session import session_scope
 from muttmetrics.models import Breed, Service
 from muttmetrics.seed.data import SEED_BREEDS, SEED_SERVICES
+from muttmetrics.seed.pricing import apply_price_overrides, load_price_overrides
 
 
 def _upsert_service(session, row: dict) -> None:
@@ -31,8 +32,9 @@ def _upsert_breed(session, row: dict) -> None:
 
 def seed_reference_data() -> None:
     """Upsert seed services and breeds; print acceptance query results."""
+    services = apply_price_overrides(SEED_SERVICES, load_price_overrides())
     with session_scope() as session:
-        for row in SEED_SERVICES:
+        for row in services:
             _upsert_service(session, row)
         for row in SEED_BREEDS:
             _upsert_breed(session, row)

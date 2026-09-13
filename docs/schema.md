@@ -114,7 +114,7 @@ Reference tables only — no FKs to other entities. See model files for full col
 - **CHECK constraints** (initial migration #8): `dog.handling_score` 1–5; `visit.condition_score` 0–5; `visit.behaviour_this_visit` 1–5; `visit.status` ∈ `completed`, `cancelled`, `no_show`. Postgres rejects invalid values even if application code bugs — e.g. `condition_score = 99` fails with `ck_visit_condition_score`.
 - **Query indexes** (migration `bba4e6f67c96`, issue #9): FK columns on `dog` and `visit`, plus `visit.visit_date` — for owner/dog listings, visit history, day packing, and service-mix queries.
 - **Required columns:** `owner.name`, `dog.name`, `visit.visit_date`, `visit.actual_minutes`.
-- **Service prices:** `service.price_base` is a catalog **floor / placeholder** (seed). Size bands live on `dog`; on-the-spot charge on `visit.quoted_price` / `final_price` / `tip`.
+- **Service prices:** `service.price_base` is an optional catalog **floor**. Committed seed leaves it NULL; a gitignored `data/private/pricing.json` overlay fills it locally. Size bands live on `dog`; on-the-spot charge on `visit.quoted_price` / `final_price` / `tip`.
 - **Migrations:** Alembic — `alembic upgrade head` applies schema. See [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 - **Seed:** `python -m muttmetrics.seed` upserts breeds + services (idempotent).
 
