@@ -193,9 +193,38 @@ Groomer-facing UI (not `/docs`). Same create-or-get + visit logic as the JSON AP
 
 **UI path:** A = this HTML form → B = Vite/React SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) → C = Next owner spike ([#41](https://github.com/BOYSABIO/muttmetrics/issues/41)).
 
+### React capture SPA (#69)
+
+Groomer-facing capture in `frontend/` (Vite + React + TypeScript). Same JSON flow as `/docs`: `POST /owners` → `/dogs` → `/visits`.
+
+**Prerequisites:** Node.js LTS (18+), repo `.env` with `API_KEY`, Postgres up, API running.
+
+```bash
+# Terminal 1 — API
+python -m muttmetrics.api
+
+# Terminal 2 — frontend
+cd frontend
+cp .env.example .env          # Windows: copy .env.example .env
+# VITE_API_KEY must match root API_KEY
+npm install
+npm run dev
+```
+
+| Piece | Role |
+|-------|------|
+| `http://127.0.0.1:5173` (typical) | Vite dev server — React app |
+| `/api/*` in the SPA | Proxied to `http://127.0.0.1:8000/*` (see `frontend/vite.config.ts`) |
+| `frontend/.env` | `VITE_API_KEY` only — gitignored; never commit |
+| `npm run build` | Production bundle to `frontend/dist/` |
+
+**Auth note:** The API key is embedded in the dev bundle via `VITE_*` — acceptable for local/LAN learning only. Jinja `/capture` remains a no-key fallback. Harden before any public deploy.
+
+**Phone trial:** same Wi‑Fi, open `http://<pc-lan-ip>:5173` with API reachable on the host machine.
+
 ### Create-or-get owners & dogs (#21)
 
-Onboarding helpers live in `src/muttmetrics/api/services/`. Prefer `/capture` for the groomer; use JSON when scripting or using `/docs`.
+Onboarding helpers live in `src/muttmetrics/api/services/`. Prefer `frontend/` SPA or `/capture` for the groomer; use JSON when scripting or using `/docs`.
 
 **JSON evening flow (maintainer / tools):**
 
