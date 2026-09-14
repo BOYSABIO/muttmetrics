@@ -51,3 +51,8 @@ docs/meetings/
 scripts/first_visit.sql
 scripts/*.local.sql
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+!frontend/.env.example
