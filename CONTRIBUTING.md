@@ -142,7 +142,7 @@ uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --por
 | `http://127.0.0.1:8000/health` | Ops / smoke | Liveness JSON — **public**, no API key, no Postgres |
 | `http://127.0.0.1:8000/ping` | maintainer smoke | Auth check — requires `X-API-Key` |
 | `http://127.0.0.1:8000/owners` | Onboarding | `POST` create-or-get owner by name |
-| `http://127.0.0.1:8000/dogs` | Onboarding | `POST` create-or-get dog by owner + name |
+| `http://127.0.0.1:8000/dogs` | Onboarding / directory | `POST` create-or-get; `GET` list/search (`?q=`) with `owner_name` |
 | `http://127.0.0.1:8000/visits` | Capture | `POST` create visit — requires existing dog/owner ids |
 | `http://127.0.0.1:8000/docs` | maintainer | OpenAPI test console — **not** the groomer’s UI |
 | `http://127.0.0.1:8000/capture` | groomer | v0 phone HTML form ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) |
@@ -166,7 +166,7 @@ X-API-Key: <same value as API_KEY in .env>
 | `require_api_key` in `src/muttmetrics/api/deps.py` | FastAPI dependency — 401 if missing/wrong |
 | `GET /health` | Stays **public** (no key) |
 | `GET /capture`, `POST /capture` | HTML form — **no** `X-API-Key` (v0; localhost/LAN trust) |
-| `GET /ping`, `POST /owners`, `POST /dogs`, `POST /visits` | Protected |
+| `GET /ping`, `GET /dogs`, `POST /owners`, `POST /dogs`, `POST /visits` | Protected |
 
 In `/docs`, use **Authorize** and set `X-API-Key` to your `.env` value before calling protected endpoints.
 
@@ -193,9 +193,14 @@ Groomer-facing UI (not `/docs`). Same create-or-get + visit logic as the JSON AP
 
 **UI path:** A = this HTML form → B = Vite/React SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) → C = Next owner spike ([#41](https://github.com/BOYSABIO/muttmetrics/issues/41)).
 
-### React capture SPA (#69)
+### React capture SPA (#69) + directory (#71)
 
-Groomer-facing capture in `frontend/` (Vite + React + TypeScript). Same JSON flow as `/docs`: `POST /owners` → `/dogs` → `/visits`.
+Groomer-facing capture in `frontend/` (Vite + React + TypeScript). Modes: **search** (directory) → **visit**, or **new** client → **visit**.
+
+| Path | API calls |
+|------|-----------|
+| Returning dog (pick from search) | `GET /dogs?q=` → **only** `POST /visits` with known ids |
+| New client | `POST /owners` → `POST /dogs` (create-or-get) → `POST /visits` |
 
 **Prerequisites:** Node.js LTS (18+), repo `.env` with `API_KEY`, Postgres up, API running.
 
@@ -215,6 +220,7 @@ npm run dev
 |-------|------|
 | `http://127.0.0.1:5173` (typical) | Vite dev server — React app |
 | `/api/*` in the SPA | Proxied to `http://127.0.0.1:8000/*` (see `frontend/vite.config.ts`) |
+| `GET /dogs?q=` | Directory browse/search — returns `owner_name` on each row (cap 50) |
 | `frontend/.env` | `VITE_API_KEY` only — gitignored; never commit |
 | `npm run build` | Production bundle to `frontend/dist/` |
 
@@ -222,15 +228,19 @@ npm run dev
 
 **Phone trial:** same Wi‑Fi, open `http://<pc-lan-ip>:5173` with API reachable on the host machine.
 
+**Next:** guided visit / timer ([#72](https://github.com/BOYSABIO/muttmetrics/issues/72)) consumes the picked `dog_id` / `owner_id`.
+
 ### Create-or-get owners & dogs (#21)
 
-Onboarding helpers live in `src/muttmetrics/api/services/`. Prefer `frontend/` SPA or `/capture` for the groomer; use JSON when scripting or using `/docs`.
+Onboarding helpers live in `src/muttmetrics/api/services/`. Prefer directory pick in the SPA when the dog already exists; use create-or-get for first visits, `/capture`, or `/docs`.
 
 **JSON evening flow (maintainer / tools):**
 
 1. `POST /owners` `{"name": "Anna Schmidt"}` → `owner_id` (**201** new / **200** existing)  
 2. `POST /dogs` `{"owner_id": …, "name": "Bella"}` → `dog_id` (**201** / **200**)  
 3. `POST /visits` with those ids → visit row  
+
+**Directory (returning dogs, #71):** `GET /dogs` or `GET /dogs?q=bella` → pick `dog_id` / `owner_id` → `POST /visits` (skip steps 1–2).  
 
 | Endpoint | Lookup key | Notes |
 |----------|------------|--------|

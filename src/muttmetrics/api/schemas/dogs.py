@@ -1,5 +1,7 @@
 """Dog onboarding schemas - create-or-get under an owner."""
 
+from datetime import date
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -34,3 +36,15 @@ class DogResponse(BaseModel):
     owner_id: int
     name: str
     breed_id: int | None = None
+
+
+class DogSearchItem(BaseModel):
+    """One row in the directory list (dog + owner label)"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    dog_id: int
+    name: str
+    owner_id: int
+    owner_name: str
+    last_visit_date: date | None = None
