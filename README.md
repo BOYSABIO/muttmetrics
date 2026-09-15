@@ -3,7 +3,7 @@
 Duration intelligence for a dog grooming business: structured visit data and P50/P90 duration ranges so the day can be packed against variance — not a booking or CRM system.
 
 **Stack:** Python · Postgres · SQLAlchemy 2.x · Alembic · FastAPI  
-**Status:** M3 capture — API, Jinja `/capture` ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)), React SPA in `frontend/` ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)). Next: directory/search ([#71](https://github.com/BOYSABIO/muttmetrics/issues/71)), guided visit/timer ([#72](https://github.com/BOYSABIO/muttmetrics/issues/72)). Compliance after live use ([#22](https://github.com/BOYSABIO/muttmetrics/issues/22), M4). CSV backfill deferred.  
+**Status:** M3 capture — API, Jinja `/capture` ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)), React SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) with dog/owner directory search ([#71](https://github.com/BOYSABIO/muttmetrics/issues/71)). Next: guided visit/timer ([#72](https://github.com/BOYSABIO/muttmetrics/issues/72)). Compliance after live use ([#22](https://github.com/BOYSABIO/muttmetrics/issues/22), M4). CSV backfill deferred.  
 **Product framing:** [`docs/VISION.md`](docs/VISION.md) (capture-first, non-goals, later ambition)  
 **Data model:** [`docs/schema.md`](docs/schema.md) (tables, relationships, column groups)
 
@@ -16,7 +16,7 @@ docs/adr/          # architecture decisions
 docker-compose.yml # local Postgres (primary dev path)
 alembic/           # migration scripts (Alembic)
 src/muttmetrics/   # package (models/, api/, seed/, …)
-frontend/          # Vite + React + TS capture SPA (#69)
+frontend/          # Vite + React + TS capture SPA (#69) + directory (#71)
 tests/
 ```
 
