@@ -18,7 +18,8 @@ section {
 input[type='search'],
 input[type='text'],
 input[type='date'],
-input[type='number'] {
+input[type='number'],
+input[type='url'] {
   font: inherit;
   padding: 0.6rem 0.75rem;
   width: 100%;
@@ -30,6 +31,29 @@ button {
   padding: 0.65rem 1rem;
   min-height: 2.75rem; /* easier on phone */
   cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.timer-readout {
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  margin: 0.5rem 0;
+}
+
+.timer-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.timer-controls button {
+  flex: 1 1 5rem;
+  min-height: 3.25rem;
+  font-size: 1.1rem;
 }
 
 ul {
