@@ -193,7 +193,7 @@ Groomer-facing UI (not `/docs`). Same create-or-get + visit logic as the JSON AP
 
 **UI path:** A = this HTML form → B = Vite/React SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) → C = Next owner spike ([#41](https://github.com/BOYSABIO/muttmetrics/issues/41)).
 
-### React capture SPA (#69) + directory (#71)
+### React capture SPA (#69–#72)
 
 Groomer-facing capture in `frontend/` (Vite + React + TypeScript). Modes: **search** (directory) → **visit**, or **new** client → **visit**.
 
@@ -201,6 +201,14 @@ Groomer-facing capture in `frontend/` (Vite + React + TypeScript). Modes: **sear
 |------|-----------|
 | Returning dog (pick from search) | `GET /dogs?q=` → **only** `POST /visits` with known ids |
 | New client | `POST /owners` → `POST /dogs` (create-or-get) → `POST /visits` |
+
+**Visit wizard (#72)** once identity is known (3 steps):
+
+1. Optional before-photo **URL** stub → `intake_photos` (camera upload later — out of scope)  
+2. Timer — Start / Stop / Reset; elapsed → `actual_minutes` via **floor** (`Math.floor(ms / 60000)`); manual minutes always allowed  
+3. Details — `visit_date` defaults to **today** (local), optional condition / surprise → Save → back to search  
+
+UI labels are **English** (salon business language). Still a thin `POST /visits` client — no new visit endpoints.
 
 **Prerequisites:** Node.js LTS (18+), repo `.env` with `API_KEY`, Postgres up, API running.
 
@@ -221,14 +229,13 @@ npm run dev
 | `http://127.0.0.1:5173` (typical) | Vite dev server — React app |
 | `/api/*` in the SPA | Proxied to `http://127.0.0.1:8000/*` (see `frontend/vite.config.ts`) |
 | `GET /dogs?q=` | Directory browse/search — returns `owner_name` on each row (cap 50) |
+| Visit step 2 timer | Client-only; fills `actual_minutes` (floor); editable override |
 | `frontend/.env` | `VITE_API_KEY` only — gitignored; never commit |
 | `npm run build` | Production bundle to `frontend/dist/` |
 
 **Auth note:** The API key is embedded in the dev bundle via `VITE_*` — acceptable for local/LAN learning only. Jinja `/capture` remains a no-key fallback. Harden before any public deploy.
 
 **Phone trial:** same Wi‑Fi, open `http://<pc-lan-ip>:5173` with API reachable on the host machine.
-
-**Next:** guided visit / timer ([#72](https://github.com/BOYSABIO/muttmetrics/issues/72)) consumes the picked `dog_id` / `owner_id`.
 
 ### Create-or-get owners & dogs (#21)
 
