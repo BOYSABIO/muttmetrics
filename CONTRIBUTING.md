@@ -61,6 +61,10 @@ docker compose logs db        # debug startup
 
 If port 5432 is in use, stop any old `muttmetrics-pg` container or native Postgres.
 
+### DB peek (editor + starter SQL)
+
+To inspect capture rows without a dashboard: connect the PostgreSQL extension or `psql`, then run the starter SELECTs in [`docs/ops-db-peek.md`](./docs/ops-db-peek.md). That doc also covers the host-vs-database footgun, pytest clutter, and wipe/cleanup.
+
 ### Alternative: Neon (hosted)
 
 For a shared or staging database later — not required for local dev.
