@@ -1,6 +1,6 @@
 # Ops: local DB peek
 
-How Spencer (or any clone) **sees capture data** without a dashboard. SQL against local Docker Postgres is enough for M3.
+How Owner (or any clone) **sees capture data** without a dashboard. SQL against local Docker Postgres is enough for M3.
 
 Schema reference: [`schema.md`](./schema.md). Connection values match [`docker-compose.yml`](../docker-compose.yml) and [`.env.example`](../.env.example).
 
@@ -117,7 +117,7 @@ This is **read-only**. To delete synthetic rows safely (preview + FK-ordered del
 
 ## Enrichment (UPDATE after thin capture)
 
-Breed, phone, notes, visit fixes — Spencer’s job, not the SPA. Playbook + recipes:
+Breed, phone, notes, visit fixes — Owner’s job, not the SPA. Playbook + recipes:
 
 [`ops-enrichment.md`](./ops-enrichment.md) · [`scripts/SQL/lookup_breeds.sql`](../scripts/SQL/lookup_breeds.sql) · [`enrich_dog_breed.sql`](../scripts/SQL/enrich_dog_breed.sql) · [`update_visit.sql`](../scripts/SQL/update_visit.sql) · …
 

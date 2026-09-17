@@ -14,7 +14,7 @@ const apiProxy = {
 export default defineConfig({
   plugins: [react()],
 
-  // npm run dev: Spencer only, hot reload, this PC only
+  // npm run dev: maintainer only, hot reload, this PC only
   server: {
     host: '127.0.0.1',
     port: 5173,
@@ -22,7 +22,7 @@ export default defineConfig({
     proxy: apiProxy,
   },
 
-  // npm run build, then npm run preview: what Sebastian opens over Tailscale
+  // npm run build, then npm run preview: what the groomer opens over Tailscale
   preview: {
     host: '0.0.0.0',
     port: 5174,

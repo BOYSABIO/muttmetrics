@@ -50,6 +50,8 @@ Verify:
 docker compose exec db psql -U muttmetrics -d muttmetrics -c "\dt"
 ```
 
+Postgres is published on `127.0.0.1:5432` only (see `ports:` in `docker-compose.yml`) — reachable from this machine, never from the LAN or the tailnet. `DATABASE_URL` uses `127.0.0.1`, not `localhost`: on Windows `localhost` can resolve to IPv6 `::1` first and stall every new connection for ~a minute.
+
 Day-to-day:
 
 ```bash
@@ -195,7 +197,7 @@ Groomer-facing UI (not `/docs`). Same create-or-get + visit logic as the JSON AP
 | `POST /capture` | Form fields → `create_or_get_owner` / `_dog` → `Visit` → success HTML |
 | Deps | `jinja2`, `python-multipart` (form bodies) |
 
-**On the phone (local v0):** run the API on the LAN machine, open `http://<pc-lan-ip>:8000/capture` from the phone (same Wi‑Fi). No tunnel required for a first trial. Do not expose this to the public internet without auth — v0 has no API key on the form.
+**Deprecated — being removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86).** The SPA replaced this form, and `POST /capture` takes **no API key**, so the API must never be reachable beyond `127.0.0.1`. Phone capture now goes through the preview server: [`docs/ops-handoff-trial.md`](./docs/ops-handoff-trial.md).
 
 **UI path:** A = this HTML form → B = Vite/React SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) → C = Next owner spike ([#41](https://github.com/BOYSABIO/muttmetrics/issues/41)).
 
@@ -232,16 +234,18 @@ npm run dev
 
 | Piece | Role |
 |-------|------|
-| `http://127.0.0.1:5173` (typical) | Vite dev server — React app |
+| `http://127.0.0.1:5173` | Vite **dev** server — hot reload, this PC only (`strictPort`) |
+| `http://<pc-ip>:5174` | Vite **preview** server — built `dist/`, network-facing, for the groomer trial |
 | `/api/*` in the SPA | Proxied to `http://127.0.0.1:8000/*` (see `frontend/vite.config.ts`) |
 | `GET /dogs?q=` | Directory browse/search — returns `owner_name` on each row (cap 50) |
 | Visit step 2 timer | Client-only; fills `actual_minutes` (floor); editable override |
 | `frontend/.env` | `VITE_API_KEY` only — gitignored; never commit |
-| `npm run build` | Production bundle to `frontend/dist/` |
+| `npm run build` | Production bundle to `frontend/dist/` (`tsc -b` type-checks first) |
+| `npm run preview` | Serves `dist/` + the same `/api` proxy — what the groomer opens |
 
-**Auth note:** The API key is embedded in the dev bundle via `VITE_*` — acceptable for local/LAN learning only. Jinja `/capture` remains a no-key fallback. Harden before any public deploy.
+**Auth note:** `VITE_API_KEY` is baked into `frontend/dist/` at **build** time and is readable by anyone who loads the page — a gate against strangers on a private URL, never a secret. Change it → rebuild. Harden before any public deploy ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)).
 
-**Phone trial:** same Wi‑Fi, open `http://<pc-lan-ip>:5173` with API reachable on the host machine.
+**Phone trial (#82):** the dev server stays on `127.0.0.1`; the groomer gets `npm run build && npm run preview` on a fixed `:5174`, reachable over Tailscale only on that one port. Full procedure: [`docs/ops-handoff-trial.md`](./docs/ops-handoff-trial.md).
 
 ### Create-or-get owners & dogs (#21)
 
