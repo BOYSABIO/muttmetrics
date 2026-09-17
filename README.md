@@ -6,7 +6,8 @@ Duration intelligence for a dog grooming business: structured visit data and P50
 **Status:** M3 capture — API, Jinja `/capture` ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)), React SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) with directory search ([#71](https://github.com/BOYSABIO/muttmetrics/issues/71)) and guided visit/timer ([#72](https://github.com/BOYSABIO/muttmetrics/issues/72)). Next: live salon trial, then compliance ([#22](https://github.com/BOYSABIO/muttmetrics/issues/22), M4). CSV backfill deferred.  
 **Product framing:** [`docs/VISION.md`](docs/VISION.md) (capture-first, non-goals, later ambition)  
 **Data model:** [`docs/schema.md`](docs/schema.md) (tables, relationships, column groups)  
-**Local DB peek:** [`docs/ops-db-peek.md`](docs/ops-db-peek.md) (editor + `psql` + starter SELECTs)
+**Local DB peek:** [`docs/ops-db-peek.md`](docs/ops-db-peek.md) (editor + `psql` + starter SELECTs)  
+**Enrichment (Spencer):** [`docs/ops-enrichment.md`](docs/ops-enrichment.md) (safe UPDATEs after thin capture)
 
 ## Layout
 

@@ -58,7 +58,7 @@ docker compose exec -T db psql -U muttmetrics -d muttmetrics -c "SELECT COUNT(*)
 
 | Kind | Location |
 |------|----------|
-| Shared / reusable (peek, cleanup) | Repo: [`scripts/`](../scripts/) — commit these |
+| Shared / reusable (peek, cleanup, enrichment) | Repo: [`scripts/SQL/`](../scripts/SQL/) — commit these |
 | Personal one-offs | Editor scratch, or `scripts/*.local.sql` (gitignored) |
 | Real client dumps / PII | Never commit — see Privacy in README |
 
@@ -113,7 +113,13 @@ ORDER BY o.name, d.name;
 
 This is **read-only**. To delete synthetic rows safely (preview + FK-ordered deletes, keeps real names like Thomas/Milla), use:
 
-[`scripts/cleanup_synthetic_clients.sql`](../scripts/cleanup_synthetic_clients.sql)
+[`scripts/SQL/cleanup_synthetic_clients.sql`](../scripts/SQL/cleanup_synthetic_clients.sql)
+
+## Enrichment (UPDATE after thin capture)
+
+Breed, phone, notes, visit fixes — Spencer’s job, not the SPA. Playbook + recipes:
+
+[`ops-enrichment.md`](./ops-enrichment.md) · [`scripts/SQL/lookup_breeds.sql`](../scripts/SQL/lookup_breeds.sql) · [`enrich_dog_breed.sql`](../scripts/SQL/enrich_dog_breed.sql) · [`update_visit.sql`](../scripts/SQL/update_visit.sql) · …
 
 ## Pytest writes to this same database
 
