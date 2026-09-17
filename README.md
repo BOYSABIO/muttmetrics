@@ -7,7 +7,8 @@ Duration intelligence for a dog grooming business: structured visit data and P50
 **Product framing:** [`docs/VISION.md`](docs/VISION.md) (capture-first, non-goals, later ambition)  
 **Data model:** [`docs/schema.md`](docs/schema.md) (tables, relationships, column groups)  
 **Local DB peek:** [`docs/ops-db-peek.md`](docs/ops-db-peek.md) (editor + `psql` + starter SELECTs)  
-**Enrichment (Spencer):** [`docs/ops-enrichment.md`](docs/ops-enrichment.md) (safe UPDATEs after thin capture)
+**Enrichment (maintainer):** [`docs/ops-enrichment.md`](docs/ops-enrichment.md) (safe UPDATEs after thin capture)  
+**Groomer trial handoff:** [`docs/ops-handoff-trial.md`](docs/ops-handoff-trial.md) (start the stack, phone checklist, troubleshooting — [#82](https://github.com/BOYSABIO/muttmetrics/issues/82))
 
 ## Layout
 
@@ -15,6 +16,7 @@ Duration intelligence for a dog grooming business: structured visit data and P50
 docs/VISION.md     # product vision (public)
 docs/schema.md     # ER diagram + table reference
 docs/ops-db-peek.md # local Postgres peek (editor + starter SQL)
+docs/ops-handoff-trial.md # runbook: groomer phone trial over Tailscale
 docs/adr/          # architecture decisions
 docker-compose.yml # local Postgres (primary dev path)
 alembic/           # migration scripts (Alembic)
@@ -52,7 +54,8 @@ cd frontend
 copy .env.example .env   # Windows; set VITE_API_KEY = same as root API_KEY
 npm install
 npm run dev
-# open http://127.0.0.1:5173 (port may differ)
+# open http://127.0.0.1:5173 (dev server — this PC only, fixed port)
+# groomer trial instead: npm run build && npm run preview → :5174 (docs/ops-handoff-trial.md)
 
 pytest
 ruff check .

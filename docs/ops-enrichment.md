@@ -1,10 +1,10 @@
-# Ops: Spencer enrichment playbook
+# Ops: maintainer enrichment playbook
 
 How to **fix and enrich** rows after thin capture — without a CRM UI and without corrupting derived fields ([ADR-001](./adr/001-derived-fields.md)).
 
 Connect first: [`ops-db-peek.md`](./ops-db-peek.md). Schema overview: [`schema.md`](./schema.md).
 
-**Audience:** Spencer (maintainer). Sebastian’s SPA stays thin on purpose.
+**Audience:** Owner (maintainer). User’s capture SPA stays thin on purpose.
 
 ## Golden rules
 
@@ -65,7 +65,7 @@ ORDER BY name_de;
 
 ### 3. Fix / enrich a visit — `update_visit.sql`
 
-**What it does:** Corrects event facts Sebastian already saved (wrong minutes, date, condition, notes, status, photo URL array).
+**What it does:** Corrects event facts User already saved (wrong minutes, date, condition, notes, status, photo URL array).
 
 **Why:** Timer mistakes and “forgot to type surprise” should not require a second fake visit row.
 
@@ -73,7 +73,7 @@ ORDER BY name_de;
 
 ### 4. Enrich an owner — `update_owner.sql`
 
-**What it does:** Adds contact / notes / area after the fact so capture never asked Sebastian for homework mid-groom.
+**What it does:** Adds contact / notes / area after the fact so capture never asked User for homework mid-groom.
 
 ### 5. Enrich a dog (non-breed fields) — `update_dog.sql`
 
@@ -99,7 +99,7 @@ LIMIT 20;
 
 - PATCH HTTP APIs (add later only if SQL gets painful)
 - Recompute-derived CLI
-- Sebastian-facing profile editor
+- User-facing profile editor
 - Predictions / M4
 
 ## Related
