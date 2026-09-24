@@ -266,6 +266,6 @@ Restore the PC's sleep settings.
 
 It is a product test, not an infrastructure test. One question: **does User open it and save a visit without Owner typing for them?**
 
-- **Yes** → start [#83](https://github.com/BOYSABIO/muttmetrics/issues/83), always-on deploy, so capture stops depending on the PC being awake.
+- **Yes** → next always-on path is OptiPlex + Tailscale ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)), so capture stops depending on the laptop being awake. Cloud deploy ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)) stays iceboxed.
 - **No** → the friction notes say why, and that gets fixed before spending anything on hosting.
 

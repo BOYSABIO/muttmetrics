@@ -21,12 +21,14 @@ Compliance (visit rows actually exist) is the product gate. Fancy UI and booking
 ## Near-term goals (build order)
 
 1. **Canonical schema** — owner / dog / visit (+ breed, service priors) — done for M1
-2. **Capture** — FastAPI `POST /visits`, then a minimal phone form; every completed groom becomes a row
+2. **Capture** — FastAPI `POST /visits` + React phone SPA; every completed groom becomes a row
 3. **Rules-based P50/P90** — honest priors before any ML; log prediction error from day one
 4. **Analytics** — overrun, pivots, €/hour by condition — findings the groomer can act on
 5. **Day packing** — “can I take a third dog?” against summed P90
 
 Stack for that path: Python, Postgres, SQLAlchemy, Alembic, FastAPI. Groomer capture UI path (teach + build): **A** thin HTML/Jinja ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) → **B** Vite + React + TS SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) → **C** Next graduate for owner surfaces ([#41](https://github.com/BOYSABIO/muttmetrics/issues/41)). Same Python API throughout.
+
+**Amendment (2026-09-24):** Stage **A** is retired — Jinja `/capture` removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86). **B** (React SPA) is the only groomer capture UI. **C** remains later for owner surfaces.
 
 **OpenAPI `/docs`** is the maintainer’s API test console — not the groomer’s salon UI.
 
@@ -49,7 +51,7 @@ Ideas we intend to keep alive. Many are already filed under milestone **M10 — 
 
 | Theme | Direction |
 |--------|-----------|
-| Phone capture UI | v0 HTML (#63) → React/TS SPA (#69) after rows exist; Next is owner-layer (#41), not a rewrite of the API |
+| Phone capture UI | React/TS SPA (#69–#72) is live; Jinja v0 (#63) retired (#86). Next is owner-layer (#41), not a rewrite of the API |
 | In-house booking / calendar | Website-facing booking integrated with how the salon already works — not a third-party suite |
 | WhatsApp | Optional intake/booking channel; **website remains primary** when booking exists |
 | CSV / bulk import | Optional tooling if historical dump is ever needed |

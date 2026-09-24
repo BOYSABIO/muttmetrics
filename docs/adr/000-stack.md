@@ -29,3 +29,7 @@
 
 - **Prisma + TypeScript end-to-end:** better if the product were UI-first; weaker for data-science muscle and notebooks.
 - **Django:** batteries-included admin is tempting for capture, but heavier than needed; FastAPI + a thin form keeps the learning surface smaller.
+
+### Amendment — stage A retired (#86, 2026-09-24)
+
+Stage **A** (Jinja `GET`/`POST /capture`, #63 / #70) is **removed**. The React SPA (#69–#72) is the only groomer capture UI. Reasons: the HTML form had no `X-API-Key`, duplicated the visit-write path, and pulled unused `jinja2` / `python-multipart` into runtime deps. History of the A → B → C path above stays; current frontend row of truth is **B** in use, **C** still later.
