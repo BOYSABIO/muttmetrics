@@ -153,7 +153,9 @@ uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --por
 | `http://127.0.0.1:8000/dogs` | Onboarding / directory | `POST` create-or-get; `GET` list/search (`?q=`) with `owner_name` |
 | `http://127.0.0.1:8000/visits` | Capture | `POST` create visit — requires existing dog/owner ids |
 | `http://127.0.0.1:8000/docs` | maintainer | OpenAPI test console — **not** the groomer’s UI |
-| `http://127.0.0.1:8000/capture` | groomer | v0 phone HTML form ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) |
+| `http://127.0.0.1:5173` (dev) / `:5174` (preview) | groomer | React capture SPA in `frontend/` — **only** salon UI ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)–[#72](https://github.com/BOYSABIO/muttmetrics/issues/72)) |
+
+`GET` / `POST /capture` (old Jinja form) was removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86) — expect **404**.
 
 `muttmetrics.api.app:app` means: import module `muttmetrics.api.app`, use variable `app`. That file must sit at `src/muttmetrics/api/app.py` — not under `routes/`.
 
@@ -173,8 +175,9 @@ X-API-Key: <same value as API_KEY in .env>
 | Header `X-API-Key` | What callers send |
 | `require_api_key` in `src/muttmetrics/api/deps.py` | FastAPI dependency — 401 if missing/wrong |
 | `GET /health` | Stays **public** (no key) |
-| `GET /capture`, `POST /capture` | HTML form — **no** `X-API-Key` (v0; localhost/LAN trust) |
 | `GET /ping`, `GET /dogs`, `POST /owners`, `POST /dogs`, `POST /visits` | Protected |
+
+All write paths require `X-API-Key`. The unauthenticated Jinja `/capture` form is gone ([#86](https://github.com/BOYSABIO/muttmetrics/issues/86)).
 
 In `/docs`, use **Authorize** and set `X-API-Key` to your `.env` value before calling protected endpoints.
 
@@ -187,23 +190,9 @@ curl.exe -s -w "`nHTTP %{http_code}`n" -H "X-API-Key: dev-change-me" http://127.
 
 Never commit real `.env` values. CI/tests set `API_KEY` via monkeypatch.
 
-### Phone capture form (#63)
-
-Groomer-facing UI (not `/docs`). Same create-or-get + visit logic as the JSON API; different front door.
-
-| Piece | Role |
-|-------|------|
-| `GET /capture` | Jinja form (`api/templates/capture.html`) |
-| `POST /capture` | Form fields → `create_or_get_owner` / `_dog` → `Visit` → success HTML |
-| Deps | `jinja2`, `python-multipart` (form bodies) |
-
-**Deprecated — being removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86).** The SPA replaced this form, and `POST /capture` takes **no API key**, so the API must never be reachable beyond `127.0.0.1`. Phone capture now goes through the preview server: [`docs/ops-handoff-trial.md`](./docs/ops-handoff-trial.md).
-
-**UI path:** A = this HTML form → B = Vite/React SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) → C = Next owner spike ([#41](https://github.com/BOYSABIO/muttmetrics/issues/41)).
-
 ### React capture SPA (#69–#72)
 
-Groomer-facing capture in `frontend/` (Vite + React + TypeScript). Modes: **search** (directory) → **visit**, or **new** client → **visit**.
+**Only** groomer-facing UI (not `/docs`). Vite + React + TypeScript in `frontend/`. Modes: **search** (directory) → **visit**, or **new** client → **visit**. Jinja `/capture` (stage A, #63) was removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86) — no templates, no unauthenticated write path. Phone trial over Tailscale: [`docs/ops-handoff-trial.md`](./docs/ops-handoff-trial.md).
 
 | Path | API calls |
 |------|-----------|
@@ -243,13 +232,13 @@ npm run dev
 | `npm run build` | Production bundle to `frontend/dist/` (`tsc -b` type-checks first) |
 | `npm run preview` | Serves `dist/` + the same `/api` proxy — what the groomer opens |
 
-**Auth note:** `VITE_API_KEY` is baked into `frontend/dist/` at **build** time and is readable by anyone who loads the page — a gate against strangers on a private URL, never a secret. Change it → rebuild. Harden before any public deploy ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)).
+**Auth note:** `VITE_API_KEY` is baked into `frontend/dist/` at **build** time and is readable by anyone who loads the page — a gate against strangers on a private URL, never a secret. Change it → rebuild. Harden before exposing beyond Tailscale (OptiPlex path [#93](https://github.com/BOYSABIO/muttmetrics/issues/93); cloud [#83](https://github.com/BOYSABIO/muttmetrics/issues/83) iceboxed).
 
 **Phone trial (#82):** the dev server stays on `127.0.0.1`; the groomer gets `npm run build && npm run preview` on a fixed `:5174`, reachable over Tailscale only on that one port. Full procedure: [`docs/ops-handoff-trial.md`](./docs/ops-handoff-trial.md).
 
 ### Create-or-get owners & dogs (#21)
 
-Onboarding helpers live in `src/muttmetrics/api/services/`. Prefer directory pick in the SPA when the dog already exists; use create-or-get for first visits, `/capture`, or `/docs`.
+Onboarding helpers live in `src/muttmetrics/api/services/`. Prefer directory pick in the SPA when the dog already exists; use create-or-get for first visits via the SPA or `/docs`.
 
 **JSON evening flow (maintainer / tools):**
 
