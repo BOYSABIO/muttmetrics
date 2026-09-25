@@ -48,6 +48,44 @@ function apiHeaders(): HeadersInit {
   }
 }
 
+async function readJson(res: Response): Promise<unknown> {
+  const text = await res.text()
+  let data: unknown = null
+  if (text !== '') {
+    try {
+      data = JSON.parse(text)
+    } catch {
+      data = text // plain-text body (e.g. "Internal Server Error")
+    }
+  }
+
+  if (!res.ok) {
+    let message: string
+
+    if (res.status >= 500) {
+      message = `Server error (${res.status})`
+    } else if (
+      typeof data === 'object' &&
+      data !== null &&
+      'detail' in data
+    ) {
+      const detail = (data as { detail: unknown }).detail
+      message =
+        typeof detail === 'string'
+        ? detail
+        : `Request failed (${res.status}): ${JSON.stringify(detail)}`
+    } else if (typeof data === 'string' && data !== '') {
+      message = `Request failed (${res.status}): ${data}`
+    } else {
+      message = `Request failed (${res.status})`
+    }
+
+    throw new Error(message)
+  }
+
+  return data
+}
+
 async function searchDogs(q: string): Promise<DogSearchItem[]> {
   const params = new URLSearchParams()
   if (q.trim() !== '') {
@@ -60,10 +98,7 @@ async function searchDogs(q: string): Promise<DogSearchItem[]> {
     method: 'GET',
     headers: apiHeaders(),
   })
-  const data: unknown = await res.json()
-  if (!res.ok) {
-    throw new Error(`Search failed ${res.status}: ${JSON.stringify(data)}`)
-  }
+  const data = await readJson(res)
   return data as DogSearchItem[]
 }
 
@@ -156,11 +191,7 @@ function App() {
         headers: apiHeaders(),
         body: JSON.stringify(visitBody),
       })
-      const visit = await visitRes.json()
-      if (!visitRes.ok) {
-        setMessage(`Visit error ${visitRes.status}: ${JSON.stringify(visit)}`)
-        return
-      }
+      const visit = (await readJson(visitRes)) as { visit_id: number }
 
       setMessage(
         `Saved visit_id=${visit.visit_id} (${selectedDog.dog_name} · ${selectedDog.owner_name})`,
@@ -174,7 +205,8 @@ function App() {
       resetTimer()
       setMode('search')
     } catch (error) {
-      setMessage(`Network error: ${String(error)}`)
+      setMessage(`Not saved — try again`)
+      console.error(error)
     }
   }
 
@@ -186,10 +218,9 @@ function App() {
         headers: apiHeaders(),
         body: JSON.stringify({ name: ownerName }),
       })
-      const owner = await ownerRes.json()
-      if (!ownerRes.ok) {
-        setMessage(`Owner error ${ownerRes.status}: ${JSON.stringify(owner)}`)
-        return
+      const owner = (await readJson(ownerRes)) as {
+        owner_id: number
+        name: string
       }
       
       const dogRes = await fetch('/api/dogs', {
@@ -200,10 +231,9 @@ function App() {
           name: dogName,
         }),
       })
-      const dog = await dogRes.json()
-      if (!dogRes.ok) {
-        setMessage(`Dog error ${dogRes.status}: ${JSON.stringify(dog)}`)
-        return
+      const dog = (await readJson(dogRes)) as {
+        dog_id: number
+        name: string
       }
 
       setSelectedDog({
@@ -219,7 +249,8 @@ function App() {
       setMode('visit')
       setMessage(`Ready: ${dog.name} · ${owner.name}`)
     } catch (error) {
-      setMessage(`Network error: ${String(error)}`)
+      setMessage(`Could not create client — try again`)
+      console.error(error)
     }
   }
 
@@ -252,7 +283,14 @@ function App() {
                 setResults(rows)
                 setMessage(`Found ${rows.length}`)
               } catch (error) {
-                setMessage(`Network error: ${String(error)}`)
+                console.error(error)
+                if (error instanceof TypeError) {
+                  setMessage("Can't reach server — check your connection")
+                } else if (error instanceof Error) {
+                  setMessage(error.message) // e.g. "Server error (500) or FastAPI detail"
+                } else {
+                  setMessage(String(error))
+                }
               }
             }}
           >

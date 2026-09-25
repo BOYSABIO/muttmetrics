@@ -232,7 +232,7 @@ npm run dev
 | `npm run build` | Production bundle to `frontend/dist/` (`tsc -b` type-checks first) |
 | `npm run preview` | Serves `dist/` + the same `/api` proxy — what the groomer opens |
 
-**Auth note:** `VITE_API_KEY` is baked into `frontend/dist/` at **build** time and is readable by anyone who loads the page — a gate against strangers on a private URL, never a secret. Change it → rebuild. Harden before exposing beyond Tailscale (OptiPlex path [#93](https://github.com/BOYSABIO/muttmetrics/issues/93); cloud [#83](https://github.com/BOYSABIO/muttmetrics/issues/83) iceboxed).
+**Auth note:** `VITE_API_KEY` is baked into `frontend/dist/` at **build** time and is readable by anyone who loads the page — a gate against strangers on a private URL, never a secret. Change it → rebuild. Harden before exposing beyond Tailscale. Always-on OptiPlex ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) and cloud ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)) are iceboxed; desktop host for now.
 
 **Phone trial (#82):** the dev server stays on `127.0.0.1`; the groomer gets `npm run build && npm run preview` on a fixed `:5174`, reachable over Tailscale only on that one port. Full procedure: [`docs/ops-handoff-trial.md`](./docs/ops-handoff-trial.md).
 
