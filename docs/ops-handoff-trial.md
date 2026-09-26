@@ -136,7 +136,7 @@ Send this part to User; it is all they need.
 
 **Must fill:** the dog (found or newly created) and the minutes. **Everything else can be skipped.**
 
-Known rough edges, do not fix mid-trial: tapping **Save** twice may create two visits; if the phone reloads the page mid-groom the timer is lost ([#88](https://github.com/BOYSABIO/muttmetrics/issues/88)).
+Known rough edges, do not fix mid-trial: tapping **Save** twice may create two visits. Mid-groom reload keeps the timer via browser draft storage ([#88](https://github.com/BOYSABIO/muttmetrics/issues/88)).
 
 ---
 
@@ -253,6 +253,7 @@ Restore the PC's sleep settings.
 | `Error: Port 5174 is already in use`               | Preview already running, or a stray process                                          | `Get-NetTCPConnection -LocalPort 5174 -State Listen`, then `Get-Process -Id <pid>`; `strictPort` is doing its job                               |
 | Preview prints no Network URL                      | `preview.host` not `0.0.0.0` in `vite.config.ts`, or Windows Firewall blocked `node` | Check the config; allow node on Private networks                                                                                                |
 | `Can't reach server` / `Server error (5xx)` / `Not saved — try again` | API down, or server returned an error (often DB) | Check terminal 2 / `curl.exe -s http://127.0.0.1:8000/health`; search or save again. Browser console has the detailed `console.error`. |
+| Reload mid-groom → search screen, timer gone | Old bundle without draft restore, or draft cleared / stale (>12h) | Hard-refresh; confirm build includes [#88](https://github.com/BOYSABIO/muttmetrics/issues/88). DevTools → Application → Local Storage → `muttmetrics.draftVisit`. |
 | First DB query takes ~a minute                     | `localhost` resolving to IPv6 `::1` while Postgres listens on IPv4 only              | Use `127.0.0.1` in `.env` and in the Vite proxy target                                                                                          |
 | User's changes don't appear                   | He is running the old bundle                                                         | He reloads the page; you rebuild if the code changed                                                                                            |
 | PC address changed                     | DHCP lease moved                                                                     | Add a static mapping in OPNsense; update the Tailscale rule                                                                                     |
