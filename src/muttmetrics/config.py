@@ -1,5 +1,7 @@
 """Application settings loaded from environment variables."""
 
+from pathlib import Path
+
 from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -25,6 +27,11 @@ class Settings(BaseSettings):
     api_key: str = Field(
         ...,
         description="Shared secret for X-API-Key header auth",
+    )
+
+    photo_root: Path = Field(
+        default=Path.home() / "muttmetrics-data" / "photos",
+        description="Directory where capture photos are stored (outside the repo)",
     )
 
 
