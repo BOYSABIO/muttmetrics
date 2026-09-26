@@ -24,6 +24,7 @@ from muttmetrics.db.base import Base
 if TYPE_CHECKING:
     from muttmetrics.models.breed import Breed
     from muttmetrics.models.owner import Owner
+    from muttmetrics.models.photo import Photo
     from muttmetrics.models.visit import Visit
 
 
@@ -92,3 +93,4 @@ class Dog(Base):
     breed: Mapped[Breed | None] = relationship(foreign_keys=[breed_id])
     breed_secondary: Mapped[Breed | None] = relationship(foreign_keys=[breed_secondary_id])
     visits: Mapped[list[Visit]] = relationship(back_populates="dog")
+    photos: Mapped[list[Photo]] = relationship(back_populates="dog")
