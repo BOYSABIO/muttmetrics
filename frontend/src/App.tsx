@@ -102,6 +102,68 @@ async function searchDogs(q: string): Promise<DogSearchItem[]> {
   return data as DogSearchItem[]
 }
 
+const DRAFT_KEY = 'muttmetrics.draftVisit'
+const DRAFT_MAX_AGE_MS = 12 * 60 * 60 * 1000 // 12 hours
+
+type DraftVisit = {
+  selectedDog: SelectedDog
+  visitStep: VisitStep
+  timerStatus: TimerStatus
+  startedAt: number | null
+  actualMinutes: string
+  visitDate: string
+  conditionScore: string
+  surprise: string
+  beforePhotoUrl: string
+  savedAt: number
+}
+
+function clearDraft(): void {
+  localStorage.removeItem(DRAFT_KEY)
+}
+
+function saveDraft(draft: Omit<DraftVisit, 'savedAt'>): void {
+  const full: DraftVisit = {
+    ...draft,
+    savedAt: Date.now(),
+  }
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(full))
+}
+
+function loadDraft(): DraftVisit | null {
+  const raw = localStorage.getItem(DRAFT_KEY)
+  if (raw === null) {
+    return null
+  }
+
+  let draft: DraftVisit
+  try {
+    draft = JSON.parse(raw) as DraftVisit
+  } catch {
+    clearDraft()
+    return null
+  }
+
+  const now = Date.now()
+
+  // Timer was started a long time ago -> abandon
+  if (
+    draft.startedAt !== null &&
+    now - draft.startedAt > DRAFT_MAX_AGE_MS
+  ) {
+    clearDraft()
+    return null
+  }
+
+  // Never started (or startedAt null), but draft itself is old
+  if (now - draft.savedAt > DRAFT_MAX_AGE_MS) {
+    clearDraft()
+    return null
+  }
+
+  return draft
+}
+
 function App() {
   const [ownerName, setOwnerName] = useState('')
   const [dogName, setDogName] = useState('')
@@ -119,6 +181,56 @@ function App() {
   const [timerStatus, setTimerStatus] = useState<TimerStatus>('idle')
   const [startedAt, setStartedAt] = useState<number | null>(null)
   const [tickNow, setTickNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const draft = loadDraft()
+    if (draft === null) {
+      return
+    }
+
+    setSelectedDog(draft.selectedDog)
+    setVisitStep(draft.visitStep)
+    setTimerStatus(draft.timerStatus)
+    setStartedAt(draft.startedAt)
+    setActualMinutes(draft.actualMinutes)
+    setVisitDate(draft.visitDate)
+    setConditionScore(draft.conditionScore)
+    setSurprise(draft.surprise)
+    setBeforePhotoUrl(draft.beforePhotoUrl)
+    setMode('visit')
+    setTickNow(Date.now())
+    setMessage(`Resumed timer for ${draft.selectedDog.dog_name}`)
+  }, []) // empty deps = run once after first paint
+
+  useEffect(() => {
+    // No dog / not in visit wizard -> nothing to persist
+    if (selectedDog === null || mode !== 'visit') {
+      return
+    }
+
+    saveDraft({
+      selectedDog,
+      visitStep,
+      timerStatus,
+      startedAt,
+      actualMinutes,
+      visitDate,
+      conditionScore,
+      surprise,
+      beforePhotoUrl,
+    })
+  }, [
+    selectedDog,
+    mode,
+    visitStep,
+    timerStatus,
+    startedAt,
+    actualMinutes,
+    visitDate,
+    conditionScore,
+    surprise,
+    beforePhotoUrl,
+  ])
 
   useEffect(() => {
     if (timerStatus !== 'running') return
@@ -154,6 +266,7 @@ function App() {
   }
 
   function resetTimer() {
+    clearDraft()
     setTimerStatus('idle')
     setStartedAt(null)
     setTickNow(Date.now())
@@ -193,6 +306,7 @@ function App() {
       })
       const visit = (await readJson(visitRes)) as { visit_id: number }
 
+      clearDraft()
       setMessage(
         `Saved visit_id=${visit.visit_id} (${selectedDog.dog_name} · ${selectedDog.owner_name})`,
       )
@@ -504,6 +618,7 @@ function App() {
           <button
             type="button"
             onClick={() => {
+              clearDraft()
               setSelectedDog(null)
               setVisitStep(1)
               setBeforePhotoUrl('')

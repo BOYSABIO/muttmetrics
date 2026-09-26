@@ -227,7 +227,7 @@ npm run dev
 | `http://<pc-ip>:5174` | Vite **preview** server — built `dist/`, network-facing, for the groomer trial |
 | `/api/*` in the SPA | Proxied to `http://127.0.0.1:8000/*` (see `frontend/vite.config.ts`) |
 | `GET /dogs?q=` | Directory browse/search — returns `owner_name` on each row (cap 50) |
-| Visit step 2 timer | Client-only; fills `actual_minutes` (floor); editable override |
+| Visit step 2 timer | Client-only; fills `actual_minutes` (floor); editable override. In-progress visit (dog + wizard + timer) persists in `localStorage` (`muttmetrics.draftVisit`) so a phone tab kill / reload can resume ([#88](https://github.com/BOYSABIO/muttmetrics/issues/88)). Cleared on save / cancel / reset. |
 | `frontend/.env` | `VITE_API_KEY` only — gitignored; never commit |
 | `npm run build` | Production bundle to `frontend/dist/` (`tsc -b` type-checks first) |
 | `npm run preview` | Serves `dist/` + the same `/api` proxy — what the groomer opens |
