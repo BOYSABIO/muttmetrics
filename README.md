@@ -8,6 +8,7 @@ Duration intelligence for a dog grooming business: structured visit data and P50
 **Data model:** [`docs/schema.md`](docs/schema.md) (tables, relationships, column groups)  
 **Local DB peek:** [`docs/ops-db-peek.md`](docs/ops-db-peek.md) (editor + `psql` + starter SELECTs)  
 **Enrichment (maintainer):** [`docs/ops-enrichment.md`](docs/ops-enrichment.md) (safe UPDATEs after thin capture)  
+**Photo storage (ops):** [`docs/ops-photos.md`](docs/ops-photos.md) (where files live, deletion, orphan sweep — [#30](https://github.com/BOYSABIO/muttmetrics/issues/30))  
 **Groomer trial handoff:** [`docs/ops-handoff-trial.md`](docs/ops-handoff-trial.md) (start the stack, phone checklist, troubleshooting — [#82](https://github.com/BOYSABIO/muttmetrics/issues/82))
 
 ## Layout
@@ -17,6 +18,8 @@ docs/VISION.md     # product vision (public)
 docs/schema.md     # ER diagram + table reference
 docs/ops-db-peek.md # local Postgres peek (editor + starter SQL)
 docs/ops-handoff-trial.md # runbook: groomer phone trial over Tailscale
+docs/ops-photos.md # photo storage: layout, deletion, sweep
+scripts/           # maintenance scripts (SQL recipes, photo purge/sweep)
 docs/adr/          # architecture decisions
 docker-compose.yml # local Postgres (primary dev path)
 alembic/           # migration scripts (Alembic)
@@ -38,6 +41,7 @@ python -m venv .venv
 pip install -e ".[dev]"
 # copy .env.example to .env (Windows: copy .env.example .env)
 # .env must include DATABASE_URL and API_KEY
+# optional: PHOTO_ROOT (photo files; defaults to ~/muttmetrics-data/photos, outside the repo)
 
 docker compose up -d    # Postgres — container muttmetrics-db (not the old muttmetrics-pg)
 alembic upgrade head    # apply schema

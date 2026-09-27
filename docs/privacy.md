@@ -31,8 +31,9 @@ MuttMetrics handles real client-adjacent business data for a German dog grooming
 ### Photos
 - Intake photos
 - After photos
+- (later) a profile photo per dog
 
-Photos should be treated as sensitive operational data, not marketing assets by default.
+Photos are sensitive operational data, not marketing assets by default. Since [#30](https://github.com/BOYSABIO/muttmetrics/issues/30) they are stored as files under `PHOTO_ROOT` (outside the repository) with one metadata row per file in the `photo` table. Operational detail: [`ops-photos.md`](./ops-photos.md); design rationale: [ADR-002](./adr/002-photo-storage.md).
 
 ## Git rules
 
@@ -75,6 +76,50 @@ This is the working product stance until a fuller operational policy exists:
 
 The exact retention periods can be refined later, but the design principle is simple: keep the minimum useful data for the minimum useful time.
 
+## Photos: what is stored, for how long, and how it is deleted
+
+### What reaches the disk
+
+Every upload is decoded, rotated according to its EXIF orientation tag, **stripped of all metadata**, downscaled (long edge ≤ 1600px) and re-encoded as JPEG. That means **GPS coordinates, capture timestamps and device identifiers never reach storage** — which matters because the groomer currently travels to clients, so an untouched phone photo can carry a client's home address.
+
+Nothing about the dog, owner or visit appears in the filename; the path is date plus a random identifier, and the database answers everything else.
+
+### Retention
+
+**No automatic purge.** Photos are the only material a future condition-scoring model ([#42](https://github.com/BOYSABIO/muttmetrics/issues/42)) could ever learn from, so a timed deletion would quietly destroy the dataset before there is a decision to make about it.
+
+- Photos are kept while the client relationship is active
+- They are **deleted on request** (below)
+- Storage use is reviewed when it becomes a problem, not on a timer
+- This stance is revisited if the salon's own privacy policy requires a fixed window
+
+### Deletion on request
+
+A client asking for their photos to be deleted is a request that must be honoured, not a feature request. The procedure is in [`ops-photos.md`](./ops-photos.md) §5 and comes down to:
+
+```bash
+python scripts/photo_purge.py --owner-id <id>           # review
+python scripts/photo_purge.py --owner-id <id> --apply   # delete
+```
+
+Files are removed first, then rows.
+
+### The three copies, stated honestly
+
+"Deleted" has to mean something specific, so:
+
+| Copy | When it goes |
+|------|--------------|
+| The file under `PHOTO_ROOT` and its `photo` row | immediately, when the purge runs |
+| Backup copies ([#95](https://github.com/BOYSABIO/muttmetrics/issues/95)) | when the backup retention window passes |
+| A browser cache on a device that displayed the photo | within one hour (`Cache-Control: private, max-age=3600`) |
+
+Telling a client the deletion is instant and total would be false. Telling them the live copy is gone immediately and backup copies age out within the retention window is both true and defensible.
+
+### Access
+
+Photos are served only through the API and require the shared `X-API-Key`. The key is embedded in the built SPA, so it is a gate against strangers on the network, **not** a secret from anyone who can open the app — which is why the capture UI is not exposed beyond the tailnet ([#82](https://github.com/BOYSABIO/muttmetrics/issues/82)) and why a public deployment needs a real auth decision ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)).
+
 ## Public-site follow-up
 
 If the salon’s public website or any salon-owned property references or feeds this system, the salon's Datenschutzerklärung must eventually mention:
@@ -89,7 +134,7 @@ That is website/privacy-policy work, not a blocking product feature for MuttMetr
 ## What this issue does not solve
 
 - It does not replace legal review
-- It does not implement deletion/export tooling
+- It does not implement **export** tooling (deletion tooling for photos landed with #30; owner/dog/visit export is still manual SQL)
 - It does not define every future policy edge case
 
 It does make privacy explicit early, so the repo and product do not drift into bad habits by accident.

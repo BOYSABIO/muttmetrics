@@ -28,6 +28,14 @@ class ImageRejected(ValueError):
     """
 
 
+class ImageTooLarge(ImageRejected):
+    """Upload exceeds MAX_UPLOAD_BYTES.
+
+    Subclass so the API can answer 413 specifically while every other
+    rejection stays a 415
+    """
+
+
 def process_upload(data: bytes) -> bytes:
     """Validate, rotate, strip metadata, downscale, re-encode as JPEG.
 
@@ -37,7 +45,7 @@ def process_upload(data: bytes) -> bytes:
     if not data:
         raise ImageRejected("Empty upload")
     if len(data) > MAX_UPLOAD_BYTES:
-        raise ImageRejected(f"Upload is {len(data)} bytes; limit is {MAX_UPLOAD_BYTES}")
+        raise ImageTooLarge(f"Upload is {len(data)} bytes; limit is {MAX_UPLOAD_BYTES}")
 
     out = BytesIO()
     try:
