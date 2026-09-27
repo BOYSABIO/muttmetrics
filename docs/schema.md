@@ -15,6 +15,8 @@ erDiagram
     BREED ||--o{ DOG : "breed_secondary_id"
     SERVICE ||--o{ VISIT : "booked_service_id"
     SERVICE ||--o{ VISIT : "actual_service_id"
+    DOG ||--o{ PHOTO : "has"
+    VISIT ||--o{ PHOTO : "intake / after"
 
     OWNER {
         int owner_id PK
@@ -59,6 +61,16 @@ erDiagram
         int base_minutes
         numeric price_base
     }
+
+    PHOTO {
+        int photo_id PK
+        int dog_id FK
+        int visit_id FK "null for a profile photo"
+        text kind "intake | after | profile"
+        text storage_key "relative path on disk"
+        text sha256
+        timestamptz created_at
+    }
 ```
 
 **Navigation path:** `owner.dogs` → `dog.visits` (and `owner.visits` for direct owner-level queries).
@@ -72,6 +84,7 @@ erDiagram
 | `visit` | **Fact table** — one row per groom; training labels live here. | → `dog`, `owner`, → `service` (booked + actual) |
 | `breed` | Reference priors for cold start (coat, duration, matting risk). | ← `dog.breed_id`, `dog.breed_secondary_id` |
 | `service` | Reference groom types (slug, minutes, **price floor**). | ← `visit.booked_service_id`, `visit.actual_service_id` |
+| `photo` | One row per stored image file. Bytes live on disk under `PHOTO_ROOT`, **not** in the database ([ADR-002](./adr/002-photo-storage.md)). | → `dog` (required), → `visit` (optional — a profile photo has no visit) |
 
 ## Column groups (by table)
 
@@ -97,16 +110,30 @@ erDiagram
 | Group | Columns |
 |-------|---------|
 | Identity | `dog_id`, `owner_id`, `visit_date` |
-| Booking | `booked_service_id`, `booking_channel`, `is_emergency`, `intake_photos[]`, `quoted_price` |
+| Booking | `booked_service_id`, `booking_channel`, `is_emergency`, `intake_photos[]` *(deprecated — see below)*, `quoted_price` |
 | System-computed at write | `days_since_last`, `predicted_min_p50`, `predicted_min_p90` |
 | Intake | `condition_score`, `matting_locations[]`, `fleas_or_parasites`, `arrived_wet_dirty` |
 | Outcome | `actual_service_id`, `pivoted`, `pivot_reason`, `shaved_down`, `actual_minutes`, `final_price`, `tip`, `add_ons[]` |
-| Qualitative | `what_surprised_me`, `behaviour_this_visit`, `after_photos[]` |
+| Qualitative | `what_surprised_me`, `behaviour_this_visit`, `after_photos[]` *(deprecated — see below)* |
 | Status | `status`, `cancelled_hours_before` |
 
 ### `breed` / `service`
 
 Reference tables only — no FKs to other entities. See model files for full column lists.
+
+### `photo`
+
+| Group | Columns |
+|-------|---------|
+| Identity | `photo_id` |
+| Belongs to | `dog_id` (NOT NULL), `visit_id` (nullable), `kind` (`intake` / `after` / `profile`) |
+| Where the bytes are | `storage_key` (relative, unique), `storage_backend` (default `local`) |
+| What the bytes are | `content_type`, `byte_size`, `sha256` |
+| When | `created_at` (timestamptz, needed for retention and the orphan sweep) |
+
+Constraints: `kind` is checked; a `profile` photo must have no `visit_id` while `intake` / `after` must have one; `byte_size > 0`. Foreign keys deliberately have **no `ON DELETE CASCADE`** — Postgres cannot delete files, so a cascade would strand bytes on disk. Deletion goes through `scripts/photo_purge.py` (see [`ops-photos.md`](./ops-photos.md)).
+
+**Deprecated:** `visit.intake_photos` and `visit.after_photos` (`TEXT[]` of URLs) are superseded by this table. They remain in the schema until nothing reads them — [#98](https://github.com/BOYSABIO/muttmetrics/issues/98) drops them. Do not add new writers.
 
 ## Implementation notes
 

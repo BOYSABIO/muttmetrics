@@ -10,7 +10,7 @@ def _set_required_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Minimal env so Settings can construct in tests."""
     monkeypatch.setenv(
         "DATABASE_URL",
-        "postgresql+psycopg://muttmetrics:muttmetrics@localhost:5432/muttmetrics",
+        "postgresql+psycopg://muttmetrics:muttmetrics@127.0.0.1:5432/muttmetrics",
     )
     monkeypatch.setenv("API_KEY", "test-api-key")
 
@@ -54,7 +54,7 @@ def test_missing_api_key_raises(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setenv(
         "DATABASE_URL",
-        "postgresql+psycopg://muttmetrics:muttmetrics@localhost:5432/muttmetrics",
+        "postgresql+psycopg://muttmetrics:muttmetrics@127.0.0.1:5432/muttmetrics",
     )
     monkeypatch.delenv("API_KEY", raising=False)
     with pytest.raises(ValidationError):

@@ -11,7 +11,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     """App client with a known API_KEY (and dummy DATABASE_URL for Settings)."""
     monkeypatch.setenv(
         "DATABASE_URL",
-        "postgresql+psycopg://muttmetrics:muttmetrics@localhost:5432/muttmetrics",
+        "postgresql+psycopg://muttmetrics:muttmetrics@127.0.0.1:5432/muttmetrics",
     )
     monkeypatch.setenv("API_KEY", "test-api-key")
     return TestClient(create_app())

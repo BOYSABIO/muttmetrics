@@ -31,6 +31,7 @@ htmlcov/
 # includes pricing.json — copy from data/pricing.example.json
 data/private/
 data/exports/
+data/backups/
 
 # IDE / OS
 .idea/

@@ -2,6 +2,7 @@
 
 from muttmetrics.api.schemas.dogs import DogResponse, UpsertDogRequest
 from muttmetrics.api.schemas.owners import OwnerResponse, UpsertOwnerRequest
+from muttmetrics.api.schemas.photos import PhotoResponse
 from muttmetrics.api.schemas.visits import CreateVisitRequest, VisitResponse
 
 __all__ = [
@@ -11,4 +12,5 @@ __all__ = [
     "UpsertDogRequest",
     "UpsertOwnerRequest",
     "VisitResponse",
+    "PhotoResponse",
 ]

@@ -3,7 +3,8 @@
 from muttmetrics.models.breed import Breed
 from muttmetrics.models.dog import Dog
 from muttmetrics.models.owner import Owner
+from muttmetrics.models.photo import Photo
 from muttmetrics.models.service import Service
 from muttmetrics.models.visit import Visit
 
-__all__ = ["Breed", "Dog", "Owner", "Service", "Visit"]
+__all__ = ["Breed", "Dog", "Owner", "Photo", "Service", "Visit"]

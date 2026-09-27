@@ -17,7 +17,7 @@ MINIMAL_BASE = {
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.setenv(
         "DATABASE_URL",
-        "postgresql+psycopg://muttmetrics:muttmetrics@localhost:5432/muttmetrics",
+        "postgresql+psycopg://muttmetrics:muttmetrics@127.0.0.1:5432/muttmetrics",
     )
     monkeypatch.setenv("API_KEY", "test-api-key")
     return TestClient(create_app())
