@@ -2,8 +2,10 @@
 
 Duration intelligence for a dog grooming business: structured visit data and P50/P90 duration ranges so the day can be packed against variance — not a booking or CRM system.
 
-**Stack:** Python · Postgres · SQLAlchemy 2.x · Alembic · FastAPI  
-**Status:** M3.5 handoff — FastAPI + React capture SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)–[#72](https://github.com/BOYSABIO/muttmetrics/issues/72)); Jinja `/capture` retired ([#86](https://github.com/BOYSABIO/muttmetrics/issues/86)); honest SPA/API errors ([#87](https://github.com/BOYSABIO/muttmetrics/issues/87)); timer survives reload ([#88](https://github.com/BOYSABIO/muttmetrics/issues/88)). Host remains Spencer’s desktop ([#82](https://github.com/BOYSABIO/muttmetrics/issues/82) runbook). Next: photo storage/upload ([#30](https://github.com/BOYSABIO/muttmetrics/issues/30) / [#92](https://github.com/BOYSABIO/muttmetrics/issues/92)). OptiPlex always-on ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) iceboxed until shop ready. CSV backfill deferred.  
+**📄 Case study:** [`docs/CASE-STUDY.md`](docs/CASE-STUDY.md) — the problem, the capture-first approach, what a real field trial changed, and where it's heading.
+
+**Stack:** Python · Postgres · SQLAlchemy 2.x · Alembic · FastAPI · Vite + React + TS (capture SPA)  
+**Status:** Capture running on real grooms. The React capture SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)–[#72](https://github.com/BOYSABIO/muttmetrics/issues/72)) is the only groomer UI — Jinja `/capture` retired ([#86](https://github.com/BOYSABIO/muttmetrics/issues/86)). Trial fixes landed: honest SPA/API errors ([#87](https://github.com/BOYSABIO/muttmetrics/issues/87)), timer survives a killed tab ([#88](https://github.com/BOYSABIO/muttmetrics/issues/88)). Photo storage in place ([#30](https://github.com/BOYSABIO/muttmetrics/issues/30), [ADR-002](docs/adr/002-photo-storage.md)). Host remains the maintainer's desktop ([#82](https://github.com/BOYSABIO/muttmetrics/issues/82) runbook). Next: phone photo upload ([#92](https://github.com/BOYSABIO/muttmetrics/issues/92)) and scheduled DB backup ([#95](https://github.com/BOYSABIO/muttmetrics/issues/95)). OptiPlex always-on ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) iceboxed until shop ready. CSV backfill deferred.  
 **Product framing:** [`docs/VISION.md`](docs/VISION.md) (capture-first, non-goals, later ambition)  
 **Data model:** [`docs/schema.md`](docs/schema.md) (tables, relationships, column groups)  
 **Local DB peek:** [`docs/ops-db-peek.md`](docs/ops-db-peek.md) (editor + `psql` + starter SELECTs)  
@@ -14,6 +16,7 @@ Duration intelligence for a dog grooming business: structured visit data and P50
 ## Layout
 
 ```
+docs/CASE-STUDY.md # case study: problem, approach, field trial, direction
 docs/VISION.md     # product vision (public)
 docs/schema.md     # ER diagram + table reference
 docs/ops-db-peek.md # local Postgres peek (editor + starter SQL)
