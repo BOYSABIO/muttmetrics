@@ -6,7 +6,7 @@ Transport is **Tailscale**, not plain salon Wi-Fi. Everything else in #82 is unc
 
 **Roles in this doc:** **User** = the groomer capturing visits on a phone. **Owner** = the maintainer who runs the stack and reads the database.
 
-Related: [ops-db-peek.md](./ops-db-peek.md) (looking at rows), [ops-enrichment.md](./ops-enrichment.md) (fixing rows afterwards), [CONTRIBUTING](../CONTRIBUTING.md) (normal dev setup).
+Related: [ops-db-peek.md](./db-peek.md) (looking at rows), [ops-enrichment.md](./enrichment.md) (fixing rows afterwards), [CONTRIBUTING](../../CONTRIBUTING.md) (normal dev setup).
 
 ---
 
@@ -186,12 +186,12 @@ GROUP BY dog_id, visit_date
 HAVING count(*) > 1;
 ```
 
-Connection details and the editor setup are in [ops-db-peek.md](./ops-db-peek.md).
+Connection details and the editor setup are in [ops-db-peek.md](./db-peek.md).
 
 Then:
 
 - **Count check:** rows added == grooms done? If not, find out which one is missing and why — that is the most valuable finding of the whole trial.
-- **Enrich afterwards**, never during: breed, owner contact, corrections → [ops-enrichment.md](./ops-enrichment.md).
+- **Enrich afterwards**, never during: breed, owner contact, corrections → [ops-enrichment.md](./enrichment.md).
 - **Friction notes** → a comment on [#82](https://github.com/BOYSABIO/muttmetrics/issues/82): what was skipped, what was asked about, what annoyed, where there was hesitation. Notes only, no fixes mid-trial.
 - **Go / no-go** for the always-on deploy ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)) recorded as a comment.
 
@@ -267,6 +267,6 @@ Restore the PC's sleep settings.
 
 It is a product test, not an infrastructure test. One question: **does User open it and save a visit without Owner typing for them?**
 
-- **Yes** → keep using this desktop + Tailscale runbook for now (Spencer manages on/off). Always-on OptiPlex ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) and cloud ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)) stay iceboxed until the shop box can live in the salon.
+- **Yes** → keep using this desktop + Tailscale runbook for now (the maintainer manages on/off). Always-on OptiPlex ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) and cloud ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)) stay iceboxed until the shop box can live in the salon.
 - **No** → the friction notes say why, and that gets fixed before spending anything on hosting.
 

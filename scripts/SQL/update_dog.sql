@@ -1,5 +1,5 @@
 -- Recipe: enrich dog hand-entered fields (coat / temperament / weight / medical).
--- See docs/ops-enrichment.md — "Enrich a dog".
+-- See docs/runbooks/enrichment.md — "Enrich a dog".
 -- For breed_id only, prefer enrich_dog_breed.sql.
 -- Do NOT set size_band, visit_count, last_visit_date, avg_duration_min, etc.
 

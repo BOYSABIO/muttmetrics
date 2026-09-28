@@ -4,7 +4,7 @@ Timing values (`base_minutes`, `buffer_minutes`) are domain estimates and are
 the point of this file. Relative order: nails < teeth < bath_trim < full_groom < de_mat.
 
 `price_base` is deliberately NULL here. Prices are the salon's commercial data and
-must never be committed - see docs/privacy.md. Real floors are loaded at seed time
+must never be committed - see docs/architecture/privacy.md. Real floors are loaded at seed time
 from `data/private/pricing.json` (gitignored); see `data/pricing.example.json` for
 the shape. Real charge always lives on visit.quoted_price / final_price / tip.
 

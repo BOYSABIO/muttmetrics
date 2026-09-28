@@ -1,0 +1,35 @@
+# MuttMetrics docs
+
+Everything written about the project, grouped by what you're trying to do. **Tasks don't live here** — they're [issues](https://github.com/BOYSABIO/muttmetrics/issues) and [milestones](https://github.com/BOYSABIO/muttmetrics/milestones).
+
+## 📦 Product — *why it exists*
+
+| Doc | What it covers |
+|---|---|
+| [Case study](product/case-study.md) | The problem, the capture-first approach, what a real field trial changed, where it's heading |
+| [Vision](product/vision.md) | Thesis, adoption path, build order, non-goals, later ambition |
+
+## 🏗️ Architecture — *how it's built*
+
+| Doc | What it covers |
+|---|---|
+| [Schema](architecture/schema.md) | Tables, relationships, column groups, indexes |
+| [Privacy](architecture/privacy.md) | What personal data exists, where it lives, how deletion works |
+| [ADR-000 — Stack](architecture/adr/000-stack.md) | Why Python/Postgres/FastAPI, and the capture UI path |
+| [ADR-001 — Derived fields](architecture/adr/001-derived-fields.md) | Hand-entered vs derived vs system-computed columns |
+| [ADR-002 — Photo storage](architecture/adr/002-photo-storage.md) | Bytes on disk, metadata in Postgres |
+
+## 🛠️ Runbooks — *how to operate it*
+
+| Runbook | Use it when |
+|---|---|
+| [Groomer trial](runbooks/groomer-trial.md) | Starting the stack for a groomer session on a phone (Tailscale), plus troubleshooting |
+| [DB peek](runbooks/db-peek.md) | You want to look at the data (editor or `psql`) with starter queries |
+| [Enrichment](runbooks/enrichment.md) | Adding detail to thinly captured rows safely |
+| [Photos](runbooks/photos.md) | Where photo files live, deleting them, the orphan sweep |
+
+## Conventions
+
+- **File names:** lowercase-kebab (`groomer-trial.md`). ADRs are numbered and never renumbered.
+- **ADRs and the vision get amended, not rewritten**: history stays visible. Runbooks get rewritten so they never teach a dead path.
+- **Maintainer's local notes** (learnings, per-issue notes, meetings) live in `docs/notes/`, which is gitignored.

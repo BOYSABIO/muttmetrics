@@ -43,14 +43,13 @@ Thumbs.db
 # Cursor
 .cursor/
 
-# Local product/design doc (too detailed for the public repo — keep on disk only)
-about.md
-docs/learnings/
-docs/meetings/
+# Maintainer's local notes: learnings, issue notes, meetings, product design (keep on disk only)
+docs/notes/
 
 # Local SQL scratch - may contain real client rows
 scripts/first_visit.sql
 scripts/*.local.sql
+scripts/**/*.local.sql
 
 # Frontend
 frontend/node_modules/

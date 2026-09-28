@@ -6,8 +6,8 @@ left pointing at bytes that are gone. Dry run unless --apply is given.
     python scripts/photo_purge.py --owner-id 42
     python scripts/photo_purge.py --owner-id 42 --apply
 
-Backups still hold copies until the retention window in docs/privacy.md
-passes. See docs/ops-photos.md for the full deletion procedure.
+Backups still hold copies until the retention window in docs/architecture/privacy.md
+passes. See docs/runbooks/photos.md for the full deletion procedure.
 """
 
 from __future__ import annotations
@@ -88,7 +88,7 @@ def main() -> int:
             rows_deleted += 1
 
         print(f"\nDeleted {files_deleted} file(s) and {rows_deleted} row(s).")
-        print("Backups still contain copies - see docs/privacy.md.")
+        print("Backups still contain copies - see docs/architecture/privacy.md.")
 
     return 0
 

@@ -21,7 +21,7 @@
 - **Two systems with no shared transaction.** Everything else follows from this: write the file first (an orphan file is invisible litter a sweeper removes), insert the row last (a row without its file is a broken promise), write to a temp name and rename atomically, and reconcile disk against database periodically.
 - **Everything stored is a re-encoded JPEG with no metadata.** Uploads are decoded (which is the real validation), EXIF-rotated, stripped, downscaled and re-encoded. GPS coordinates from a phone never reach the disk.
 - **Serving requires the API.** Photos are behind `X-API-Key`, so a browser `<img src>` cannot fetch one directly — the SPA fetches bytes and renders a blob URL (#92).
-- **Deletion is application code, not SQL.** Rows, files and backup copies are three separate things; `docs/privacy.md` states what happens to each.
+- **Deletion is application code, not SQL.** Rows, files and backup copies are three separate things; `docs/architecture/privacy.md` states what happens to each.
 
 ### Alternatives considered
 

@@ -1,5 +1,5 @@
 -- Recipe: fix / enrich a visit row (event facts only).
--- See docs/ops-enrichment.md — "Fix / enrich a visit".
+-- See docs/runbooks/enrichment.md — "Fix / enrich a visit".
 -- Do NOT set days_since_last or predicted_min_*.
 
 -- ---------------------------------------------------------------------------
