@@ -1,5 +1,5 @@
 -- Recipe: enrich owner contact / notes (hand-entered columns only).
--- See docs/ops-enrichment.md — "Enrich an owner".
+-- See docs/runbooks/enrichment.md — "Enrich an owner".
 -- Do NOT set visit_count, neglect_rate, lifetime_value, etc.
 
 -- ---------------------------------------------------------------------------

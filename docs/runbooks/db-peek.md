@@ -2,7 +2,7 @@
 
 How Owner (or any clone) **sees capture data** without a dashboard. SQL against local Docker Postgres is enough for M3.
 
-Schema reference: [`schema.md`](./schema.md). Connection values match [`docker-compose.yml`](../docker-compose.yml) and [`.env.example`](../.env.example).
+Schema reference: [`schema.md`](../architecture/schema.md). Connection values match [`docker-compose.yml`](../../docker-compose.yml) and [`.env.example`](../../.env.example).
 
 ## Connection truth
 
@@ -58,7 +58,7 @@ docker compose exec -T db psql -U muttmetrics -d muttmetrics -c "SELECT COUNT(*)
 
 | Kind | Location |
 |------|----------|
-| Shared / reusable (peek, cleanup, enrichment) | Repo: [`scripts/SQL/`](../scripts/SQL/) — commit these |
+| Shared / reusable (peek, cleanup, enrichment) | Repo: [`scripts/SQL/`](../../scripts/SQL/) — commit these |
 | Personal one-offs | Editor scratch, or `scripts/*.local.sql` (gitignored) |
 | Real client dumps / PII | Never commit — see Privacy in README |
 
@@ -111,15 +111,15 @@ WHERE o.name ILIKE '%Capture%'
 ORDER BY o.name, d.name;
 ```
 
-This is **read-only**. To delete synthetic rows safely (preview + FK-ordered deletes, keeps real names like Thomas/Milla), use:
+This is **read-only**. To delete synthetic rows safely (preview + FK-ordered deletes, keeps real rows), use:
 
-[`scripts/SQL/cleanup_synthetic_clients.sql`](../scripts/SQL/cleanup_synthetic_clients.sql)
+`scripts/SQL/cleanup_synthetic_clients.local.sql` *(local only, gitignored: it names real rows to protect)*
 
 ## Enrichment (UPDATE after thin capture)
 
 Breed, phone, notes, visit fixes — Owner’s job, not the SPA. Playbook + recipes:
 
-[`ops-enrichment.md`](./ops-enrichment.md) · [`scripts/SQL/lookup_breeds.sql`](../scripts/SQL/lookup_breeds.sql) · [`enrich_dog_breed.sql`](../scripts/SQL/enrich_dog_breed.sql) · [`update_visit.sql`](../scripts/SQL/update_visit.sql) · …
+[`ops-enrichment.md`](./enrichment.md) · [`scripts/SQL/lookup_breeds.sql`](../../scripts/SQL/lookup_breeds.sql) · [`enrich_dog_breed.sql`](../../scripts/SQL/enrich_dog_breed.sql) · [`update_visit.sql`](../../scripts/SQL/update_visit.sql) · …
 
 ## Pytest writes to this same database
 

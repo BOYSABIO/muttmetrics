@@ -1,8 +1,8 @@
 # Ops: maintainer enrichment playbook
 
-How to **fix and enrich** rows after thin capture — without a CRM UI and without corrupting derived fields ([ADR-001](./adr/001-derived-fields.md)).
+How to **fix and enrich** rows after thin capture — without a CRM UI and without corrupting derived fields ([ADR-001](../architecture/adr/001-derived-fields.md)).
 
-Connect first: [`ops-db-peek.md`](./ops-db-peek.md). Schema overview: [`schema.md`](./schema.md).
+Connect first: [`ops-db-peek.md`](./db-peek.md). Schema overview: [`schema.md`](../architecture/schema.md).
 
 **Audience:** Owner (maintainer). User’s capture SPA stays thin on purpose.
 
@@ -37,7 +37,7 @@ Why forbidden matters: derived values are **meant to be recomputed from visits**
 
 ## Recipes (explained)
 
-Each recipe has a matching file under [`scripts/SQL/`](../scripts/SQL/). Open the file in the Postgres extension and run section by section.
+Each recipe has a matching file under [`scripts/SQL/`](../../scripts/SQL/). Open the file in the Postgres extension and run section by section.
 
 ### 1. List breeds — `lookup_breeds.sql`
 
@@ -104,5 +104,5 @@ LIMIT 20;
 
 ## Related
 
-- Synthetic junk cleanup: [`scripts/SQL/cleanup_synthetic_clients.sql`](../scripts/SQL/cleanup_synthetic_clients.sql)
-- Peek starters: [`ops-db-peek.md`](./ops-db-peek.md)
+- Synthetic junk cleanup: `scripts/SQL/cleanup_synthetic_clients.local.sql` *(local only, gitignored: it names real rows to protect)*
+- Peek starters: [`ops-db-peek.md`](./db-peek.md)

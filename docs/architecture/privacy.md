@@ -1,6 +1,6 @@
 # Privacy
 
-MuttMetrics handles real client-adjacent business data for a German dog grooming shop. This document is not legal advice; it is the engineering checklist for what data we store, what never belongs in git, and what follow-up the salon site still needs.
+MuttMetrics handles real client-adjacent business data for a dog grooming shop in the EU, so GDPR applies. This document is not legal advice; it is the engineering checklist for what data we store, what never belongs in git, and what follow-up the salon site still needs.
 
 ## What data MuttMetrics is expected to store
 
@@ -33,7 +33,7 @@ MuttMetrics handles real client-adjacent business data for a German dog grooming
 - After photos
 - (later) a profile photo per dog
 
-Photos are sensitive operational data, not marketing assets by default. Since [#30](https://github.com/BOYSABIO/muttmetrics/issues/30) they are stored as files under `PHOTO_ROOT` (outside the repository) with one metadata row per file in the `photo` table. Operational detail: [`ops-photos.md`](./ops-photos.md); design rationale: [ADR-002](./adr/002-photo-storage.md).
+Photos are sensitive operational data, not marketing assets by default. Since [#30](https://github.com/BOYSABIO/muttmetrics/issues/30) they are stored as files under `PHOTO_ROOT` (outside the repository) with one metadata row per file in the `photo` table. Operational detail: [`ops-photos.md`](../runbooks/photos.md); design rationale: [ADR-002](./adr/002-photo-storage.md).
 
 ## Git rules
 
@@ -95,7 +95,7 @@ Nothing about the dog, owner or visit appears in the filename; the path is date 
 
 ### Deletion on request
 
-A client asking for their photos to be deleted is a request that must be honoured, not a feature request. The procedure is in [`ops-photos.md`](./ops-photos.md) §5 and comes down to:
+A client asking for their photos to be deleted is a request that must be honoured, not a feature request. The procedure is in [`ops-photos.md`](../runbooks/photos.md) §5 and comes down to:
 
 ```bash
 python scripts/photo_purge.py --owner-id <id>           # review

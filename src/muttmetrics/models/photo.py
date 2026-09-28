@@ -30,7 +30,7 @@ class Photo(Base):
 
     Bytes live on disk under the configured photo root; this table holds the
     metadata plus the relative storage_key that locates them. Deleting a
-    row does not delete the file - see docs/privacy.md for the procedure.
+    row does not delete the file - see docs/architecture/privacy.md for the procedure.
     """
 
     __tablename__ = "photo"

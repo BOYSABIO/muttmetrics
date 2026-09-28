@@ -43,30 +43,18 @@ These are **not** what MuttMetrics is *today*, and they are not the next milesto
 
 “Non-goal for now” ≠ “never.” See **Later ambition** below.
 
-We do **not** plan to buy MoeGo/Petleo and bolt on. If scheduling/booking is built later, it is **in-house** (salon website / calendar), with MuttMetrics still owning duration intelligence.
+If scheduling is built later, it is built **in-house**, with MuttMetrics still owning duration intelligence, rather than bolted onto a third-party salon suite.
 
 ## Later ambition
 
-Ideas we intend to keep alive. Many are already filed under milestone **M10 — Icebox** so they stay concrete on GitHub without blocking the capture-first path.
+Longer-range ideas are kept deliberately general here. The concrete ones sit in the **M10 — Icebox** milestone, so they stay out of the way of the capture-first path.
 
-| Theme | Direction |
-|--------|-----------|
-| Phone capture UI | React/TS SPA (#69–#72) is live; Jinja v0 (#63) retired (#86). Next is owner-layer (#41), not a rewrite of the API |
-| In-house booking / calendar | Website-facing booking integrated with how the salon already works — not a third-party suite |
-| WhatsApp | Optional intake/booking channel; **website remains primary** when booking exists |
-| CSV / bulk import | Optional tooling if historical dump is ever needed |
-| Photo at booking | Intake photos, manual condition score, matting report — pivot before the door |
-| Fitted model | Replace rules when `n` justifies it; beat the baseline or keep the prior |
-| Owner layer | Care protocols, dog-specific intervals, salon-branded dog pages |
-| Vision | Models on intake photos once labels exist |
-| Duration → schedule | Push P50/P90 into the in-house calendar so blocks match reality |
-| Retail | Product recommendations as the end of care advice — not banners |
-| Multi-salon | Only if the single-shop loop is proven |
-| Content | Before/after cards, equipment ROI from utilization data |
-| Consumables / inventory | Shampoo, conditioner, creams, tools — COGS and equipment ROI adjacency (icebox) |
-| Salon cost base / P&L context | Rent, utilities, and similar fixed costs as analytics context for pricing and capacity — **not** invoicing or payments |
+- **Scheduling that uses the ranges:** duration predictions feeding how the day is actually booked.
+- **Richer inputs:** intake photos and condition, and fitted models once there's enough data to beat the rules.
+- **An owner-facing layer:** built on the same data, only after capture and prediction work.
+- **Beyond one shop:** only if the single-shop loop is proven.
 
-The ambitious end-state is still an **intelligence layer on owned data**, with booking built ourselves when we need it — not a rush to clone a salon suite.
+The end state is an **intelligence layer on owned data**, not a salon suite.
 
 ## How to read the repo
 
@@ -74,7 +62,7 @@ The ambitious end-state is still an **intelligence layer on owned data**, with b
 |----------|-----|
 | This file | Why the project exists; boundaries; long-range ambition |
 | GitHub milestones / issues | What to do next |
-| `docs/adr/` | Engineering decisions (stack, schema policies, …) |
+| `docs/architecture/adr/` | Engineering decisions (stack, schema policies, …) |
 | README | Setup and one-line pitch |
 
 ## Success signals

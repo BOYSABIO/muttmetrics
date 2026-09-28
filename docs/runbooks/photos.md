@@ -1,8 +1,8 @@
 # Ops: capture photos — where they live, how to move them, how to delete them
 
-Operational reference for photo storage ([#30](https://github.com/BOYSABIO/muttmetrics/issues/30)). Design rationale is in [ADR-002](./adr/002-photo-storage.md); the privacy policy this implements is in [`privacy.md`](./privacy.md).
+Operational reference for photo storage ([#30](https://github.com/BOYSABIO/muttmetrics/issues/30)). Design rationale is in [ADR-002](../architecture/adr/002-photo-storage.md); the privacy policy this implements is in [`privacy.md`](../architecture/privacy.md).
 
-Related: [`ops-db-peek.md`](./ops-db-peek.md) (looking at rows), [`ops-enrichment.md`](./ops-enrichment.md) (fixing rows), [`ops-handoff-trial.md`](./ops-handoff-trial.md) (running the stack).
+Related: [`ops-db-peek.md`](./db-peek.md) (looking at rows), [`ops-enrichment.md`](./enrichment.md) (fixing rows), [`ops-handoff-trial.md`](./groomer-trial.md) (running the stack).
 
 ---
 
@@ -106,7 +106,7 @@ python scripts/photo_purge.py --owner-id 42 --apply
 
 The script deletes **files first, then rows** — the reverse of the write order, for the same reason: never leave a row pointing at bytes that are gone.
 
-3. **Backups still contain the photos** until the retention window in [`privacy.md`](./privacy.md) passes. Tell the client that; do not claim an instant total erase.
+3. **Backups still contain the photos** until the retention window in [`privacy.md`](../architecture/privacy.md) passes. Tell the client that; do not claim an instant total erase.
 
 A browser that displayed a photo may also keep it in its cache for up to an hour (`Cache-Control: private, max-age=3600`).
 

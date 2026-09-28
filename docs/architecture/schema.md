@@ -131,7 +131,7 @@ Reference tables only — no FKs to other entities. See model files for full col
 | What the bytes are | `content_type`, `byte_size`, `sha256` |
 | When | `created_at` (timestamptz, needed for retention and the orphan sweep) |
 
-Constraints: `kind` is checked; a `profile` photo must have no `visit_id` while `intake` / `after` must have one; `byte_size > 0`. Foreign keys deliberately have **no `ON DELETE CASCADE`** — Postgres cannot delete files, so a cascade would strand bytes on disk. Deletion goes through `scripts/photo_purge.py` (see [`ops-photos.md`](./ops-photos.md)).
+Constraints: `kind` is checked; a `profile` photo must have no `visit_id` while `intake` / `after` must have one; `byte_size > 0`. Foreign keys deliberately have **no `ON DELETE CASCADE`** — Postgres cannot delete files, so a cascade would strand bytes on disk. Deletion goes through `scripts/photo_purge.py` (see [`ops-photos.md`](../runbooks/photos.md)).
 
 **Deprecated:** `visit.intake_photos` and `visit.after_photos` (`TEXT[]` of URLs) are superseded by this table. They remain in the schema until nothing reads them — [#98](https://github.com/BOYSABIO/muttmetrics/issues/98) drops them. Do not add new writers.
 
@@ -142,7 +142,7 @@ Constraints: `kind` is checked; a `profile` photo must have no `visit_id` while 
 - **Query indexes** (migration `bba4e6f67c96`, issue #9): FK columns on `dog` and `visit`, plus `visit.visit_date` — for owner/dog listings, visit history, day packing, and service-mix queries.
 - **Required columns:** `owner.name`, `dog.name`, `visit.visit_date`, `visit.actual_minutes`.
 - **Service prices:** `service.price_base` is an optional catalog **floor**. Committed seed leaves it NULL; a gitignored `data/private/pricing.json` overlay fills it locally. Size bands live on `dog`; on-the-spot charge on `visit.quoted_price` / `final_price` / `tip`.
-- **Migrations:** Alembic — `alembic upgrade head` applies schema. See [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+- **Migrations:** Alembic — `alembic upgrade head` applies schema. See [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
 - **Seed:** `python -m muttmetrics.seed` upserts breeds + services (idempotent).
 
 ### Indexes (issue #9)

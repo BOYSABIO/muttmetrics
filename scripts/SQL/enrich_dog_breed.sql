@@ -1,5 +1,5 @@
 -- Recipe: set dog.breed_id (and optional breed_secondary_id).
--- See docs/ops-enrichment.md — "Set a dog's breed".
+-- See docs/runbooks/enrichment.md — "Set a dog's breed".
 -- Replace placeholders before running. No real PII in committed copies.
 
 -- ---------------------------------------------------------------------------
@@ -14,7 +14,7 @@ WHERE d.dog_id = 123;   -- <-- placeholder dog_id
 -- SELECT d.dog_id, d.name, o.name AS owner_name
 -- FROM dog d
 -- JOIN owner o ON o.owner_id = d.owner_id
--- WHERE d.name ILIKE '%Milla%';
+-- WHERE d.name ILIKE '%DogName%';
 
 -- ---------------------------------------------------------------------------
 -- 2) Pick breed_id from catalog (or run lookup_breeds.sql)

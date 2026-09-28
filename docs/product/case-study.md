@@ -1,6 +1,6 @@
 # Case study: building a data layer for a business that had none
 
-> A write-up of why MuttMetrics exists, how it was approached, and what a real field trial changed. Setup and code are in the [README](../README.md). The product framing is in [`VISION.md`](./VISION.md).
+> A write-up of why MuttMetrics exists, how it was approached, and what a real field trial changed. Setup and code are in the [README](../../README.md). The product framing is in [`VISION.md`](./vision.md).
 > Business details are left general on purpose: the salon isn't named, and nothing here identifies a client, a dog or an owner.
 
 ---
@@ -27,7 +27,7 @@ So the question wasn't "what schema would be ideal?" It was **"what can realisti
 
 **1. Start from an empty database and grow it row by row.** No historical import. Each completed groom becomes a `visit` row, entered on the groomer's phone browser in the shop. If the rows don't get written, nothing else matters, so capture compliance is the product gate.
 
-**2. Let capture design drive the schema, not the reverse.** The `visit` table is the fact table, and its one mandatory label is `actual_minutes`, the thing everything later tries to predict. Columns are split by where they come from ([ADR-001](./adr/001-derived-fields.md)):
+**2. Let capture design drive the schema, not the reverse.** The `visit` table is the fact table, and its one mandatory label is `actual_minutes`, the thing everything later tries to predict. Columns are split by where they come from ([ADR-001](../architecture/adr/001-derived-fields.md)):
 - **hand-entered** at the groom, kept short;
 - **system-computed at write** (e.g. days since the last visit);
 - **derived** by recompute jobs (visit counts, average duration, typical rebook interval).
@@ -38,7 +38,7 @@ The groomer only ever sees the first group.
 
 **4. Honest priors before any model.** The first prediction target is a *range* (P50/P90) from rules and reference priors per breed and service, with prediction error logged from day one. A fitted model only replaces the rules once there's enough data to beat them.
 
-**5. Privacy by construction.** Photos are stored as files outside the repository, with only metadata in Postgres ([ADR-002](./adr/002-photo-storage.md)). Every upload is decoded, rotated, **stripped of EXIF** (no GPS coordinates from a phone ever reach disk), downscaled and re-encoded. Deletion is deliberate application code, not a database cascade, so files are never stranded or silently kept.
+**5. Privacy by construction.** Photos are stored as files outside the repository, with only metadata in Postgres ([ADR-002](../architecture/adr/002-photo-storage.md)). Every upload is decoded, rotated, **stripped of EXIF** (no GPS coordinates from a phone ever reach disk), downscaled and re-encoded. Deletion is deliberate application code, not a database cascade, so files are never stranded or silently kept.
 
 **Stack:** Python · Postgres · SQLAlchemy · Alembic · FastAPI, with a Vite + React + TypeScript phone app for capture. It started as a thin server-rendered form and was retired once the SPA proved itself.
 
