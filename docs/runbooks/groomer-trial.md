@@ -129,14 +129,18 @@ Send this part to User; it is all they need.
 1. **Open** `http://10.x.x.x:5174` (Tailscale must be on). Add it to the home screen for next time.
 2. **Find the dog:** type part of the name → **Search** → tap the right row (the owner name is shown next to it).
 3. **New client** (first visit only): tap **New client** → owner name → dog name → continue. Breed and the rest get filled in later by Owner; do not worry about them.
-4. **Step 1 — photo:** skip it. Leave the field empty and continue.
+4. **Step 1 — before photo:** tap **Take photo** to use the camera, or **Choose photo** to pick one already on the phone. Optional, but it is the picture of how the dog arrived. Tap **Remove** to change it.
 5. **Step 2 — timer:** press **Start** when you start the groom, **Stop** when you finish. If you forget, type the minutes in by hand. Minutes is the one number that matters.
-6. **Step 3 — details:** the date is already today. Condition score and "what surprised me" are optional but useful. Tap **Save visit** **once** and wait for the green confirmation with a visit number.
+6. **Step 3 — details and after photo:** the date is already today. Condition score and "what surprised me" are optional but useful, and an **after photo** can be added here. Tap **Save visit** and wait — the button says "Saving…" while it works, and photos take a few seconds over the tunnel. The confirmation shows a visit number and how many photos went up.
 7. **If anything fails:** write the dog name and the minutes on paper and tell Owner. Nothing is lost — it can be added later.
 
-**Must fill:** the dog (found or newly created) and the minutes. **Everything else can be skipped.**
+**Must fill:** the dog (found or newly created) and the minutes. **Everything else, photos included, can be skipped.**
 
-Known rough edges, do not fix mid-trial: tapping **Save** twice may create two visits. Mid-groom reload keeps the timer via browser draft storage ([#88](https://github.com/BOYSABIO/muttmetrics/issues/88)).
+**Photos are optional and never block a save.** If an upload fails, the visit is still saved and the message says how many photos made it — do not re-enter the visit.
+
+Mid-groom reload keeps the timer via browser draft storage ([#88](https://github.com/BOYSABIO/muttmetrics/issues/88)), but a **chosen photo cannot be kept** — the app says so on resume and the photo has to be picked again.
+
+Photos are re-encoded server-side: metadata (including GPS) is stripped and the image is downscaled ([#30](https://github.com/BOYSABIO/muttmetrics/issues/30) / [`photos.md`](./photos.md)). Files live under `PHOTO_ROOT`, not in the repo.
 
 ---
 

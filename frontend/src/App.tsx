@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import { PhotoPicker } from './PhotoPicker'
 
 type TimerStatus = 'idle' | 'running' | 'stopped'
 
@@ -46,6 +47,12 @@ function apiHeaders(): HeadersInit {
     'Content-Type': 'application/json',
     'X-API-Key': import.meta.env.VITE_API_KEY,
   }
+}
+
+function apiKeyOnlyHeaders(): HeadersInit {
+  // No Content-Type: the browser must set multipart/form-data itself
+  // because it has to append the boundary marker that separates parts
+  return { 'X-API-Key': import.meta.env.VITE_API_KEY }
 }
 
 async function readJson(res: Response): Promise<unknown> {
@@ -102,6 +109,23 @@ async function searchDogs(q: string): Promise<DogSearchItem[]> {
   return data as DogSearchItem[]
 }
 
+async function uploadPhoto(
+  visitId: number,
+  file: File,
+  kind: 'intake' | 'after',
+): Promise<void> {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('kind', kind)
+
+  const res = await fetch(`/api/visits/${visitId}/photos`, {
+    method: 'POST',
+    headers: apiKeyOnlyHeaders(),
+    body: form,
+  })
+  await readJson(res) // throws with the honest message
+}
+
 const DRAFT_KEY = 'muttmetrics.draftVisit'
 const DRAFT_MAX_AGE_MS = 12 * 60 * 60 * 1000 // 12 hours
 
@@ -114,7 +138,8 @@ type DraftVisit = {
   visitDate: string
   conditionScore: string
   surprise: string
-  beforePhotoUrl: string
+  hadIntakeFile: boolean
+  hadAfterFile: boolean
   savedAt: number
 }
 
@@ -177,10 +202,14 @@ function App() {
   const [mode, setMode] = useState<Mode>('search')
   const [selectedDog, setSelectedDog] = useState<SelectedDog | null>(null)
   const [visitStep, setVisitStep] = useState<VisitStep>(1)
-  const [beforePhotoUrl, setBeforePhotoUrl] = useState('')
+  const [intakeFile, setIntakeFile] = useState<File | null>(null)
+  const [afterFile, setAfterFile] = useState<File | null>(null)
   const [timerStatus, setTimerStatus] = useState<TimerStatus>('idle')
   const [startedAt, setStartedAt] = useState<number | null>(null)
   const [tickNow, setTickNow] = useState(() => Date.now())
+  // One in-flight guard for both write flows: a second tap while a request
+  // is running creates duplicate visits / owners (#92 phone trial).
+  const [isBusy, setIsBusy] = useState(false)
 
   useEffect(() => {
     const draft = loadDraft()
@@ -196,10 +225,24 @@ function App() {
     setVisitDate(draft.visitDate)
     setConditionScore(draft.conditionScore)
     setSurprise(draft.surprise)
-    setBeforePhotoUrl(draft.beforePhotoUrl)
     setMode('visit')
     setTickNow(Date.now())
-    setMessage(`Resumed timer for ${draft.selectedDog.dog_name}`)
+    
+    const lost: string[] = []
+    if (draft.hadIntakeFile) {
+      lost.push('before')
+      if (draft.hadAfterFile) {
+        lost.push('after')
+      }
+
+      setMessage(
+        lost.length === 0
+        ? `Resumed timer for ${draft.selectedDog.dog_name}`
+        : `Resumed timer for ${draft.selectedDog.dog_name} - the ${lost.join(' and ')} ` +
+          `photo${lost.length > 1 ? 's' : ''} could not be kept, please pick ` +
+          `${lost.length > 1 ? 'them' : 'it'} again`,
+      )
+    }
   }, []) // empty deps = run once after first paint
 
   useEffect(() => {
@@ -217,7 +260,8 @@ function App() {
       visitDate,
       conditionScore,
       surprise,
-      beforePhotoUrl,
+      hadIntakeFile: intakeFile !== null,
+      hadAfterFile: afterFile !== null,
     })
   }, [
     selectedDog,
@@ -229,7 +273,8 @@ function App() {
     visitDate,
     conditionScore,
     surprise,
-    beforePhotoUrl,
+    intakeFile,
+    afterFile,
   ])
 
   useEffect(() => {
@@ -279,7 +324,11 @@ function App() {
       setMessage('No dog selected - go back and pick one.')
       return
     }
+    if (isBusy) {
+      return
+    }
 
+    setIsBusy(true)
     setMessage('Saving...')
     try {
       const visitBody: Record<string, unknown> = {
@@ -295,9 +344,6 @@ function App() {
       if (surprise.trim() !== '') {
         visitBody.what_surprised_me = surprise.trim()
       }
-      if (beforePhotoUrl.trim() !== '') {
-        visitBody.intake_photos = [beforePhotoUrl.trim()]
-      }
 
       const visitRes = await fetch('/api/visits', {
         method: 'POST',
@@ -305,26 +351,68 @@ function App() {
         body: JSON.stringify(visitBody),
       })
       const visit = (await readJson(visitRes)) as { visit_id: number }
+      const savedId = visit.visit_id
+
+      // The visit is saved from here on. Nothing below may claim otherwise
+      const photoJobs: Array<[File, 'intake' | 'after']> = []
+      if (intakeFile !== null) {
+        photoJobs.push([intakeFile, 'intake'])
+      }
+      if (afterFile !== null) {
+        photoJobs.push([afterFile, 'after'])
+      }
+
+      let photoNote = ''
+      if (photoJobs.length > 0) {
+        setMessage(`Visit saved - uploading ${photoJobs.length} photos...`)
+
+        let uploaded = 0
+        for (const [file, kind] of photoJobs) {
+          try {
+            await uploadPhoto(savedId, file, kind)
+            uploaded += 1
+          } catch (error) {
+            // Never rethrow: the visit is already saved and the outer catch
+            // would tell the user it was not
+            console.error(error)
+          }
+        }
+
+        photoNote =
+          uploaded === photoJobs.length
+          ? ` · ${uploaded} photo(s)`
+          : ` · only ${uploaded}/${photoJobs.length} photos uploaded - visit is safe`
+      }
 
       clearDraft()
       setMessage(
-        `Saved visit_id=${visit.visit_id} (${selectedDog.dog_name} · ${selectedDog.owner_name})`,
+        `Saved visit_id=${savedId} (${selectedDog.dog_name} · ${selectedDog.owner_name})${photoNote}`,
       )
+
       setSelectedDog(null)
       setConditionScore('')
       setSurprise('')
       setVisitStep(1)
-      setBeforePhotoUrl('')
+      setIntakeFile(null)
+      setAfterFile(null)
       setVisitDate(todayISODate())
       resetTimer()
       setMode('search')
     } catch (error) {
       setMessage(`Not saved — try again`)
       console.error(error)
+    } finally {
+      // Always re-enable, or one failed save locks the screen until a reload.
+      setIsBusy(false)
     }
   }
 
   async function continueNewClient() {
+    if (isBusy) {
+      return
+    }
+
+    setIsBusy(true)
     setMessage('Creating...')
     try {
       const ownerRes = await fetch('/api/owners', {
@@ -357,7 +445,8 @@ function App() {
         owner_name: owner.name,
       })
       setVisitStep(1)
-      setBeforePhotoUrl('')
+      setIntakeFile(null)
+      setAfterFile(null)
       setVisitDate(todayISODate())
       resetTimer()
       setMode('visit')
@@ -365,6 +454,8 @@ function App() {
     } catch (error) {
       setMessage(`Could not create client — try again`)
       console.error(error)
+    } finally {
+      setIsBusy(false)
     }
   }
 
@@ -435,7 +526,8 @@ function App() {
                     setMode('visit')
                     setMessage('')
                     setVisitStep(1)
-                    setBeforePhotoUrl('')
+                    setIntakeFile(null)
+                    setAfterFile(null)
                     setVisitDate(todayISODate())
                     resetTimer()
                   }}
@@ -471,8 +563,8 @@ function App() {
               onChange={(e) => setDogName(e.target.value)}
             />
           </p>
-          <button type="button" onClick={continueNewClient}>
-            Continue to visit
+          <button type="button" onClick={continueNewClient} disabled={isBusy}>
+            {isBusy ? 'Creating…' : 'Continue to visit'}
           </button>
           <button
             type="button"
@@ -497,19 +589,13 @@ function App() {
 
           {visitStep === 1 && (
             <>
-              <p>
-                <label htmlFor="before_photo">
-                  Before photo link (optional — upload later)
-                </label>
-                <br />
-                <input
-                  id="before_photo"
-                  type="url"
-                  value={beforePhotoUrl}
-                  onChange={(e) => setBeforePhotoUrl(e.target.value)}
-                  placeholder="https://…"
-                />
-              </p>
+              <PhotoPicker
+                label="Before photo (optional)"
+                inputId="intake-photo"
+                file={intakeFile}
+                onPick={setIntakeFile}
+                disabled={isBusy}
+              />
               <button type="button" onClick={() => setVisitStep(2)}>
                 Continue
               </button>
@@ -606,8 +692,17 @@ function App() {
                   onChange={(e) => setSurprise(e.target.value)}
                 />
               </p>
-              <button type="button" onClick={saveVisit}>
-                Save visit
+
+              <PhotoPicker
+                label="After photo (optional)"
+                inputId="after-photo"
+                file={afterFile}
+                onPick={setAfterFile}
+                disabled={isBusy}
+              />
+
+              <button type="button" onClick={saveVisit} disabled={isBusy}>
+                {isBusy ? 'Saving…' : 'Save visit'}
               </button>
               <button type="button" onClick={() => setVisitStep(2)}>
                 Back
@@ -621,7 +716,8 @@ function App() {
               clearDraft()
               setSelectedDog(null)
               setVisitStep(1)
-              setBeforePhotoUrl('')
+              setIntakeFile(null)
+              setAfterFile(null)
               resetTimer()
               setMode('search')
               setMessage('')

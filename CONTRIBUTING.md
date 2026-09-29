@@ -225,13 +225,20 @@ Never commit real `.env` values. CI/tests set `API_KEY` via monkeypatch.
 | Returning dog (pick from search) | `GET /dogs?q=` → **only** `POST /visits` with known ids |
 | New client | `POST /owners` → `POST /dogs` (create-or-get) → `POST /visits` |
 
-**Visit wizard (#72)** once identity is known (3 steps):
+**Visit wizard (#72, photos #92)** once identity is known (3 steps):
 
-1. Optional before-photo **URL** stub → `intake_photos` (camera upload later — out of scope)  
+1. Optional **before photo** — `PhotoPicker` component: *Take photo* (`capture="environment"`, camera) or *Choose photo* (library), with a blob-URL preview  
 2. Timer — Start / Stop / Reset; elapsed → `actual_minutes` via **floor** (`Math.floor(ms / 60000)`); manual minutes always allowed  
-3. Details — `visit_date` defaults to **today** (local), optional condition / surprise → Save → back to search  
+3. Details — `visit_date` defaults to **today** (local), optional condition / surprise, optional **after photo** → Save → back to search  
 
-UI labels are **English** (salon business language). Still a thin `POST /visits` client — no new visit endpoints.
+UI labels are **English** (salon business language).
+
+**Photo upload flow (#92).** The upload endpoint needs a `visit_id`, so files are held in React state and posted **after** `POST /visits` returns. Rules that are easy to break:
+
+- **`apiKeyOnlyHeaders()`, not `apiHeaders()`** for the upload — a multipart body must not carry a `Content-Type` header, because the browser has to set it with the boundary marker it generates
+- **Each upload has its own `try`/`catch`** — the visit is already saved, and `saveVisit`'s outer catch says "Not saved", which would be a lie
+- **A `File` cannot be persisted.** The #88 draft stores `hadIntakeFile` / `hadAfterFile` booleans so the resume message can say the photo was not kept
+- **`isBusy` guards both write flows.** Save and new-client Continue are disabled in flight; without it a slow phone upload invites repeat taps and duplicate rows (missed in #87, fixed in #92)
 
 **Prerequisites:** Node.js LTS (18+), repo `.env` with `API_KEY`, Postgres up, API running.
 
