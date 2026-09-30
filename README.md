@@ -3,7 +3,7 @@
 Duration intelligence for a dog grooming business: structured visit data and P50/P90 duration ranges so the day can be packed against variance — not a booking or CRM system.
 
 **Stack:** Python · Postgres · SQLAlchemy 2.x · Alembic · FastAPI · Vite + React + TS (capture SPA)  
-**Status:** Capture running on real grooms. The React capture SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)–[#72](https://github.com/BOYSABIO/muttmetrics/issues/72)) is the only groomer UI — Jinja `/capture` retired ([#86](https://github.com/BOYSABIO/muttmetrics/issues/86)). Trial fixes landed: honest SPA/API errors ([#87](https://github.com/BOYSABIO/muttmetrics/issues/87)), timer survives a killed tab ([#88](https://github.com/BOYSABIO/muttmetrics/issues/88)). Photo capture end to end: storage ([#30](https://github.com/BOYSABIO/muttmetrics/issues/30), [ADR-002](docs/architecture/adr/002-photo-storage.md)) and phone upload from camera or library ([#92](https://github.com/BOYSABIO/muttmetrics/issues/92)). Host remains the maintainer's desktop ([#82](https://github.com/BOYSABIO/muttmetrics/issues/82) runbook). Next: scheduled DB backup ([#95](https://github.com/BOYSABIO/muttmetrics/issues/95)). OptiPlex always-on ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) iceboxed until shop ready. CSV backfill deferred.  
+**Status:** Capture running on real grooms. The React capture SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)–[#72](https://github.com/BOYSABIO/muttmetrics/issues/72)) is the only groomer UI — Jinja `/capture` retired ([#86](https://github.com/BOYSABIO/muttmetrics/issues/86)). Trial fixes landed: honest SPA/API errors ([#87](https://github.com/BOYSABIO/muttmetrics/issues/87)), timer survives a killed tab ([#88](https://github.com/BOYSABIO/muttmetrics/issues/88)). Photo capture end to end: storage ([#30](https://github.com/BOYSABIO/muttmetrics/issues/30), [ADR-002](docs/architecture/adr/002-photo-storage.md)) and phone upload from camera or library ([#92](https://github.com/BOYSABIO/muttmetrics/issues/92)). Host remains the maintainer's desktop ([#82](https://github.com/BOYSABIO/muttmetrics/issues/82) runbook). Backups in place ([#95](https://github.com/BOYSABIO/muttmetrics/issues/95)): dump + photo copy, retention, staleness check — run manually for now, scheduling documented. Next: M3.5 exit checks ([#84](https://github.com/BOYSABIO/muttmetrics/issues/84)). OptiPlex always-on ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) iceboxed until shop ready. CSV backfill deferred.  
 
 ## Documentation
 
@@ -13,7 +13,7 @@ Duration intelligence for a dog grooming business: structured visit data and P50
 |---|---|
 | **Product** | [Case study](docs/product/case-study.md) · [Vision](docs/product/vision.md) |
 | **Architecture** | [Schema](docs/architecture/schema.md) · [Privacy](docs/architecture/privacy.md) · [ADRs](docs/architecture/adr/) |
-| **Runbooks** | [Groomer trial](docs/runbooks/groomer-trial.md) · [DB peek](docs/runbooks/db-peek.md) · [Enrichment](docs/runbooks/enrichment.md) · [Photos](docs/runbooks/photos.md) |
+| **Runbooks** | [Groomer trial](docs/runbooks/groomer-trial.md) · [DB peek](docs/runbooks/db-peek.md) · [Enrichment](docs/runbooks/enrichment.md) · [Photos](docs/runbooks/photos.md) · [Backups](docs/runbooks/backup.md) |
 | **Contributing** | [Setup](#setup) · [CONTRIBUTING](./CONTRIBUTING.md) |
 | **Planning** | [Milestones](https://github.com/BOYSABIO/muttmetrics/milestones) · [Issues](https://github.com/BOYSABIO/muttmetrics/issues) |
 

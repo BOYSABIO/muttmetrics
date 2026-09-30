@@ -111,10 +111,11 @@ Files are removed first, then rows.
 | Copy | When it goes |
 |------|--------------|
 | The file under `PHOTO_ROOT` and its `photo` row | immediately, when the purge runs |
-| Backup copies ([#95](https://github.com/BOYSABIO/muttmetrics/issues/95)) | when the backup retention window passes |
+| Database backup copies ([#95](https://github.com/BOYSABIO/muttmetrics/issues/95)) | **within 14 days** (daily tier), or **within 8 weeks** if the row was in a retained Sunday dump |
+| Photo backup copies | **immediately**, as a step of the purge procedure — the photo backup is additive and never expires on its own ([`backup.md`](../runbooks/backup.md) §6) |
 | A browser cache on a device that displayed the photo | within one hour (`Cache-Control: private, max-age=3600`) |
 
-Telling a client the deletion is instant and total would be false. Telling them the live copy is gone immediately and backup copies age out within the retention window is both true and defensible.
+Telling a client the deletion is instant and total would be false. What is true and defensible: the live copy and the photo backup go immediately, and any database backup still holding their rows is gone within 14 days (8 weeks at the outside, if a retained Sunday dump is involved).
 
 ### Access
 
