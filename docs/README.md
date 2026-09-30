@@ -27,6 +27,7 @@ Everything written about the project, grouped by what you're trying to do. **Tas
 | [DB peek](runbooks/db-peek.md) | You want to look at the data (editor or `psql`) with starter queries |
 | [Enrichment](runbooks/enrichment.md) | Adding detail to thinly captured rows safely |
 | [Photos](runbooks/photos.md) | Where photo files live, deleting them, the orphan sweep |
+| [Backups](runbooks/backup.md) | Running and checking backups, retention, scheduling, **restoring** |
 
 ## Conventions
 
