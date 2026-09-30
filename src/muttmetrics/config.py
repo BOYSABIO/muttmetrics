@@ -34,6 +34,11 @@ class Settings(BaseSettings):
         description="Directory where capture photos are stored (outside the repo)",
     )
 
+    backup_root: Path = Field(
+        default=Path.home() / "muttmetrics-data" / "backups",
+        description="Directory for database dumps and the photo backup copy",
+    )
+
 
 def get_settings() -> Settings:
     """
