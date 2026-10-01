@@ -82,8 +82,11 @@ Pruning only ever touches files matching `muttmetrics-*.dump` whose timestamp it
 ### Windows (current host)
 
 ```powershell
+# Resolve absolute paths once on the host (Task Scheduler needs them; don't paste a personal path into the repo):
+#   $py   = (Resolve-Path .\.venv\Scripts\python.exe).Path
+#   $script = (Resolve-Path .\scripts\backup.py).Path
 schtasks /Create /TN "MuttMetrics backup" /SC DAILY /ST 21:00 /F `
-  /TR "\"C:\Users\SABIO\Documents\BRAIN\PROJECTS\Dog-Grooming\MuttMetrics\.venv\Scripts\python.exe\" \"C:\Users\SABIO\Documents\BRAIN\PROJECTS\Dog-Grooming\MuttMetrics\scripts\backup.py\""
+  /TR "`"$py`" `"$script`""
 ```
 
 Then open Task Scheduler and set two things the command line cannot:
