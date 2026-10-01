@@ -18,6 +18,7 @@ This is a learning project built production-style: small issues, migrations for 
 | `pytest` | tests |
 | SQLAlchemy + Alembic | models + migrations (M1+) |
 | FastAPI | thin capture/predict API (M3+) |
+| `.gitattributes` | LF in repo — stops Windows CRLF whole-file diff noise |
 
 ```bash
 pip install -e ".[dev]"
