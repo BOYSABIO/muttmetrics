@@ -3,9 +3,9 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+import muttmetrics.models  # noqa: F401
 from muttmetrics.config import get_settings
 from muttmetrics.db.base import Base
-from muttmetrics.models import Breed, Dog, Owner, Service, Visit  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
