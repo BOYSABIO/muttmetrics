@@ -40,6 +40,7 @@ def create_visit(body: CreateVisitRequest, session: DbSession) -> VisitResponse:
         quoted_price=body.quoted_price,
         final_price=body.final_price,
         tip=body.tip,
+        shaved_down=body.shaved_down,
         status=body.status,
     )
     session.add(visit)

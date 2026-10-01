@@ -8,6 +8,7 @@ from muttmetrics.api.routes.health import router as health_router
 from muttmetrics.api.routes.owners import router as owners_router
 from muttmetrics.api.routes.photos import router as photos_router
 from muttmetrics.api.routes.ping import router as ping_router
+from muttmetrics.api.routes.services import router as services_router
 from muttmetrics.api.routes.visits import router as visits_router
 
 
@@ -33,6 +34,7 @@ def create_app() -> FastAPI:
     app.include_router(owners_router)
     app.include_router(dogs_router)
     app.include_router(photos_router)
+    app.include_router(services_router)
     return app
 
 

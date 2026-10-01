@@ -41,6 +41,7 @@ class CreateVisitRequest(BaseModel):
     quoted_price: float | None = None
     final_price: float | None = None
     tip: float | None = None
+    shaved_down: bool | None = None
     status: Literal["completed", "cancelled", "no_show"] | None = None
 
 

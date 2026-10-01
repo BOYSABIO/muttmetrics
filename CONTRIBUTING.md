@@ -189,6 +189,7 @@ uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --por
 | `http://127.0.0.1:8000/ping` | maintainer smoke | Auth check — requires `X-API-Key` |
 | `http://127.0.0.1:8000/owners` | Onboarding | `POST` create-or-get owner by name |
 | `http://127.0.0.1:8000/dogs` | Onboarding / directory | `POST` create-or-get; `GET` list/search (`?q=`) with `owner_name` |
+| `http://127.0.0.1:8000/services` | Capture | `GET` seeded package catalog for the SPA picker ([#110](https://github.com/BOYSABIO/muttmetrics/issues/110)) |
 | `http://127.0.0.1:8000/visits` | Capture | `POST` create visit — requires existing dog/owner ids |
 | `http://127.0.0.1:8000/visits/{id}/photos` | Capture | `POST` multipart photo upload; `GET` metadata list ([#30](https://github.com/BOYSABIO/muttmetrics/issues/30)) |
 | `http://127.0.0.1:8000/photos/{id}` | Capture | `GET` the JPEG bytes (API key required — an `<img src>` cannot fetch it) |
@@ -215,7 +216,7 @@ X-API-Key: <same value as API_KEY in .env>
 | Header `X-API-Key` | What callers send |
 | `require_api_key` in `src/muttmetrics/api/deps.py` | FastAPI dependency — 401 if missing/wrong |
 | `GET /health` | Stays **public** (no key) |
-| `GET /ping`, `GET /dogs`, `POST /owners`, `POST /dogs`, `POST /visits` | Protected |
+| `GET /ping`, `GET /dogs`, `GET /services`, `POST /owners`, `POST /dogs`, `POST /visits` | Protected |
 | `POST /visits/{id}/photos`, `GET /visits/{id}/photos`, `GET /photos/{id}` | Protected — these serve client photos |
 
 All write paths require `X-API-Key`. The unauthenticated Jinja `/capture` form is gone ([#86](https://github.com/BOYSABIO/muttmetrics/issues/86)).
@@ -240,11 +241,13 @@ Never commit real `.env` values. CI/tests set `API_KEY` via monkeypatch.
 | Returning dog (pick from search) | `GET /dogs?q=` → **only** `POST /visits` with known ids |
 | New client | `POST /owners` → `POST /dogs` (create-or-get) → `POST /visits` |
 
-**Visit wizard (#72, photos #92)** once identity is known (3 steps):
+**Visit wizard (#72, photos #92, money #110)** once identity is known (3 steps):
 
-1. Optional **before photo** — `PhotoPicker` component: *Take photo* (`capture="environment"`, camera) or *Choose photo* (library), with a blob-URL preview  
-2. Timer — Start / Stop / Reset; elapsed → `actual_minutes` via **floor** (`Math.floor(ms / 60000)`); manual minutes always allowed  
-3. Details — `visit_date` defaults to **today** (local), optional condition / surprise, optional **after photo** → Save → back to search  
+1. Optional **before photo** — `PhotoPicker` component: *Take photo* (`capture="environment"`, camera) or *Choose photo* (library), with a blob-URL preview
+2. Timer — Start / Stop / Reset; elapsed → `actual_minutes` via **floor** (`Math.floor(ms / 60000)`); manual minutes always allowed
+3. Details — `visit_date` defaults to **today** (local); **service** (required, from `GET /services`); **final price** (required); optional tip / quoted price; optional condition / surprise; optional **after photo** → Save → back to search
+
+Until booking exists, the SPA sets `booked_service_id = actual_service_id`. Step-3 detail fields clear via `resetVisitDetails()` on save / cancel / new dog so leftover prices don’t stick.
 
 UI labels are **English** (salon business language).
 
@@ -308,7 +311,8 @@ Blank names after normalize → **422**.
 Creates one `visit` row after a groom. Prefer registering via `#21` endpoints above instead of raw SQL.
 
 **Required JSON fields:** `dog_id`, `owner_id`, `visit_date`, `actual_minutes` (> 0).  
-**Optional:** `condition_score` (0–5), service ids, prices, photo URL lists, `what_surprised_me`, `status`.
+**SPA also requires for completed saves:** `actual_service_id`, `final_price` ([#110](https://github.com/BOYSABIO/muttmetrics/issues/110)).  
+**Optional:** `condition_score` (0–5), `booked_service_id`, `quoted_price`, `tip`, photo URL lists (deprecated), `what_surprised_me`, `status`, `shaved_down` (when wired).
 
 | Status | Meaning |
 |--------|---------|

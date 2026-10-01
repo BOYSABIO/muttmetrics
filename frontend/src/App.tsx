@@ -42,6 +42,15 @@ type DogSearchItem = {
   last_visit_date: string | null
 }
 
+type ServiceListItem = {
+  service_id: number
+  slug: string | null
+  name_en: string | null
+  name_de: string | null
+  base_minutes: number | null
+  price_base: number | null
+}
+
 function apiHeaders(): HeadersInit {
   return {
     'Content-Type': 'application/json',
@@ -109,6 +118,15 @@ async function searchDogs(q: string): Promise<DogSearchItem[]> {
   return data as DogSearchItem[]
 }
 
+async function listServices(): Promise<ServiceListItem[]> {
+  const res = await fetch('/api/services', {
+    method: 'GET',
+    headers: apiHeaders(),
+  })
+  const data = await readJson(res)
+  return data as ServiceListItem[]
+}
+
 async function uploadPhoto(
   visitId: number,
   file: File,
@@ -138,6 +156,11 @@ type DraftVisit = {
   visitDate: string
   conditionScore: string
   surprise: string
+  serviceId: string
+  finalPrice: string
+  tip: string
+  quotedPrice: string
+  shavedDown: boolean
   hadIntakeFile: boolean
   hadAfterFile: boolean
   savedAt: number
@@ -207,6 +230,12 @@ function App() {
   const [timerStatus, setTimerStatus] = useState<TimerStatus>('idle')
   const [startedAt, setStartedAt] = useState<number | null>(null)
   const [tickNow, setTickNow] = useState(() => Date.now())
+  const [services, setServices] = useState<ServiceListItem[]>([])
+  const [serviceId, setServiceId] = useState('')
+  const [finalPrice, setFinalPrice] = useState('')
+  const [tip, setTip] = useState('')
+  const [quotedPrice, setQuotedPrice] = useState('')
+  const [shavedDown, setShavedDown] = useState(false)
   // One in-flight guard for both write flows: a second tap while a request
   // is running creates duplicate visits / owners (#92 phone trial).
   const [isBusy, setIsBusy] = useState(false)
@@ -225,6 +254,11 @@ function App() {
     setVisitDate(draft.visitDate)
     setConditionScore(draft.conditionScore)
     setSurprise(draft.surprise)
+    setServiceId(draft.serviceId ?? '')
+    setFinalPrice(draft.finalPrice ?? '')
+    setTip(draft.tip ?? '')
+    setQuotedPrice(draft.quotedPrice ?? '')
+    setShavedDown(draft.shavedDown ?? false)
     setMode('visit')
     setTickNow(Date.now())
     
@@ -260,6 +294,11 @@ function App() {
       visitDate,
       conditionScore,
       surprise,
+      serviceId,
+      finalPrice,
+      tip,
+      quotedPrice,
+      shavedDown,
       hadIntakeFile: intakeFile !== null,
       hadAfterFile: afterFile !== null,
     })
@@ -275,6 +314,11 @@ function App() {
     surprise,
     intakeFile,
     afterFile,
+    serviceId,
+    finalPrice,
+    tip,
+    quotedPrice,
+    shavedDown,
   ])
 
   useEffect(() => {
@@ -286,6 +330,18 @@ function App() {
   
     return () => window.clearInterval(id)
   }, [timerStatus])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const rows = await listServices()
+        setServices(rows)
+      } catch (error) {
+        console.error(error)
+        setMessage('Could not load services - check API / seed')
+      }
+    })()
+  }, [])
 
   function startTimer() {
     const now = Date.now()
@@ -316,7 +372,18 @@ function App() {
     setStartedAt(null)
     setTickNow(Date.now())
     setActualMinutes('')
-    setMessage('')
+    // Do not clear `message` here — saveVisit sets a success line then calls
+    // resetTimer; wiping it made successful saves look like a no-op.
+  }
+
+  function resetVisitDetails() {
+    setConditionScore('')
+    setSurprise('')
+    setServiceId('')
+    setFinalPrice('')
+    setTip('')
+    setQuotedPrice('')
+    setShavedDown(false)
   }
 
   async function saveVisit() {
@@ -325,6 +392,14 @@ function App() {
       return
     }
     if (isBusy) {
+      return
+    }
+    if (serviceId.trim() === '' || Number(serviceId) < 1) {
+      setMessage('Pick a service package.')
+      return
+    }
+    if (finalPrice.trim() === '' || Number(finalPrice) < 0 || Number.isNaN(Number(finalPrice))) {
+      setMessage('Enter a final price (€).')
       return
     }
 
@@ -337,12 +412,22 @@ function App() {
         visit_date: visitDate,
         actual_minutes: Number(actualMinutes),
         status: 'completed',
+        actual_service_id: Number(serviceId),
+        booked_service_id: Number(serviceId), // until booking exists: booked = actual
+        final_price: Number(finalPrice),
+        shaved_down: shavedDown,
       }
       if (conditionScore.trim() !== '') {
         visitBody.condition_score = Number(conditionScore)
       }
       if (surprise.trim() !== '') {
         visitBody.what_surprised_me = surprise.trim()
+      }
+      if (tip.trim() !== '') {
+        visitBody.tip = Number(tip)
+      }
+      if (quotedPrice.trim() !== '') {
+        visitBody.quoted_price = Number(quotedPrice)
       }
 
       const visitRes = await fetch('/api/visits', {
@@ -385,19 +470,17 @@ function App() {
       }
 
       clearDraft()
-      setMessage(
-        `Saved visit_id=${savedId} (${selectedDog.dog_name} · ${selectedDog.owner_name})${photoNote}`,
-      )
-
       setSelectedDog(null)
-      setConditionScore('')
-      setSurprise('')
+      resetVisitDetails()
       setVisitStep(1)
       setIntakeFile(null)
       setAfterFile(null)
       setVisitDate(todayISODate())
       resetTimer()
       setMode('search')
+      setMessage(
+        `Saved visit_id=${savedId} (${selectedDog.dog_name} · ${selectedDog.owner_name})${photoNote}`,
+      )
     } catch (error) {
       setMessage(`Not saved — try again`)
       console.error(error)
@@ -444,6 +527,7 @@ function App() {
         dog_name: dog.name,
         owner_name: owner.name,
       })
+      resetVisitDetails()
       setVisitStep(1)
       setIntakeFile(null)
       setAfterFile(null)
@@ -523,6 +607,7 @@ function App() {
                       dog_name: dog.name,
                       owner_name: dog.owner_name,
                     })
+                    resetVisitDetails()
                     setMode('visit')
                     setMessage('')
                     setVisitStep(1)
@@ -671,6 +756,60 @@ function App() {
                 />
               </p>
               <p>
+                <label htmlFor="service_id">Service</label>
+                <br />
+                <select
+                  id="service_id"
+                  value={serviceId}
+                  onChange={(e) => setServiceId(e.target.value)}
+                  disabled={isBusy || services.length === 0}
+                >
+                  <option value="">Select package…</option>
+                  {services.map((s) => (
+                    <option key={s.service_id} value={String(s.service_id)}>
+                      {s.name_en ?? s.slug ?? `Service ${s.service_id}`}
+                      {s.base_minutes != null ? ` (~${s.base_minutes} min)` : ''}
+                    </option>
+                  ))}
+                </select>
+              </p>
+              <p>
+                <label htmlFor="final_price">Final price (€)</label>
+                <br />
+                <input
+                  id="final_price"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={finalPrice}
+                  onChange={(e) => setFinalPrice(e.target.value)}
+                />
+              </p>
+              <p>
+                <label htmlFor="tip">Tip (€, optional)</label>
+                <br />
+                <input
+                  id="tip"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={tip}
+                  onChange={(e) => setTip(e.target.value)}
+                />
+              </p>
+              <p>
+                <label htmlFor="quoted_price">Quoted price (€, optional)</label>
+                <br />
+                <input
+                  id="quoted_price"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={quotedPrice}
+                  onChange={(e) => setQuotedPrice(e.target.value)}
+                />
+              </p>
+              <p>
                 <label htmlFor="condition_score">Condition (0–5, optional)</label>
                 <br />
                 <input
@@ -681,6 +820,18 @@ function App() {
                   value={conditionScore}
                   onChange={(e) => setConditionScore(e.target.value)}
                 />
+              </p>
+              <p>
+                <label htmlFor="shaved_down">
+                  <input
+                    id="shaved_down"
+                    type="checkbox"
+                    checked={shavedDown}
+                    onChange={(e) => setShavedDown(e.target.checked)}
+                    disabled={isBusy}
+                  />{' '}
+                  Shaved down
+                </label>
               </p>
               <p>
                 <label htmlFor="surprise">What surprised me (optional)</label>
@@ -715,6 +866,7 @@ function App() {
             onClick={() => {
               clearDraft()
               setSelectedDog(null)
+              resetVisitDetails()
               setVisitStep(1)
               setIntakeFile(null)
               setAfterFile(null)
