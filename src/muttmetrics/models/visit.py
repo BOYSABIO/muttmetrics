@@ -71,7 +71,6 @@ class Visit(Base):
     booking_channel: Mapped[str | None] = mapped_column(String, nullable=True)
     is_emergency: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     days_since_last: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    intake_photos: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
     predicted_min_p50: Mapped[int | None] = mapped_column(Integer, nullable=True)
     predicted_min_p90: Mapped[int | None] = mapped_column(Integer, nullable=True)
     quoted_price: Mapped[float | None] = mapped_column(Numeric, nullable=True)
@@ -97,7 +96,6 @@ class Visit(Base):
     # Qualitative
     what_surprised_me: Mapped[str | None] = mapped_column(Text, nullable=True)
     behaviour_this_visit: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    after_photos: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
 
     # Status
     status: Mapped[str | None] = mapped_column(String, nullable=True)

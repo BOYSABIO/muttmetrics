@@ -1,6 +1,7 @@
 -- Recipe: fix / enrich a visit row (event facts only).
 -- See docs/runbooks/enrichment.md — "Fix / enrich a visit".
 -- Do NOT set days_since_last or predicted_min_*.
+-- Photos live in the photo table (API upload / photo_purge) — not on visit.
 
 -- ---------------------------------------------------------------------------
 -- 1) Inspect
@@ -12,7 +13,9 @@ SELECT
   v.condition_score,
   v.what_surprised_me,
   v.status,
-  v.intake_photos,
+  v.actual_service_id,
+  v.final_price,
+  v.tip,
   d.name AS dog_name,
   o.name AS owner_name
 FROM visit v
@@ -32,13 +35,16 @@ SET
   condition_score = 3,                      -- <-- 0–5 or NULL
   what_surprised_me = 'Example note only',  -- <-- placeholder text
   status = 'completed',                     -- completed | cancelled | no_show
-  intake_photos = ARRAY['https://example.com/before.jpg']  -- or NULL
+  actual_service_id = 4,                    -- <-- optional; from service catalog
+  final_price = 75.00,                      -- <-- optional
+  tip = 10.00                               -- <-- optional
 WHERE visit_id = 123;
 
 -- ---------------------------------------------------------------------------
 -- 3) Verify
 -- ---------------------------------------------------------------------------
-SELECT visit_id, visit_date, actual_minutes, condition_score, what_surprised_me, status, intake_photos
+SELECT visit_id, visit_date, actual_minutes, condition_score, what_surprised_me,
+       status, actual_service_id, final_price, tip
 FROM visit
 WHERE visit_id = 123;
 

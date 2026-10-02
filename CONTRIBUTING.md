@@ -156,7 +156,7 @@ Deps: `pillow` (decode/encode), `pillow-heif` (iPhone HEIC), `python-multipart` 
 
 **Rules worth not relearning the hard way:** the database stores a *relative* key, so moving the host is a config change; the file is written **before** the row, because an orphan file is removable litter while a row without its file is a broken promise; foreign keys have no `ON DELETE CASCADE`, because Postgres cannot delete files and a cascade would strand them.
 
-`visit.intake_photos` / `after_photos` are **deprecated** and will be dropped in [#98](https://github.com/BOYSABIO/muttmetrics/issues/98) — do not add new writers.
+Visit photos live only in the `photo` table — the old `visit.*_photos` URL arrays were dropped in [#98](https://github.com/BOYSABIO/muttmetrics/issues/98).
 
 ## Seed reference data
 

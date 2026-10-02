@@ -35,9 +35,11 @@ Three entities, two kinds of “not typed by the groomer”:
 
 #### `visit` — captured at the event (hand-entered or observed)
 
-`dog_id`, `owner_id`, `visit_date`, `booked_service_id`, `booking_channel`, `is_emergency`, `intake_photos`, `quoted_price`, `condition_score`, `matting_locations`, `fleas_or_parasites`, `arrived_wet_dirty`, `actual_service_id`, `pivoted`, `pivot_reason`, `shaved_down`, `actual_minutes`, `final_price`, `tip`, `add_ons`, `what_surprised_me`, `behaviour_this_visit`, `after_photos`, `status`, `cancelled_hours_before`
+`dog_id`, `owner_id`, `visit_date`, `booked_service_id`, `booking_channel`, `is_emergency`, `quoted_price`, `condition_score`, `matting_locations`, `fleas_or_parasites`, `arrived_wet_dirty`, `actual_service_id`, `pivoted`, `pivot_reason`, `shaved_down`, `actual_minutes`, `final_price`, `tip`, `add_ons`, `what_surprised_me`, `behaviour_this_visit`, `status`, `cancelled_hours_before`
 
 (`pivoted` may be set from `booked_service_id != actual_service_id` in code; it is still an event fact on the row, not a rolling owner/dog aggregate.)
+
+**Amendment (2026-10-02, #98):** `intake_photos` / `after_photos` removed from the capture contract; photos are `photo` rows only.
 
 #### `visit` — system-computed at write/score time (stored on the row; not hand-entered)
 

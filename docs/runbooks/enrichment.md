@@ -20,7 +20,7 @@ Connect first: [`ops-db-peek.md`](./db-peek.md). Schema overview: [`schema.md`](
 |-------|----------------------------------|-----------|
 | `owner` | `phone`, `email`, `notes`, `address_area`, `preferred_channel`, `client_since`, `locale`, `name` | `visit_count`, `neglect_rate`, `lifetime_value`, … |
 | `dog` | `breed_id`, `breed_secondary_id`, `weight_kg`, coat/temperament/medical hand-entered fields, `name` | `size_band`, `visit_count`, `last_visit_date`, `avg_duration_min`, … |
-| `visit` | `visit_date`, `actual_minutes`, `condition_score`, `what_surprised_me`, `status`, `intake_photos`, prices/tips if needed | `days_since_last`, `predicted_min_p50`, `predicted_min_p90` |
+| `visit` | `visit_date`, `actual_minutes`, `condition_score`, `what_surprised_me`, `status`, service ids / prices / tips if needed | `days_since_last`, `predicted_min_p50`, `predicted_min_p90` |
 
 Why forbidden matters: derived values are **meant to be recomputed from visits**. If you type `last_visit_date` by hand, it can disagree with the real `visit` table. Later analytics/M4 will trust the wrong number. There is no DB “formula” that auto-fixes that — you just created a lie that looks official.
 
@@ -65,11 +65,11 @@ ORDER BY name_de;
 
 ### 3. Fix / enrich a visit — `update_visit.sql`
 
-**What it does:** Corrects event facts User already saved (wrong minutes, date, condition, notes, status, photo URL array).
+**What it does:** Corrects event facts User already saved (wrong minutes, date, condition, notes, status, money/service).
 
 **Why:** Timer mistakes and “forgot to type surprise” should not require a second fake visit row.
 
-**Arrays:** `intake_photos` is `TEXT[]`. Example literal: `ARRAY['https://example.com/before.jpg']`.
+**Photos:** do not patch URLs on `visit`. Use the photo API / [`photos.md`](./photos.md) / `photo_purge.py`.
 
 ### 4. Enrich an owner — `update_owner.sql`
 

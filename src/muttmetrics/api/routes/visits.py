@@ -35,8 +35,6 @@ def create_visit(body: CreateVisitRequest, session: DbSession) -> VisitResponse:
         booked_service_id=body.booked_service_id,
         actual_service_id=body.actual_service_id,
         what_surprised_me=body.what_surprised_me,
-        intake_photos=body.intake_photos,
-        after_photos=body.after_photos,
         quoted_price=body.quoted_price,
         final_price=body.final_price,
         tip=body.tip,
