@@ -550,56 +550,72 @@ function App() {
       : 0
 
   return (
-    <main>
-      <h1>MuttMetrics</h1>
-      <p>{message}</p>
+    <main className="app">
+      <header className="app-header">
+        <h1>MuttMetrics</h1>
+        <p className="tagline">Salon capture</p>
+      </header>
+
+      {message !== '' && <p className="status" role="status">{message}</p>}
 
       {mode === 'search' && (
-        <section>
+        <section className="panel">
           <h2>Find a dog</h2>
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Dog name"
-          />
-          <button
-            type="button"
-            onClick={async () => {
-              try {
-                setMessage('Searching…')
-                const rows = await searchDogs(query)
-                setResults(rows)
-                setMessage(`Found ${rows.length}`)
-              } catch (error) {
-                console.error(error)
-                if (error instanceof TypeError) {
-                  setMessage("Can't reach server — check your connection")
-                } else if (error instanceof Error) {
-                  setMessage(error.message) // e.g. "Server error (500) or FastAPI detail"
-                } else {
-                  setMessage(String(error))
+          <div className="field">
+            <label htmlFor="dog_search">Dog name</label>
+            <input
+              id="dog_search"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search…"
+              autoComplete="off"
+            />
+          </div>
+          <div className="actions">
+            <button
+              type="button"
+              className="primary"
+              onClick={async () => {
+                try {
+                  setMessage('Searching…')
+                  const rows = await searchDogs(query)
+                  setResults(rows)
+                  setMessage(`Found ${rows.length}`)
+                } catch (error) {
+                  console.error(error)
+                  if (error instanceof TypeError) {
+                    setMessage("Can't reach server — check your connection")
+                  } else if (error instanceof Error) {
+                    setMessage(error.message)
+                  } else {
+                    setMessage(String(error))
+                  }
                 }
-              }
-            }}
-          >
-            Search
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode('new')
-              setMessage('')
-            }}
-          >
-            New client
-          </button>
-          <ul>
+              }}
+            >
+              Search
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('new')
+                setMessage('')
+              }}
+            >
+              New client
+            </button>
+          </div>
+          <ul className="dog-list">
             {results.map((dog) => (
               <li key={dog.dog_id}>
-                {dog.name} · {dog.owner_name}
+                <div className="dog-meta">
+                  {dog.name}
+                  <span>{dog.owner_name}</span>
+                </div>
                 <button
                   type="button"
+                  className="primary"
                   onClick={() => {
                     setSelectedDog({
                       dog_id: dog.dog_id,
@@ -626,51 +642,56 @@ function App() {
       )}
 
       {mode === 'new' && (
-        <section>
+        <section className="panel">
           <h2>New client</h2>
-          <p>
+          <div className="field">
             <label htmlFor="owner_name">Owner name</label>
-            <br />
             <input
               id="owner_name"
               type="text"
               value={ownerName}
               onChange={(e) => setOwnerName(e.target.value)}
             />
-          </p>
-          <p>
+          </div>
+          <div className="field">
             <label htmlFor="dog_name">Dog name</label>
-            <br />
             <input
               id="dog_name"
               type="text"
               value={dogName}
               onChange={(e) => setDogName(e.target.value)}
             />
-          </p>
-          <button type="button" onClick={continueNewClient} disabled={isBusy}>
-            {isBusy ? 'Creating…' : 'Continue to visit'}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode('search')
-              setMessage('')
-            }}
-          >
-            Back
-          </button>
+          </div>
+          <div className="actions stack">
+            <button
+              type="button"
+              className="primary"
+              onClick={continueNewClient}
+              disabled={isBusy}
+            >
+              {isBusy ? 'Creating…' : 'Continue to visit'}
+            </button>
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => {
+                setMode('search')
+                setMessage('')
+              }}
+            >
+              Back
+            </button>
+          </div>
         </section>
       )}
 
       {mode === 'visit' && selectedDog !== null && (
-        <section>
-          <h2>
-            Visit — {selectedDog.dog_name} · {selectedDog.owner_name}
+        <section className="panel">
+          <h2 className="visit-title">
+            {selectedDog.dog_name}
+            <span>{selectedDog.owner_name}</span>
           </h2>
-          <p>
-            Step {visitStep} of 3
-          </p>
+          <p className="step-meta">Step {visitStep} of 3</p>
 
           {visitStep === 1 && (
             <>
@@ -681,9 +702,15 @@ function App() {
                 onPick={setIntakeFile}
                 disabled={isBusy}
               />
-              <button type="button" onClick={() => setVisitStep(2)}>
-                Continue
-              </button>
+              <div className="actions stack">
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={() => setVisitStep(2)}
+                >
+                  Continue
+                </button>
+              </div>
             </>
           )}
 
@@ -697,6 +724,7 @@ function App() {
               <div className="timer-controls">
                 <button
                   type="button"
+                  className="primary"
                   onClick={startTimer}
                   disabled={timerStatus === 'running'}
                 >
@@ -713,9 +741,8 @@ function App() {
                   Reset
                 </button>
               </div>
-              <p>
-                <label htmlFor="actual_minutes">Actual minutes (editable)</label>
-                <br />
+              <div className="field">
+                <label htmlFor="actual_minutes">Actual minutes</label>
                 <input
                   id="actual_minutes"
                   type="number"
@@ -723,41 +750,46 @@ function App() {
                   value={actualMinutes}
                   onChange={(e) => setActualMinutes(e.target.value)}
                 />
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  if (Number(actualMinutes) < 1) {
-                    setMessage('Need minutes ≥ 1 (use timer or type).')
-                    return
-                  }
-                  setMessage('')
-                  setVisitStep(3)
-                }}
-              >
-                Continue
-              </button>
-              <button type="button" onClick={() => setVisitStep(1)}>
-                Back
-              </button>
+              </div>
+              <div className="actions stack">
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={() => {
+                    if (Number(actualMinutes) < 1) {
+                      setMessage('Need minutes ≥ 1 (use timer or type).')
+                      return
+                    }
+                    setMessage('')
+                    setVisitStep(3)
+                  }}
+                >
+                  Continue
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => setVisitStep(1)}
+                >
+                  Back
+                </button>
+              </div>
             </>
           )}
 
           {visitStep === 3 && (
             <>
-              <p>
+              <div className="field">
                 <label htmlFor="visit_date">Visit date</label>
-                <br />
                 <input
                   id="visit_date"
                   type="date"
                   value={visitDate}
                   onChange={(e) => setVisitDate(e.target.value)}
                 />
-              </p>
-              <p>
+              </div>
+              <div className="field">
                 <label htmlFor="service_id">Service</label>
-                <br />
                 <select
                   id="service_id"
                   value={serviceId}
@@ -772,10 +804,9 @@ function App() {
                     </option>
                   ))}
                 </select>
-              </p>
-              <p>
+              </div>
+              <div className="field">
                 <label htmlFor="final_price">Final price (€)</label>
-                <br />
                 <input
                   id="final_price"
                   type="number"
@@ -784,10 +815,9 @@ function App() {
                   value={finalPrice}
                   onChange={(e) => setFinalPrice(e.target.value)}
                 />
-              </p>
-              <p>
+              </div>
+              <div className="field">
                 <label htmlFor="tip">Tip (€, optional)</label>
-                <br />
                 <input
                   id="tip"
                   type="number"
@@ -796,10 +826,9 @@ function App() {
                   value={tip}
                   onChange={(e) => setTip(e.target.value)}
                 />
-              </p>
-              <p>
+              </div>
+              <div className="field">
                 <label htmlFor="quoted_price">Quoted price (€, optional)</label>
-                <br />
                 <input
                   id="quoted_price"
                   type="number"
@@ -808,10 +837,9 @@ function App() {
                   value={quotedPrice}
                   onChange={(e) => setQuotedPrice(e.target.value)}
                 />
-              </p>
-              <p>
+              </div>
+              <div className="field">
                 <label htmlFor="condition_score">Condition (0–5, optional)</label>
-                <br />
                 <input
                   id="condition_score"
                   type="number"
@@ -820,29 +848,26 @@ function App() {
                   value={conditionScore}
                   onChange={(e) => setConditionScore(e.target.value)}
                 />
-              </p>
-              <p>
-                <label htmlFor="shaved_down">
-                  <input
-                    id="shaved_down"
-                    type="checkbox"
-                    checked={shavedDown}
-                    onChange={(e) => setShavedDown(e.target.checked)}
-                    disabled={isBusy}
-                  />{' '}
-                  Shaved down
-                </label>
-              </p>
-              <p>
+              </div>
+              <label className="checkbox-row" htmlFor="shaved_down">
+                <input
+                  id="shaved_down"
+                  type="checkbox"
+                  checked={shavedDown}
+                  onChange={(e) => setShavedDown(e.target.checked)}
+                  disabled={isBusy}
+                />
+                Shaved down
+              </label>
+              <div className="field">
                 <label htmlFor="surprise">What surprised me (optional)</label>
-                <br />
                 <input
                   id="surprise"
                   type="text"
                   value={surprise}
                   onChange={(e) => setSurprise(e.target.value)}
                 />
-              </p>
+              </div>
 
               <PhotoPicker
                 label="After photo (optional)"
@@ -852,17 +877,29 @@ function App() {
                 disabled={isBusy}
               />
 
-              <button type="button" onClick={saveVisit} disabled={isBusy}>
-                {isBusy ? 'Saving…' : 'Save visit'}
-              </button>
-              <button type="button" onClick={() => setVisitStep(2)}>
-                Back
-              </button>
+              <div className="actions stack">
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={saveVisit}
+                  disabled={isBusy}
+                >
+                  {isBusy ? 'Saving…' : 'Save visit'}
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => setVisitStep(2)}
+                >
+                  Back
+                </button>
+              </div>
             </>
           )}
 
           <button
             type="button"
+            className="ghost"
             onClick={() => {
               clearDraft()
               setSelectedDog(null)
