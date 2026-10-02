@@ -110,11 +110,11 @@ erDiagram
 | Group | Columns |
 |-------|---------|
 | Identity | `dog_id`, `owner_id`, `visit_date` |
-| Booking | `booked_service_id`, `booking_channel`, `is_emergency`, `intake_photos[]` *(deprecated — see below)*, `quoted_price` |
+| Booking | `booked_service_id`, `booking_channel`, `is_emergency`, `quoted_price` |
 | System-computed at write | `days_since_last`, `predicted_min_p50`, `predicted_min_p90` |
 | Intake | `condition_score`, `matting_locations[]`, `fleas_or_parasites`, `arrived_wet_dirty` |
 | Outcome | `actual_service_id`, `pivoted`, `pivot_reason`, `shaved_down`, `actual_minutes`, `final_price`, `tip`, `add_ons[]` |
-| Qualitative | `what_surprised_me`, `behaviour_this_visit`, `after_photos[]` *(deprecated — see below)* |
+| Qualitative | `what_surprised_me`, `behaviour_this_visit` |
 | Status | `status`, `cancelled_hours_before` |
 
 ### `breed` / `service`
@@ -133,11 +133,11 @@ Reference tables only — no FKs to other entities. See model files for full col
 
 Constraints: `kind` is checked; a `profile` photo must have no `visit_id` while `intake` / `after` must have one; `byte_size > 0`. Foreign keys deliberately have **no `ON DELETE CASCADE`** — Postgres cannot delete files, so a cascade would strand bytes on disk. Deletion goes through `scripts/photo_purge.py` (see [`ops-photos.md`](../runbooks/photos.md)).
 
-**Deprecated:** `visit.intake_photos` and `visit.after_photos` (`TEXT[]` of URLs) are superseded by this table. They remain in the schema until nothing reads them — [#98](https://github.com/BOYSABIO/muttmetrics/issues/98) drops them. Do not add new writers.
+**History:** `visit.intake_photos` / `after_photos` (`TEXT[]` of URLs) were removed in [#98](https://github.com/BOYSABIO/muttmetrics/issues/98) once the SPA wrote only to this table.
 
 ## Implementation notes
 
-- **Arrays:** list fields use Postgres `ARRAY(Text)`, not JSON (`fear_triggers`, `matting_locations`, photo URL lists, etc.).
+- **Arrays:** list fields use Postgres `ARRAY(Text)`, not JSON (`fear_triggers`, `matting_locations`, `add_ons`, etc.).
 - **CHECK constraints** (initial migration #8): `dog.handling_score` 1–5; `visit.condition_score` 0–5; `visit.behaviour_this_visit` 1–5; `visit.status` ∈ `completed`, `cancelled`, `no_show`. Postgres rejects invalid values even if application code bugs — e.g. `condition_score = 99` fails with `ck_visit_condition_score`.
 - **Query indexes** (migration `bba4e6f67c96`, issue #9): FK columns on `dog` and `visit`, plus `visit.visit_date` — for owner/dog listings, visit history, day packing, and service-mix queries.
 - **Required columns:** `owner.name`, `dog.name`, `visit.visit_date`, `visit.actual_minutes`.

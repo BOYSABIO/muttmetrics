@@ -163,7 +163,7 @@ op.execute("UPDATE visit SET booking_channel = 'unknown' WHERE booking_channel I
 op.alter_column("visit", "booking_channel", nullable=False)
 ```
 
-Dropping the old shape belongs in C, long after nothing reads it — which is exactly what [#98](https://github.com/BOYSABIO/muttmetrics/issues/98) is waiting to do with `visit.intake_photos` and `visit.after_photos`.
+Dropping the old shape belongs in C, long after nothing reads it — [#98](https://github.com/BOYSABIO/muttmetrics/issues/98) did this for `visit.intake_photos` / `after_photos`.
 
 ## 6. When `alembic_version` and the real schema disagree
 

@@ -36,8 +36,6 @@ class CreateVisitRequest(BaseModel):
     booked_service_id: int | None = None
     actual_service_id: int | None = None
     what_surprised_me: str | None = None
-    intake_photos: list[str] | None = None
-    after_photos: list[str] | None = None
     quoted_price: float | None = None
     final_price: float | None = None
     tip: float | None = None
