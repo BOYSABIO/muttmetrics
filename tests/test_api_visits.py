@@ -3,7 +3,6 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from muttmetrics.api.app import create_app
 from muttmetrics.db.session import session_scope
 from muttmetrics.models import Dog, Owner
 
@@ -11,16 +10,6 @@ MINIMAL_BASE = {
     "visit_date": "2026-09-07",
     "actual_minutes": 60,
 }
-
-
-@pytest.fixture
-def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setenv(
-        "DATABASE_URL",
-        "postgresql+psycopg://muttmetrics:muttmetrics@127.0.0.1:5432/muttmetrics",
-    )
-    monkeypatch.setenv("API_KEY", "test-api-key")
-    return TestClient(create_app())
 
 
 @pytest.fixture
@@ -44,33 +33,41 @@ def test_create_visit_requires_api_key(client: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_create_visit_invalid_body_returns_422(client: TestClient) -> None:
+def test_create_visit_invalid_body_returns_422(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
     response = client.post(
         "/visits",
         json={"dog_id": 1, "owner_id": 1, "visit_date": "2026-09-07", "actual_minutes": 0},
-        headers={"X-API-Key": "test-api-key"},
+        headers=auth_headers,
     )
     assert response.status_code == 422
 
 
 def test_create_visit_unknown_dog_returns_404(
-    client: TestClient, demo_dog_owner: tuple[int, int]
+    client: TestClient,
+    demo_dog_owner: tuple[int, int],
+    auth_headers: dict[str, str],
 ) -> None:
     owner_id, _ = demo_dog_owner
     response = client.post(
         "/visits",
         json={"dog_id": 999999, "owner_id": owner_id, **MINIMAL_BASE},
-        headers={"X-API-Key": "test-api-key"},
+        headers=auth_headers,
     )
     assert response.status_code == 404
 
 
-def test_create_visit_persists(client: TestClient, demo_dog_owner: tuple[int, int]) -> None:
+def test_create_visit_persists(
+    client: TestClient,
+    demo_dog_owner: tuple[int, int],
+    auth_headers: dict[str, str],
+) -> None:
     owner_id, dog_id = demo_dog_owner
     response = client.post(
         "/visits",
         json={"dog_id": dog_id, "owner_id": owner_id, **MINIMAL_BASE},
-        headers={"X-API-Key": "test-api-key"},
+        headers=auth_headers,
     )
     assert response.status_code == 201
     data = response.json()

@@ -5,26 +5,14 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
-from muttmetrics.api.app import create_app
-
 
 @pytest.fixture
-def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setenv(
-        "DATABASE_URL",
-        "postgresql+psycopg://muttmetrics:muttmetrics@127.0.0.1:5432/muttmetrics",
-    )
-    monkeypatch.setenv("API_KEY", "test-api-key")
-    return TestClient(create_app())
-
-
-@pytest.fixture
-def owner_id(client: TestClient) -> int:
+def owner_id(client: TestClient, auth_headers: dict[str, str]) -> int:
     name = f"Dog Lesson Owner {uuid.uuid4().hex[:8]}"
     response = client.post(
         "/owners",
         json={"name": name},
-        headers={"X-API-Key": "test-api-key"},
+        headers=auth_headers,
     )
     assert response.status_code == 201
     return response.json()["owner_id"]
@@ -38,14 +26,15 @@ def test_upsert_dog_requires_api_key(client: TestClient, owner_id: int) -> None:
     assert response.status_code == 401
 
 
-def test_upsert_dog_creates_then_gets(client: TestClient, owner_id: int) -> None:
-    headers = {"X-API-Key": "test-api-key"}
+def test_upsert_dog_creates_then_gets(
+    client: TestClient, owner_id: int, auth_headers: dict[str, str]
+) -> None:
     dog_name = f"Bella {uuid.uuid4().hex[:8]}"
 
     created = client.post(
         "/dogs",
         json={"owner_id": owner_id, "name": dog_name},
-        headers=headers,
+        headers=auth_headers,
     )
     assert created.status_code == 201
     dog_id = created.json()["dog_id"]
@@ -54,26 +43,28 @@ def test_upsert_dog_creates_then_gets(client: TestClient, owner_id: int) -> None
     again = client.post(
         "/dogs",
         json={"owner_id": owner_id, "name": dog_name.upper()},
-        headers=headers,
+        headers=auth_headers,
     )
     assert again.status_code == 200
     assert again.json()["dog_id"] == dog_id
 
 
-def test_upsert_dog_unknown_owner_404(client: TestClient) -> None:
+def test_upsert_dog_unknown_owner_404(client: TestClient, auth_headers: dict[str, str]) -> None:
     response = client.post(
         "/dogs",
         json={"owner_id": 999999, "name": "Ghost"},
-        headers={"X-API-Key": "test-api-key"},
+        headers=auth_headers,
     )
     assert response.status_code == 404
 
 
-def test_upsert_dog_blank_name_422(client: TestClient, owner_id: int) -> None:
+def test_upsert_dog_blank_name_422(
+    client: TestClient, owner_id: int, auth_headers: dict[str, str]
+) -> None:
     response = client.post(
         "/dogs",
         json={"owner_id": owner_id, "name": "   "},
-        headers={"X-API-Key": "test-api-key"},
+        headers=auth_headers,
     )
     assert response.status_code == 422
 
@@ -83,19 +74,20 @@ def test_list_dogs_requires_api_key(client: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_list_dogs_browse_includes_owner_name(client: TestClient, owner_id: int) -> None:
-    headers = {"X-API-Key": "test-api-key"}
+def test_list_dogs_browse_includes_owner_name(
+    client: TestClient, owner_id: int, auth_headers: dict[str, str]
+) -> None:
     dog_name = f"BrowseDog {uuid.uuid4().hex[:8]}"
 
     created = client.post(
         "/dogs",
         json={"owner_id": owner_id, "name": dog_name},
-        headers=headers,
+        headers=auth_headers,
     )
     assert created.status_code == 201
     dog_id = created.json()["dog_id"]
 
-    listed = client.get("/dogs", headers=headers)
+    listed = client.get("/dogs", headers=auth_headers)
     assert listed.status_code == 200
     rows = listed.json()
     assert isinstance(rows, list)
@@ -108,25 +100,26 @@ def test_list_dogs_browse_includes_owner_name(client: TestClient, owner_id: int)
     assert "last_visit_date" in match
 
 
-def test_list_dogs_q_filters_by_name_substring(client: TestClient, owner_id: int) -> None:
-    headers = {"X-API-Key": "test-api-key"}
+def test_list_dogs_q_filters_by_name_substring(
+    client: TestClient, owner_id: int, auth_headers: dict[str, str]
+) -> None:
     token = uuid.uuid4().hex[:8]
     dog_name = f"Bella{token}"
 
     created = client.post(
         "/dogs",
         json={"owner_id": owner_id, "name": dog_name},
-        headers=headers,
+        headers=auth_headers,
     )
 
     assert created.status_code == 201
     dog_id = created.json()["dog_id"]
 
-    hit = client.get(f"/dogs?q={token}", headers=headers)
+    hit = client.get(f"/dogs?q={token}", headers=auth_headers)
     assert hit.status_code == 200
     ids = [row["dog_id"] for row in hit.json()]
     assert dog_id in ids
 
-    miss = client.get("/dogs?q=zzznomatch999", headers=headers)
+    miss = client.get("/dogs?q=zzznomatch999", headers=auth_headers)
     assert miss.status_code == 200
     assert miss.json() == []
