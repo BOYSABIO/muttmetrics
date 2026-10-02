@@ -1,20 +1,6 @@
 """API key auth tests (no Postgres required)."""
 
-import pytest
 from fastapi.testclient import TestClient
-
-from muttmetrics.api.app import create_app
-
-
-@pytest.fixture
-def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    """App client with a known API_KEY (and dummy DATABASE_URL for Settings)."""
-    monkeypatch.setenv(
-        "DATABASE_URL",
-        "postgresql+psycopg://muttmetrics:muttmetrics@127.0.0.1:5432/muttmetrics",
-    )
-    monkeypatch.setenv("API_KEY", "test-api-key")
-    return TestClient(create_app())
 
 
 def test_ping_missing_key_returns_401(client: TestClient) -> None:
@@ -29,9 +15,9 @@ def test_ping_wrong_key_returns_401(client: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_ping_valid_key_returns_ok(client: TestClient) -> None:
+def test_ping_valid_key_returns_ok(client: TestClient, auth_headers: dict[str, str]) -> None:
     """Verify 200 for valid X-API-Key header."""
-    response = client.get("/ping", headers={"X-API-Key": "test-api-key"})
+    response = client.get("/ping", headers=auth_headers)
     assert response.status_code == 200
     assert response.json() == {"ok": True}
 

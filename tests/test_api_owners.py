@@ -2,20 +2,7 @@
 
 import uuid
 
-import pytest
 from fastapi.testclient import TestClient
-
-from muttmetrics.api.app import create_app
-
-
-@pytest.fixture
-def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setenv(
-        "DATABASE_URL",
-        "postgresql+psycopg://muttmetrics:muttmetrics@127.0.0.1:5432/muttmetrics",
-    )
-    monkeypatch.setenv("API_KEY", "test-api-key")
-    return TestClient(create_app())
 
 
 def test_upsert_owner_requires_api_key(client: TestClient) -> None:
@@ -23,12 +10,11 @@ def test_upsert_owner_requires_api_key(client: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_upsert_owner_creates_then_gets(client: TestClient) -> None:
-    headers = {"X-API-Key": "test-api-key"}
+def test_upsert_owner_creates_then_gets(client: TestClient, auth_headers: dict[str, str]) -> None:
     # Unique per run — "Test Owner" already exists from visit fixtures
     name = f"Lesson Two Owner {uuid.uuid4().hex[:8]}"
 
-    created = client.post("/owners", json={"name": name}, headers=headers)
+    created = client.post("/owners", json={"name": name}, headers=auth_headers)
     assert created.status_code == 201
     owner_id = created.json()["owner_id"]
     assert created.json()["name"] == name
@@ -36,16 +22,16 @@ def test_upsert_owner_creates_then_gets(client: TestClient) -> None:
     again = client.post(
         "/owners",
         json={"name": name.upper()},
-        headers=headers,
+        headers=auth_headers,
     )
     assert again.status_code == 200
     assert again.json()["owner_id"] == owner_id
 
 
-def test_upsert_owner_rejects_blank_name(client: TestClient) -> None:
+def test_upsert_owner_rejects_blank_name(client: TestClient, auth_headers: dict[str, str]) -> None:
     response = client.post(
         "/owners",
         json={"name": "   "},
-        headers={"X-API-Key": "test-api-key"},
+        headers=auth_headers,
     )
     assert response.status_code == 422
