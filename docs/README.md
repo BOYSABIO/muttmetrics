@@ -18,6 +18,7 @@ Everything written about the project, grouped by what you're trying to do. **Tas
 | [ADR-000 — Stack](architecture/adr/000-stack.md) | Why Python/Postgres/FastAPI, and the capture UI path |
 | [ADR-001 — Derived fields](architecture/adr/001-derived-fields.md) | Hand-entered vs derived vs system-computed columns |
 | [ADR-002 — Photo storage](architecture/adr/002-photo-storage.md) | Bytes on disk, metadata in Postgres |
+| [Rules prior (P50/P90)](prior.md) | Hand-encoded duration formula before any fitted model (#23) |
 
 ## 🛠️ Runbooks — *how to operate it*
 
