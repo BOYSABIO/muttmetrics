@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from muttmetrics.api.deps import get_db, require_api_key
 from muttmetrics.api.schemas.visits import CreateVisitRequest, VisitResponse
+from muttmetrics.api.services.visit_predictions import compute_visit_predictions
 from muttmetrics.models import Dog, Owner, Visit
 
 router = APIRouter(tags=["visits"])
@@ -23,8 +24,14 @@ def create_visit(body: CreateVisitRequest, session: DbSession) -> VisitResponse:
     """Persist a post-groom visit; dog and owner must already exist."""
     if session.get(Owner, body.owner_id) is None:
         raise HTTPException(status_code=404, detail=f"Owner {body.owner_id} not found")
-    if session.get(Dog, body.dog_id) is None:
+
+    dog = session.get(Dog, body.dog_id)
+    if dog is None:
         raise HTTPException(status_code=404, detail=f"Dog {body.dog_id} not found")
+
+    days_since_last, p50, p90 = compute_visit_predictions(
+        session, dog=dog, visit_date=body.visit_date
+    )
 
     visit = Visit(
         dog_id=body.dog_id,
@@ -40,6 +47,9 @@ def create_visit(body: CreateVisitRequest, session: DbSession) -> VisitResponse:
         tip=body.tip,
         shaved_down=body.shaved_down,
         status=body.status,
+        days_since_last=days_since_last,
+        predicted_min_p50=p50,
+        predicted_min_p90=p90,
     )
     session.add(visit)
     session.flush()
