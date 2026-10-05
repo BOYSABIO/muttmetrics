@@ -19,7 +19,7 @@ Always **P90 ≥ P50**. The gap is the uncertainty buffer.
 
 - **Prior** — belief about duration before rich history for this dog exists (breed base, size, matting risk, overdue, handling).
 - **Rules** — deterministic multipliers we chose and tested. Same inputs → same `(p50, p90)`.
-- **Not wired yet** — nothing writes these onto `visit` on save. That is [#24](https://github.com/BOYSABIO/muttmetrics/issues/24). A lookup CLI/endpoint is [#26](https://github.com/BOYSABIO/muttmetrics/issues/26).
+- **On visit create** — `POST /visits` computes `days_since_last` and stores `predicted_min_p50` / `predicted_min_p90` when breed priors exist ([#24](https://github.com/BOYSABIO/muttmetrics/issues/24)); see `api/services/visit_predictions.py`. A lookup CLI/endpoint is [#26](https://github.com/BOYSABIO/muttmetrics/issues/26).
 
 ## Function
 

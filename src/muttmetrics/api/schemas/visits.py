@@ -56,3 +56,6 @@ class VisitResponse(BaseModel):
     condition_score: int | None = None
     what_surprised_me: str | None = None
     status: Literal["completed", "cancelled", "no_show"] | None = None
+    days_since_last: int | None = None
+    predicted_min_p50: int | None = None
+    predicted_min_p90: int | None = None
