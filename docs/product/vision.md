@@ -22,9 +22,11 @@ Compliance (visit rows actually exist) is the product gate. Fancy UI and booking
 
 1. **Canonical schema** — owner / dog / visit (+ breed, service priors) — done for M1
 2. **Capture** — FastAPI `POST /visits` + React phone SPA; every completed groom becomes a row
-3. **Rules-based P50/P90** — honest priors before any ML; log prediction error from day one
+3. **Rules-based P50/P90** — honest breed-based cold start before any ML; log prediction error from day one
 4. **Analytics** — overrun, pivots, €/hour by condition — findings the groomer can act on
 5. **Day packing** — “can I take a third dog?” against summed P90
+
+**Amendment (2026-10-06):** The rules prior may key off breed for cold start. Later fitted predictions (M7) should not *require* breed — **coat, size, and temperament/handling** (plus visit context) are the intended primary drivers, especially for mixes. See [#121](https://github.com/BOYSABIO/muttmetrics/issues/121).
 
 Stack for that path: Python, Postgres, SQLAlchemy, Alembic, FastAPI. Groomer capture UI path (teach + build): **A** thin HTML/Jinja ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) → **B** Vite + React + TS SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) → **C** Next graduate for owner surfaces ([#41](https://github.com/BOYSABIO/muttmetrics/issues/41)). Same Python API throughout.
 
@@ -50,7 +52,7 @@ If scheduling is built later, it is built **in-house**, with MuttMetrics still o
 Longer-range ideas are kept deliberately general here. The concrete ones sit in the **M10 — Icebox** milestone, so they stay out of the way of the capture-first path.
 
 - **Scheduling that uses the ranges:** duration predictions feeding how the day is actually booked.
-- **Richer inputs:** intake photos and condition, and fitted models once there's enough data to beat the rules.
+- **Richer inputs:** intake photos and condition, and fitted models once there's enough data to beat the rules — scoring from coat/size/temperament without requiring breed ([#121](https://github.com/BOYSABIO/muttmetrics/issues/121)).
 - **An owner-facing layer:** built on the same data, only after capture and prediction work.
 - **Beyond one shop:** only if the single-shop loop is proven.
 

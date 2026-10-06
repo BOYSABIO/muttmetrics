@@ -32,6 +32,7 @@ dev = [
 
 [project.scripts]
 muttmetrics-api = "muttmetrics.api.__main__:main"
+muttmetrics-duration-range = "muttmetrics.duration_range:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/muttmetrics"]

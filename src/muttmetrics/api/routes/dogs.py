@@ -1,5 +1,6 @@
-"""Dog onboarding (create-or-get) and directory search."""
+"""Dog onboarding (create-or-get), directory search, and duration-range preview."""
 
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
@@ -7,7 +8,9 @@ from sqlalchemy.orm import Session
 
 from muttmetrics.api.deps import get_db, require_api_key
 from muttmetrics.api.schemas.dogs import DogResponse, DogSearchItem, UpsertDogRequest
+from muttmetrics.api.schemas.duration_range import DurationRangeResponse
 from muttmetrics.api.services.dogs import create_or_get_dog, search_dogs
+from muttmetrics.api.services.visit_predictions import score_dog_duration_range
 
 router = APIRouter(tags=["dogs"])
 
@@ -44,3 +47,41 @@ def list_dogs(
 ) -> list[DogSearchItem]:
     """Directory search / browse - dog rows with owner_name for the UI."""
     return search_dogs(session, q=q)
+
+
+@router.get(
+    "/dogs/{dog_id}/duration-range",
+    dependencies=[Depends(require_api_key)],
+)
+def get_duration_range(
+    dog_id: int,
+    session: DbSession,
+    as_of: Annotated[
+        date | None,
+        Query(description="Date for days_since_last (default: today)"),
+    ] = None,
+    service_id: Annotated[
+        int | None,
+        Query(description="Booked service id (validated; not in formula v0)"),
+    ] = None,
+) -> DurationRangeResponse:
+    """Preview P50/P90 for a dog without creating a visit (#26)."""
+    try:
+        result = score_dog_duration_range(
+            session,
+            dog_id=dog_id,
+            as_of=as_of or date.today(),
+            service_id=service_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return DurationRangeResponse(
+        dog_id=result.dog_id,
+        service_id=result.service_id,
+        as_of=result.as_of,
+        days_since_last=result.days_since_last,
+        predicted_min_p50=result.predicted_min_p50,
+        predicted_min_p90=result.predicted_min_p90,
+        skipped_reason=result.skipped_reason,
+    )

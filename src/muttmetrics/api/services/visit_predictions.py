@@ -1,17 +1,60 @@
-"""Compute days_since_last + rules prior at visit create (#24)"""
+"""Compute days_since_last + rules prior (#24) and duration-range preview (#26)."""
 
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from datetime import date
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from muttmetrics.models import Breed, Dog, Visit
+from muttmetrics.models import Breed, Dog, Service, Visit
 from muttmetrics.prior import rules_prior
 
 LOGGER = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class DurationRange:
+    dog_id: int
+    as_of: date
+    days_since_last: int | None
+    predicted_min_p50: int | None
+    predicted_min_p90: int | None
+    service_id: int | None = None
+    skipped_reason: str | None = None
+
+
+def score_dog_duration_range(
+    session: Session,
+    *,
+    dog_id: int,
+    as_of: date,
+    service_id: int | None = None,
+) -> DurationRange:
+    """Same prior path as visit create. Raises LookupError if dog/service missing."""
+    dog = session.get(Dog, dog_id)
+    if dog is None:
+        raise LookupError(f"Dog {dog_id} not found")
+
+    if service_id is not None and session.get(Service, service_id) is None:
+        raise LookupError(f"Service {service_id} not found")
+
+    days, p50, p90 = compute_visit_predictions(session, dog=dog, visit_date=as_of)
+    skipped = None
+    if p50 is None:
+        skipped = "no base_groom_minutes on breed (or no breed)"
+
+    return DurationRange(
+        dog_id=dog_id,
+        service_id=service_id,
+        as_of=as_of,
+        days_since_last=days,
+        predicted_min_p50=p50,
+        predicted_min_p90=p90,
+        skipped_reason=skipped,
+    )
 
 
 def compute_visit_predictions(
