@@ -82,12 +82,34 @@ Inputs: base `100`, matting `4`, size `l`, days `90`, interval `60`, handling `4
 
 Locked by `tests/test_prior.py::test_walkthrough_example`.
 
-## Out of scope (this doc / #23)
+## Calibration — predicted vs actual (#25)
 
-- Fitting coefficients from salon data
+Once visits store both `actual_minutes` and `predicted_min_*`, check whether the rules are systematically wrong (e.g. underestimating a breed).
+
+**Script (not a DB view):** [`scripts/SQL/calibration_error.sql`](../scripts/SQL/calibration_error.sql). Open in the Postgres extension or:
+
+```powershell
+Get-Content .\scripts\SQL\calibration_error.sql -Raw |
+  docker compose exec -T db psql -U muttmetrics -d muttmetrics
+```
+
+| Output | How to read it |
+|--------|----------------|
+| `avg_error_p50` | `actual − p50`. **Positive** → under-predicted (jobs ran long). **Negative** → over-predicted |
+| `p90_hit_rate` | Share of visits with `actual ≤ p90`. With enough rows, aim roughly near **0.9** |
+| `n` | Sample size — ignore strong conclusions when `n` is tiny |
+
+Three result sets: by **breed**, by **condition_score**, **overall**. Only completed (or legacy `status` NULL) visits that have predictions. Empty results are normal until dogs with breeds are saved via `POST /visits` after #24.
+
+No dashboard; run when you want a weekly honesty check. Counts that reveal salon volume stay private (same idea as compliance notes).
+
+## Out of scope (here)
+
+- Fitting coefficients from salon data / auto-tuning the formula
 - Service-slug adjustments (nails vs full groom) — can layer later
-- Persisting onto `visit.predicted_min_*`
 - Day packer
+- Lookup CLI/endpoint for a single dog ([#26](https://github.com/BOYSABIO/muttmetrics/issues/26))
+- Postgres `CREATE VIEW` (a committed script is enough for maintainer runs)
 
 ## Related
 
