@@ -19,7 +19,8 @@ Always **P90 ≥ P50**. The gap is the uncertainty buffer.
 
 - **Prior** — belief about duration before rich history for this dog exists (breed base, size, matting risk, overdue, handling).
 - **Rules** — deterministic multipliers we chose and tested. Same inputs → same `(p50, p90)`.
-- **On visit create** — `POST /visits` computes `days_since_last` and stores `predicted_min_p50` / `predicted_min_p90` when breed priors exist ([#24](https://github.com/BOYSABIO/muttmetrics/issues/24)); see `api/services/visit_predictions.py`. A lookup CLI/endpoint is [#26](https://github.com/BOYSABIO/muttmetrics/issues/26).
+- **On visit create** — `POST /visits` computes `days_since_last` and stores `predicted_min_p50` / `predicted_min_p90` when breed priors exist ([#24](https://github.com/BOYSABIO/muttmetrics/issues/24)); see `api/services/visit_predictions.py`.
+- **Preview without a visit** ([#26](https://github.com/BOYSABIO/muttmetrics/issues/26)) — same helper via `GET /dogs/{dog_id}/duration-range` or `python -m muttmetrics.duration_range --dog-id N`. Optional `service_id` is validated/echoed; v0 minutes still come from breed priors.
 
 ## Function
 
@@ -103,15 +104,21 @@ Three result sets: by **breed**, by **condition_score**, **overall**. Only compl
 
 No dashboard; run when you want a weekly honesty check. Counts that reveal salon volume stay private (same idea as compliance notes).
 
+## Future direction (not v0)
+
+Breed is a **convenient cold-start package**, not the long-term load-bearing feature. Mixes and salon practice suggest duration is driven more by **coat + size + temperament/handling**, plus visit context (interval, condition, service).
+
+Fitted / later priors must be able to produce P50/P90 **without requiring `breed_id`**. Tracked under M7: [#121](https://github.com/BOYSABIO/muttmetrics/issues/121) (feature matrix [#33](https://github.com/BOYSABIO/muttmetrics/issues/33), bakeoff [#34](https://github.com/BOYSABIO/muttmetrics/issues/34)).
+
 ## Out of scope (here)
 
 - Fitting coefficients from salon data / auto-tuning the formula
-- Service-slug adjustments (nails vs full groom) — can layer later
+- Service-slug adjustments inside the prior (nails vs full groom) — `service_id` on the preview is validated only for now
 - Day packer
-- Lookup CLI/endpoint for a single dog ([#26](https://github.com/BOYSABIO/muttmetrics/issues/26))
-- Postgres `CREATE VIEW` (a committed script is enough for maintainer runs)
+- Postgres `CREATE VIEW` for calibration (a committed script is enough for maintainer runs)
 
 ## Related
 
 - [ADR-001](architecture/adr/001-derived-fields.md) — `days_since_last` and predictions are system-computed on the visit, not hand-edited
 - Breed cold-start values — `src/muttmetrics/seed/data.py` (`base_groom_minutes`, `matting_risk`, `recommended_interval_days`)
+- Coat/size/temperament-first predictions — [#121](https://github.com/BOYSABIO/muttmetrics/issues/121)
