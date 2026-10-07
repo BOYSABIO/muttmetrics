@@ -5,7 +5,7 @@ from io import BytesIO
 import pytest
 from PIL import Image
 
-from muttmetrics.images import MAX_EDGE, MAX_UPLOAD_BYTES, ImageRejected, process_upload
+from muttmetrics.media.images import MAX_EDGE, MAX_UPLOAD_BYTES, ImageRejected, process_upload
 
 
 def _image_bytes(width: int, height: int, fmt: str = "PNG") -> bytes:

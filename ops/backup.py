@@ -8,9 +8,9 @@ Additive matters: a mirror would propagate an accidental deletion into the
 backup, which is the opposite of the job. Honouring a GDPR deletion request
 therefore needs the backup copy removed too - see docs/architecture/privacy.md.
 
-    python scripts/backup.py
-    python scripts/backup.py --extra-dest D:/muttmetrics-backup
-    python scripts/backup.py --skip-photos
+    python ops/backup.py
+    python ops/backup.py --extra-dest D:/muttmetrics-backup
+    python ops/backup.py --skip-photos
 
 Today all destinations are usually on the same disk as the live data. That
 protects against mistakes, not against losing the drive. The second entry
@@ -29,8 +29,8 @@ from pathlib import Path
 
 from sqlalchemy.engine import make_url
 
-from muttmetrics import storage
 from muttmetrics.config import get_settings
+from muttmetrics.media import storage
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 _log_path: Path | None = None

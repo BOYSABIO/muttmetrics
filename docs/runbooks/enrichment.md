@@ -12,7 +12,7 @@ Connect first: [`ops-db-peek.md`](./db-peek.md). Schema overview: [`schema.md`](
 2. **UPDATE by primary key** (`owner_id`, `dog_id`, `visit_id`) — not by name alone (duplicate names exist).
 3. **SELECT after UPDATE** — verify.
 4. **Never UPDATE derived columns** (owner/dog aggregates) or visit **system-computed** columns (`days_since_last`, `predicted_min_p50`, `predicted_min_p90`).
-5. **No real PII in git** — scripts use placeholders (`123`, `'Example'`). Edit locally; use `scripts/**/*.local.sql` if you want a personal copy (gitignored pattern: `scripts/*.local.sql`).
+5. **No real PII in git** — scripts use placeholders (`123`, `'Example'`). Edit locally; use `ops/**/*.local.sql` if you want a personal copy (gitignored pattern: `ops/*.local.sql`).
 
 ### Safe vs forbidden (cheat sheet)
 
@@ -28,7 +28,7 @@ Why forbidden matters: derived values are **meant to be recomputed from visits**
 
 ```text
 1. Peek / find ids   →  SELECT …
-2. Open script       →  scripts/SQL/enrich_*.sql or update_*.sql
+2. Open script       →  ops/sql/enrich_*.sql or update_*.sql
 3. Replace placeholders
 4. Run SELECT block
 5. Run UPDATE block
@@ -37,7 +37,7 @@ Why forbidden matters: derived values are **meant to be recomputed from visits**
 
 ## Recipes (explained)
 
-Each recipe has a matching file under [`scripts/SQL/`](../../scripts/SQL/). Index of all scripts: [`scripts/README.md`](../../scripts/README.md). Open the file in the Postgres extension and run section by section.
+Each recipe has a matching file under [`ops/sql/`](../../ops/sql/). Index of all scripts: [`ops/README.md`](../../ops/README.md). Open the file in the Postgres extension and run section by section.
 
 ### 1. List breeds — `lookup_breeds.sql`
 
@@ -104,5 +104,5 @@ LIMIT 20;
 
 ## Related
 
-- Synthetic junk cleanup: `scripts/SQL/cleanup_synthetic_clients.local.sql` *(local only, gitignored: it names real rows to protect)*
+- Synthetic junk cleanup: `ops/sql/cleanup_synthetic_clients.local.sql` *(local only, gitignored: it names real rows to protect)*
 - Peek starters: [`ops-db-peek.md`](./db-peek.md)

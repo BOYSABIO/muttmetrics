@@ -2,11 +2,11 @@
 -- Denominator is manual: ask how many dogs were groomed that week.
 -- Compliance % = 100.0 * completed_visits / grooms_reported  (skip if denom = 0).
 --
--- Week = Mon–Sun on visit_date (salon calendar). Edit the two dates below.
+-- Week = MonΓÇôSun on visit_date (salon calendar). Edit the two dates below.
 -- Example first formal week: 2026-10-06 .. 2026-10-12
 --
 -- Run in the Postgres extension, or:
---   Get-Content .\scripts\SQL\compliance_week.sql -Raw |
+--   Get-Content .\ops\sql\compliance_week.sql -Raw |
 --     docker compose exec -T db psql -U muttmetrics -d muttmetrics
 
 -- ---------------------------------------------------------------------------
@@ -21,7 +21,7 @@
 -- 1) Numerator: completed visits in the week
 -- ---------------------------------------------------------------------------
 -- Count status = 'completed', and NULL (legacy rows before status was filled).
--- Exclude cancelled / no_show — those are not "groom happened + should log".
+-- Exclude cancelled / no_show ΓÇö those are not "groom happened + should log".
 SELECT COUNT(*) AS completed_visits
 FROM visit
 WHERE visit_date >= DATE '2026-10-06'
@@ -29,7 +29,7 @@ WHERE visit_date >= DATE '2026-10-06'
   AND (status IS NULL OR status = 'completed');
 
 -- ---------------------------------------------------------------------------
--- 2) List (sanity check — wrong dates / doubles show up here)
+-- 2) List (sanity check ΓÇö wrong dates / doubles show up here)
 -- ---------------------------------------------------------------------------
 SELECT
   v.visit_id,

@@ -134,7 +134,7 @@ def test_destructive_operations_are_acknowledged(path: Path) -> None:
         "database with real rows it may be irreversible.\n\n"
         "If that is a mistake, see docs/runbooks/migrations.md - a rename wants\n"
         "op.alter_column(new_column_name=...), not drop + add.\n\n"
-        "If it is intentional: dump first (python scripts/backup.py), then add a\n"
+        "If it is intentional: dump first (python ops/backup.py), then add a\n"
         "line like this anywhere in the migration file:\n\n"
         f"    {ACK} - dropping legacy array columns, see #98\n",
         pytrace=False,

@@ -4,7 +4,7 @@ How the maintainer measures **% of real grooms that left a visit row** (#22).
 
 This is a **manual product metric**, not a dashboard. The groomer is asked for the denominator; SQL gives the numerator. Do it once per salon week (Mon–Sun) for the first month of formal capture.
 
-Schema / peek: [`db-peek.md`](./db-peek.md). Numerator SQL: [`scripts/SQL/compliance_week.sql`](../../scripts/SQL/compliance_week.sql). All scripts: [`scripts/README.md`](../../scripts/README.md).
+Schema / peek: [`db-peek.md`](./db-peek.md). Numerator SQL: [`ops/sql/compliance_week.sql`](../../ops/sql/compliance_week.sql). All scripts: [`ops/README.md`](../../ops/README.md).
 
 ## Definition
 
@@ -31,11 +31,11 @@ Do **not** paste weekly numbers into a public issue comment. Record them locally
 ## Weekly procedure
 
 1. **Pick the week** — last completed Mon–Sun (or the week you are closing). Example: `2026-10-06` … `2026-10-12`.
-2. **Edit dates** in [`scripts/SQL/compliance_week.sql`](../../scripts/SQL/compliance_week.sql) (both queries).
+2. **Edit dates** in [`ops/sql/compliance_week.sql`](../../ops/sql/compliance_week.sql) (both queries).
 3. **Run the script** (Postgres extension, or from repo root):
 
    ```powershell
-   Get-Content .\scripts\SQL\compliance_week.sql -Raw |
+   Get-Content .\ops\sql\compliance_week.sql -Raw |
      docker compose exec -T db psql -U muttmetrics -d muttmetrics
    ```
 

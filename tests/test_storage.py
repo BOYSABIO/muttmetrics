@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from muttmetrics import storage
+from muttmetrics.media import storage
 
 
 @pytest.fixture(autouse=True)

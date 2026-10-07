@@ -1,5 +1,5 @@
 -- Recipe: list seeded breeds (read-only).
--- See docs/runbooks/enrichment.md — "List breeds".
+-- See docs/runbooks/enrichment.md ΓÇö "List breeds".
 -- Run against local compose DB only.
 
 SELECT breed_id, name_de, name_en, base_groom_minutes, matting_risk

@@ -1,6 +1,6 @@
 # Rules-based duration prior (P50 / P90)
 
-Hand-encoded baseline for how long a groom will take, **before** any fitted model. Implemented as a pure function in [`src/muttmetrics/prior.py`](../src/muttmetrics/prior.py) ([#23](https://github.com/BOYSABIO/muttmetrics/issues/23)).
+Hand-encoded baseline for how long a groom will take, **before** any fitted model. Implemented as a pure function in [`src/muttmetrics/priors/prior.py`](../src/muttmetrics/priors/prior.py) ([#23](https://github.com/BOYSABIO/muttmetrics/issues/23)).
 
 This doc is the formula source of truth. If code and doc disagree, fix one of them and keep them aligned.
 
@@ -20,7 +20,7 @@ Always **P90 ≥ P50**. The gap is the uncertainty buffer.
 - **Prior** — belief about duration before rich history for this dog exists (breed base, size, matting risk, overdue, handling).
 - **Rules** — deterministic multipliers we chose and tested. Same inputs → same `(p50, p90)`.
 - **On visit create** — `POST /visits` computes `days_since_last` and stores `predicted_min_p50` / `predicted_min_p90` when breed priors exist ([#24](https://github.com/BOYSABIO/muttmetrics/issues/24)); see `api/services/visit_predictions.py`.
-- **Preview without a visit** ([#26](https://github.com/BOYSABIO/muttmetrics/issues/26)) — same helper via `GET /dogs/{dog_id}/duration-range` or `python -m muttmetrics.duration_range --dog-id N`. Optional `service_id` is validated/echoed; v0 minutes still come from breed priors.
+- **Preview without a visit** ([#26](https://github.com/BOYSABIO/muttmetrics/issues/26)) — same helper via `GET /dogs/{dog_id}/duration-range` or `python -m muttmetrics.priors --dog-id N`. Optional `service_id` is validated/echoed; v0 minutes still come from breed priors.
 
 ## Function
 
@@ -87,10 +87,10 @@ Locked by `tests/test_prior.py::test_walkthrough_example`.
 
 Once visits store both `actual_minutes` and `predicted_min_*`, check whether the rules are systematically wrong (e.g. underestimating a breed).
 
-**Script (not a DB view):** [`scripts/SQL/calibration_error.sql`](../scripts/SQL/calibration_error.sql) — see also [`scripts/README.md`](../scripts/README.md). Open in the Postgres extension or:
+**Script (not a DB view):** [`ops/sql/calibration_error.sql`](../ops/sql/calibration_error.sql) — see also [`ops/README.md`](../ops/README.md). Open in the Postgres extension or:
 
 ```powershell
-Get-Content .\scripts\SQL\calibration_error.sql -Raw |
+Get-Content .\ops\sql\calibration_error.sql -Raw |
   docker compose exec -T db psql -U muttmetrics -d muttmetrics
 ```
 
@@ -110,6 +110,27 @@ Breed is a **convenient cold-start package**, not the long-term load-bearing fea
 
 Fitted / later priors must be able to produce P50/P90 **without requiring `breed_id`**. Tracked under M7: [#121](https://github.com/BOYSABIO/muttmetrics/issues/121) (feature matrix [#33](https://github.com/BOYSABIO/muttmetrics/issues/33), bakeoff [#34](https://github.com/BOYSABIO/muttmetrics/issues/34)).
 
+## How we fill data (roadmap lock — #127)
+
+Visit capture stays **thin** on purpose. Dog/owner detail is **enrichment**, not mid-groom homework.
+
+| Track | Who | What |
+|-------|-----|------|
+| **Visit form (SPA)** | Groomer | Name → minutes → service → money → optional condition/photos. No CRM fields. |
+| **Enrichment (SQL today)** | Maintainer | Breed/coat/size/handling, fixes — [`enrichment.md`](runbooks/enrichment.md) |
+| **Maintainer browse/edit UI** | Maintainer | When SQL friction hurts — [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) (not M9 client pages; not the groomer’s phone) |
+| **Derived recompute** | System | `visit_count`, `last_visit_date`, … — **after** there are rows worth recomputing |
+| **Coat-first predictions** | Later (M7) | Do not require breed — [#121](https://github.com/BOYSABIO/muttmetrics/issues/121) |
+
+```text
+condition polarity (#123) → visit habit (#22)
+  → enrich when needed (#117 if SQL hurts)
+  → M5 analytics on sparse-but-clear data
+  → recompute / fitted model later
+```
+
+Empty nullable columns are fine. Ambiguous scales are not. Do not turn the phone visit form into a dog/owner CRM without a separate product decision.
+
 ## Out of scope (here)
 
 - Fitting coefficients from salon data / auto-tuning the formula
@@ -122,3 +143,4 @@ Fitted / later priors must be able to produce P50/P90 **without requiring `breed
 - [ADR-001](architecture/adr/001-derived-fields.md) — `days_since_last` and predictions are system-computed on the visit, not hand-edited
 - Breed cold-start values — `src/muttmetrics/seed/data.py` (`base_groom_minutes`, `matting_risk`, `recommended_interval_days`)
 - Coat/size/temperament-first predictions — [#121](https://github.com/BOYSABIO/muttmetrics/issues/121)
+- Thin capture vs enrichment sequencing — [#127](https://github.com/BOYSABIO/muttmetrics/issues/127), maintainer UI [#117](https://github.com/BOYSABIO/muttmetrics/issues/117)

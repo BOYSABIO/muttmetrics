@@ -2,7 +2,7 @@
 
 import pytest
 
-from muttmetrics.prior import rules_prior
+from muttmetrics.priors import rules_prior
 
 
 def test_walkthrough_example() -> None:

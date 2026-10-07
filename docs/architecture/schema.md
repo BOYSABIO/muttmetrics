@@ -131,7 +131,7 @@ Reference tables only — no FKs to other entities. See model files for full col
 | What the bytes are | `content_type`, `byte_size`, `sha256` |
 | When | `created_at` (timestamptz, needed for retention and the orphan sweep) |
 
-Constraints: `kind` is checked; a `profile` photo must have no `visit_id` while `intake` / `after` must have one; `byte_size > 0`. Foreign keys deliberately have **no `ON DELETE CASCADE`** — Postgres cannot delete files, so a cascade would strand bytes on disk. Deletion goes through `scripts/photo_purge.py` (see [`ops-photos.md`](../runbooks/photos.md)).
+Constraints: `kind` is checked; a `profile` photo must have no `visit_id` while `intake` / `after` must have one; `byte_size > 0`. Foreign keys deliberately have **no `ON DELETE CASCADE`** — Postgres cannot delete files, so a cascade would strand bytes on disk. Deletion goes through `ops/photo_purge.py` (see [`photos.md`](../runbooks/photos.md)).
 
 **History:** `visit.intake_photos` / `after_photos` (`TEXT[]` of URLs) were removed in [#98](https://github.com/BOYSABIO/muttmetrics/issues/98) once the SPA wrote only to this table.
 

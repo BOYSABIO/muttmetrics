@@ -1,7 +1,8 @@
 """CLI: duration range for a dog (#26).
 
 Usage:
-  python -m muttmetrics.duration_range --dog-id 1 [--as-of 2026-10-06] [--service-id 4]
+  python -m muttmetrics.priors --dog-id 1 [--as-of 2026-10-06] [--service-id 4]
+  python -m muttmetrics.priors.duration_range --dog-id 1 …
 """
 
 from __future__ import annotations

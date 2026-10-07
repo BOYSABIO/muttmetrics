@@ -3,8 +3,8 @@
 Files first, then rows - the reverse of the write order, so a row is never
 left pointing at bytes that are gone. Dry run unless --apply is given.
 
-    python scripts/photo_purge.py --owner-id 42
-    python scripts/photo_purge.py --owner-id 42 --apply
+    python ops/photo_purge.py --owner-id 42
+    python ops/photo_purge.py --owner-id 42 --apply
 
 Backups still hold copies until the retention window in docs/architecture/privacy.md
 passes. See docs/runbooks/photos.md for the full deletion procedure.
@@ -17,8 +17,8 @@ import sys
 
 from sqlalchemy import Select, select
 
-from muttmetrics import storage
 from muttmetrics.db.session import session_scope
+from muttmetrics.media import storage
 from muttmetrics.models import Dog, Photo
 
 

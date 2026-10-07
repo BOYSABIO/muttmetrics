@@ -4,8 +4,8 @@ Normal causes: a crash between writing the file and inserting the row, or a
 .tmp file from an interrupted write. Files newer than --min-age-hours are
 never touched, so an upload in flight is safe.
 
-    python scripts/photo_sweep.py             # report only
-    python scripts/photo_sweep.py --apply     # delete the orphans
+    python ops/photo_sweep.py             # report only
+    python ops/photo_sweep.py --apply     # delete the orphans
 """
 
 from __future__ import annotations
@@ -17,8 +17,8 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from muttmetrics import storage
 from muttmetrics.db.session import session_scope
+from muttmetrics.media import storage
 from muttmetrics.models import Photo
 
 

@@ -98,8 +98,8 @@ Nothing about the dog, owner or visit appears in the filename; the path is date 
 A client asking for their photos to be deleted is a request that must be honoured, not a feature request. The procedure is in [`ops-photos.md`](../runbooks/photos.md) §5 and comes down to:
 
 ```bash
-python scripts/photo_purge.py --owner-id <id>           # review
-python scripts/photo_purge.py --owner-id <id> --apply   # delete
+python ops/photo_purge.py --owner-id <id>           # review
+python ops/photo_purge.py --owner-id <id> --apply   # delete
 ```
 
 Files are removed first, then rows.

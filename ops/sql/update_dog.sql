@@ -1,5 +1,5 @@
 -- Recipe: enrich dog hand-entered fields (coat / temperament / weight / medical).
--- See docs/runbooks/enrichment.md — "Enrich a dog".
+-- See docs/runbooks/enrichment.md ΓÇö "Enrich a dog".
 -- For breed_id only, prefer enrich_dog_breed.sql.
 -- Do NOT set size_band, visit_count, last_visit_date, avg_duration_min, etc.
 
@@ -19,7 +19,7 @@ JOIN owner o ON o.owner_id = d.owner_id
 WHERE d.dog_id = 123;   -- <-- placeholder dog_id
 
 -- ---------------------------------------------------------------------------
--- 2) UPDATE — comment out anything you are not changing
+-- 2) UPDATE ΓÇö comment out anything you are not changing
 -- ---------------------------------------------------------------------------
 BEGIN;
 
@@ -32,7 +32,7 @@ SET
   coat_density = 'medium',
   undercoat = true,
   sheds = false,
-  handling_score = 3,                  -- 1–5 CHECK
+  handling_score = 3,                  -- 1ΓÇô5 CHECK
   fear_triggers = ARRAY['dryer'],      -- TEXT[]
   muzzle_required = false,
   two_person_job = false,

@@ -56,12 +56,12 @@ docker compose exec -T db psql -U muttmetrics -d muttmetrics -c "SELECT COUNT(*)
 
 ## Where SQL scripts live
 
-Full map (Python ops + SQL + package CLIs): [`scripts/README.md`](../../scripts/README.md).
+Full map (Python ops + SQL + package CLIs): [`ops/README.md`](../../ops/README.md).
 
 | Kind | Location |
 |------|----------|
-| Shared / reusable (peek, cleanup, enrichment, compliance, calibration) | Repo: [`scripts/SQL/`](../../scripts/SQL/) — commit these |
-| Personal one-offs | Editor scratch, or `scripts/**/*.local.sql` (gitignored) |
+| Shared / reusable (peek, cleanup, enrichment, compliance, calibration) | Repo: [`ops/sql/`](../../ops/sql/) — commit these |
+| Personal one-offs | Editor scratch, or `ops/**/*.local.sql` (gitignored) |
 | Real client dumps / PII | Never commit — see Privacy in README |
 
 The extension is a **runner**, not the source of truth. Durable SQL belongs in git.
@@ -115,13 +115,13 @@ ORDER BY o.name, d.name;
 
 This is **read-only**. To delete synthetic rows safely (preview + FK-ordered deletes, keeps real rows), use:
 
-`scripts/SQL/cleanup_synthetic_clients.local.sql` *(local only, gitignored: it names real rows to protect)*
+`ops/sql/cleanup_synthetic_clients.local.sql` *(local only, gitignored: it names real rows to protect)*
 
 ## Enrichment (UPDATE after thin capture)
 
 Breed, phone, notes, visit fixes — Owner’s job, not the SPA. Playbook + recipes:
 
-[`ops-enrichment.md`](./enrichment.md) · [`scripts/SQL/lookup_breeds.sql`](../../scripts/SQL/lookup_breeds.sql) · [`enrich_dog_breed.sql`](../../scripts/SQL/enrich_dog_breed.sql) · [`update_visit.sql`](../../scripts/SQL/update_visit.sql) · …
+[`ops-enrichment.md`](./enrichment.md) · [`ops/sql/lookup_breeds.sql`](../../ops/sql/lookup_breeds.sql) · [`enrich_dog_breed.sql`](../../ops/sql/enrich_dog_breed.sql) · [`update_visit.sql`](../../ops/sql/update_visit.sql) · …
 
 ## Pytest writes to this same database
 

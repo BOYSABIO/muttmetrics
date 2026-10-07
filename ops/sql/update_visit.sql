@@ -1,7 +1,7 @@
 -- Recipe: fix / enrich a visit row (event facts only).
--- See docs/runbooks/enrichment.md — "Fix / enrich a visit".
+-- See docs/runbooks/enrichment.md ΓÇö "Fix / enrich a visit".
 -- Do NOT set days_since_last or predicted_min_*.
--- Photos live in the photo table (API upload / photo_purge) — not on visit.
+-- Photos live in the photo table (API upload / photo_purge) ΓÇö not on visit.
 
 -- ---------------------------------------------------------------------------
 -- 1) Inspect
@@ -24,7 +24,7 @@ JOIN owner o ON o.owner_id = v.owner_id
 WHERE v.visit_id = 123;   -- <-- placeholder visit_id
 
 -- ---------------------------------------------------------------------------
--- 2) UPDATE — edit only the columns you need; comment out the rest
+-- 2) UPDATE ΓÇö edit only the columns you need; comment out the rest
 -- ---------------------------------------------------------------------------
 BEGIN;
 
@@ -32,7 +32,7 @@ UPDATE visit
 SET
   visit_date = DATE '2026-09-17',           -- <-- or leave unchanged / comment out
   actual_minutes = 90,                      -- <-- wall-clock minutes (> 0)
-  condition_score = 3,                      -- <-- 0–5 or NULL
+  condition_score = 3,                      -- <-- 0ΓÇô5 or NULL
   what_surprised_me = 'Example note only',  -- <-- placeholder text
   status = 'completed',                     -- completed | cancelled | no_show
   actual_service_id = 4,                    -- <-- optional; from service catalog

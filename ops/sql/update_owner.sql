@@ -1,5 +1,5 @@
 -- Recipe: enrich owner contact / notes (hand-entered columns only).
--- See docs/runbooks/enrichment.md — "Enrich an owner".
+-- See docs/runbooks/enrichment.md ΓÇö "Enrich an owner".
 -- Do NOT set visit_count, neglect_rate, lifetime_value, etc.
 
 -- ---------------------------------------------------------------------------
@@ -10,7 +10,7 @@ FROM owner
 WHERE owner_id = 123;   -- <-- placeholder owner_id
 
 -- ---------------------------------------------------------------------------
--- 2) UPDATE — comment out lines you do not want to change
+-- 2) UPDATE ΓÇö comment out lines you do not want to change
 -- ---------------------------------------------------------------------------
 BEGIN;
 
