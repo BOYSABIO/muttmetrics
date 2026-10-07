@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from muttmetrics.images import MAX_UPLOAD_BYTES
+from muttmetrics.media.images import MAX_UPLOAD_BYTES
 
 
 @pytest.fixture(autouse=True)

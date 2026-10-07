@@ -72,7 +72,7 @@ To inspect capture rows without a dashboard: connect the PostgreSQL extension or
 
 To enrich breed / owner / visit after thin capture (maintainer SQL only): [`docs/runbooks/enrichment.md`](./docs/runbooks/enrichment.md).
 
-**Where is script X?** See [`scripts/README.md`](./scripts/README.md) — backups/photos (Python), SQL recipes, and package CLIs (`duration_range`, seed).
+**Where is ops tool X?** See [`ops/README.md`](./ops/README.md) — backups/photos (Python), SQL recipes, and package CLIs (`python -m muttmetrics.priors`, seed). Layout: [`docs/architecture/ops-layout.md`](./docs/architecture/ops-layout.md).
 
 ### Alternative: Neon (hosted)
 
@@ -118,7 +118,7 @@ alembic downgrade base
 ```bash
 alembic revision --autogenerate -m "describe change"
 # Review alembic/versions/<rev>_describe_change.py — autogenerate is a DRAFT
-python scripts/backup.py        # first, on any database that holds real rows
+python ops/backup.py        # first, on any database that holds real rows
 alembic upgrade head
 ```
 
@@ -128,13 +128,13 @@ Autogenerate diffs two schema *states*; it does not know what you *meant*. A ren
 
 ## Backups (#95)
 
-`scripts/backup.py` writes a `pg_dump -Fc` archive plus an **additive** photo copy under `BACKUP_ROOT` (outside the repo); `scripts/backup_check.py` reports how stale the last run is and exits non-zero when it is too old. Retention: 14 daily dumps, Sundays for 8 weeks, photos never auto-pruned.
+`ops/backup.py` writes a `pg_dump -Fc` archive plus an **additive** photo copy under `BACKUP_ROOT` (outside the repo); `ops/backup_check.py` reports how stale the last run is and exits non-zero when it is too old. Retention: 14 daily dumps, Sundays for 8 weeks, photos never auto-pruned.
 
 Run it by hand for now — **scheduling is documented but not enabled yet** ([`docs/runbooks/backup.md`](./docs/runbooks/backup.md) §4). Everything about restoring, including the drill that proves a dump is real, is in that runbook.
 
 ```bash
-python scripts/backup.py
-python scripts/backup_check.py
+python ops/backup.py
+python ops/backup_check.py
 ```
 
 ## Capture photos (#30)
@@ -147,12 +147,12 @@ PHOTO_ROOT=C:/muttmetrics-data/photos   # optional; defaults to ~/muttmetrics-da
 
 | Piece | Role |
 |-------|------|
-| `src/muttmetrics/storage.py` | keys ↔ files: key generation, atomic write, read, delete, traversal checks |
-| `src/muttmetrics/images.py` | bytes ↔ bytes: decode, EXIF strip, downscale, re-encode JPEG |
+| `src/muttmetrics/media/storage.py` | keys ↔ files: key generation, atomic write, read, delete, traversal checks |
+| `src/muttmetrics/media/images.py` | bytes ↔ bytes: decode, EXIF strip, downscale, re-encode JPEG |
 | `src/muttmetrics/api/routes/photos.py` | upload / list / serve |
 | `photo` table | `dog_id`, optional `visit_id`, `kind`, relative `storage_key`, size, sha256, `created_at` |
-| `scripts/photo_purge.py` | delete a client's photos (files first, then rows) — dry run by default |
-| `scripts/photo_sweep.py` | find files with no row (crash leftovers) — dry run by default |
+| `ops/photo_purge.py` | delete a client's photos (files first, then rows) — dry run by default |
+| `ops/photo_sweep.py` | find files with no row (crash leftovers) — dry run by default |
 
 Deps: `pillow` (decode/encode), `pillow-heif` (iPhone HEIC), `python-multipart` (upload bodies).
 

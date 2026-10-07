@@ -2,7 +2,7 @@
 
 Operational reference for photo storage ([#30](https://github.com/BOYSABIO/muttmetrics/issues/30)). Design rationale is in [ADR-002](../architecture/adr/002-photo-storage.md); the privacy policy this implements is in [`privacy.md`](../architecture/privacy.md).
 
-Related: [`db-peek.md`](./db-peek.md) (looking at rows), [`enrichment.md`](./enrichment.md) (fixing rows), [`groomer-trial.md`](./groomer-trial.md) (running the stack), [`scripts/README.md`](../../scripts/README.md) (all maintainer scripts).
+Related: [`db-peek.md`](./db-peek.md) (looking at rows), [`enrichment.md`](./enrichment.md) (fixing rows), [`groomer-trial.md`](./groomer-trial.md) (running the stack), [`ops/README.md`](../../ops/README.md) (all maintainer scripts).
 
 ---
 
@@ -98,10 +98,10 @@ Three separate things hold photo data, and a deletion request has to address all
 
 ```bash
 # 1. See what would go (default: dry run, changes nothing)
-python scripts/photo_purge.py --owner-id 42
+python ops/photo_purge.py --owner-id 42
 
 # 2. Do it
-python scripts/photo_purge.py --owner-id 42 --apply
+python ops/photo_purge.py --owner-id 42 --apply
 ```
 
 The script deletes **files first, then rows** — the reverse of the write order, for the same reason: never leave a row pointing at bytes that are gone.
@@ -115,8 +115,8 @@ A browser that displayed a photo may also keep it in its cache for up to an hour
 Files with no row. Normal causes: a crash between write and insert, or a `.tmp` left by an interrupted write.
 
 ```bash
-python scripts/photo_sweep.py            # report only
-python scripts/photo_sweep.py --apply    # delete them
+python ops/photo_sweep.py            # report only
+python ops/photo_sweep.py --apply    # delete them
 ```
 
 Only files older than one hour are considered, so an upload in flight is never swept. Worth running occasionally, and after any crash during a capture session.

@@ -47,9 +47,7 @@ Thumbs.db
 docs/notes/
 
 # Local SQL scratch - may contain real client rows
-scripts/first_visit.sql
-scripts/*.local.sql
-scripts/**/*.local.sql
+ops/**/*.local.sql
 
 # Frontend
 frontend/node_modules/

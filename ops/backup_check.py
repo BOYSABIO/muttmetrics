@@ -1,11 +1,11 @@
 """Is the backup still running? (#95)
 
 A backup that stops does not raise an error - it goes quiet. This reads the
-status file written by scripts/backup.py and says plainly how old the last
+status file written by ops/backup.py and says plainly how old the last
 run is, exiting non-zero when it is too old (or missing entirely).
 
-    python scripts/backup_check.py
-    python scripts/backup_check.py --max-age-hours 24
+    python ops/backup_check.py
+    python ops/backup_check.py --max-age-hours 24
 
 Exit codes: 0 fresh, 1 stale or missing. The exit code is there so this can
 later be wired into something that shouts on its own (see the icebox

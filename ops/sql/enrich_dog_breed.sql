@@ -1,5 +1,5 @@
 -- Recipe: set dog.breed_id (and optional breed_secondary_id).
--- See docs/runbooks/enrichment.md — "Set a dog's breed".
+-- See docs/runbooks/enrichment.md ΓÇö "Set a dog's breed".
 -- Replace placeholders before running. No real PII in committed copies.
 
 -- ---------------------------------------------------------------------------
@@ -22,7 +22,7 @@ WHERE d.dog_id = 123;   -- <-- placeholder dog_id
 -- SELECT breed_id, name_de, name_en FROM breed ORDER BY name_de;
 
 -- ---------------------------------------------------------------------------
--- 3) UPDATE (primary breed required; secondary optional — comment out if unused)
+-- 3) UPDATE (primary breed required; secondary optional ΓÇö comment out if unused)
 -- ---------------------------------------------------------------------------
 BEGIN;
 
@@ -33,7 +33,7 @@ SET
 WHERE dog_id = 123;          -- <-- same dog_id as step 1
 
 -- ---------------------------------------------------------------------------
--- 4) Verify (names via JOIN — still stored as ids on dog)
+-- 4) Verify (names via JOIN ΓÇö still stored as ids on dog)
 -- ---------------------------------------------------------------------------
 SELECT
   d.dog_id,

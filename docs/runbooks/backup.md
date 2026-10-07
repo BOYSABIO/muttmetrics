@@ -1,6 +1,6 @@
 # Runbook: backups — running them, checking them, restoring from them
 
-Operational reference for [#95](https://github.com/BOYSABIO/muttmetrics/issues/95). Related: [`photos.md`](./photos.md) (what is being backed up), [`privacy.md`](../architecture/privacy.md) (retention / client asks), [ADR-002](../architecture/adr/002-photo-storage.md) (why photos are files), [`scripts/README.md`](../../scripts/README.md) (script index).
+Operational reference for [#95](https://github.com/BOYSABIO/muttmetrics/issues/95). Related: [`photos.md`](./photos.md) (what is being backed up), [`privacy.md`](../architecture/privacy.md) (retention / client asks), [ADR-002](../architecture/adr/002-photo-storage.md) (why photos are files), [`ops/README.md`](../../ops/README.md) (script index).
 
 ---
 
@@ -37,7 +37,7 @@ The first four are the ones that have nearly happened. The rest needs a second m
 ## 1. Running a backup
 
 ```bash
-python scripts/backup.py
+python ops/backup.py
 ```
 
 Options: `--extra-dest PATH` (repeatable, for a second destination), `--skip-photos`, `--no-prune`.
@@ -51,8 +51,8 @@ The script runs `docker compose` with the repo as its working directory regardle
 ## 2. Checking that backups are still happening
 
 ```bash
-python scripts/backup_check.py
-python scripts/backup_check.py --max-age-hours 24
+python ops/backup_check.py
+python ops/backup_check.py --max-age-hours 24
 ```
 
 Prints the age of the last run and exits **non-zero** when it is stale or missing. It also verifies that the dump named in the status file actually exists, because a status report is a claim and the directory is the fact.
@@ -99,7 +99,7 @@ Verify it as the scheduler, not as yourself:
 ```powershell
 schtasks /Run /TN "MuttMetrics backup"
 Get-Content C:\muttmetrics-data\backups\backup.log -Tail 10
-python scripts/backup_check.py
+python ops/backup_check.py
 ```
 
 The log file is the proof it ran unattended.
@@ -113,7 +113,7 @@ Same script, no changes:
 [Service]
 Type=oneshot
 WorkingDirectory=/opt/muttmetrics
-ExecStart=/opt/muttmetrics/.venv/bin/python scripts/backup.py
+ExecStart=/opt/muttmetrics/.venv/bin/python ops/backup.py
 ```
 
 ```ini
@@ -169,7 +169,7 @@ The numbers should match (allowing for rows added since the dump). **Record the 
 ### The real thing: restoring over the live database
 
 ```bash
-python scripts/backup.py            # dump the current state first, whatever state it is in
+python ops/backup.py            # dump the current state first, whatever state it is in
 docker compose exec db dropdb -U muttmetrics muttmetrics
 docker compose exec db createdb -U muttmetrics muttmetrics
 docker compose cp <dump> db:/tmp/restore.dump
@@ -179,21 +179,21 @@ alembic current                     # confirm the schema version matches the cod
 
 **Photos restore by copying** `<BACKUP_ROOT>/photos/` back over `PHOTO_ROOT` — the keys in the database are relative, so nothing in the rows needs changing.
 
-After any restore, run `scripts/photo_sweep.py` (files with no row) and spot-check a `GET /photos/{id}` (rows with no file).
+After any restore, run `ops/photo_sweep.py` (files with no row) and spot-check a `GET /photos/{id}` (rows with no file).
 
 ### Drill log
 
 Results live in `docs/notes/backup-drills.md`, which is **gitignored** — row counts are business data (how many clients, how many grooms), and this runbook is public. Record the date, the dump used, the four counts on both sides, and whether they matched.
 
-Run a drill after any change to `scripts/backup.py`, before a migration that touches existing data, and at least once a quarter otherwise.
+Run a drill after any change to `ops/backup.py`, before a migration that touches existing data, and at least once a quarter otherwise.
 
 ## 6. Deleting a client's photos, including from backups
 
-`scripts/photo_purge.py` removes the live file and the row. The backup copy is additive and has to be removed too:
+`ops/photo_purge.py` removes the live file and the row. The backup copy is additive and has to be removed too:
 
 ```bash
-python scripts/photo_purge.py --owner-id 42            # review
-python scripts/photo_purge.py --owner-id 42 --apply    # live file + row
+python ops/photo_purge.py --owner-id 42            # review
+python ops/photo_purge.py --owner-id 42 --apply    # live file + row
 # then remove the same relative keys under <BACKUP_ROOT>/photos/
 ```
 

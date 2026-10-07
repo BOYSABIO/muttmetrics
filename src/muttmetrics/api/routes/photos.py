@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, Upl
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from muttmetrics import images, storage
 from muttmetrics.api.deps import get_db, require_api_key
 from muttmetrics.api.schemas.photos import PhotoResponse
+from muttmetrics.media import images, storage
 from muttmetrics.models import Photo, Visit
 
 router = APIRouter(tags=["photos"])

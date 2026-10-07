@@ -34,7 +34,7 @@ The thing that would prove the second column is a migration harness that seeds r
 ## 1. Before upgrading a database that holds real rows
 
 ```bash
-python scripts/backup.py        # dump first - see runbooks/backup.md
+python ops/backup.py        # dump first - see runbooks/backup.md
 alembic upgrade head
 ```
 
@@ -182,7 +182,7 @@ alembic stamp head       # "trust me, the schema is already here"
 1. Edit the models.
 2. `alembic revision --autogenerate -m "describe change"`.
 3. **Read the draft.** Every `drop_*`, every `type_=`, every `nullable=False` — intentional, or an autogenerate misreading? Check `downgrade()` too.
-4. `python scripts/backup.py` before touching a database with real rows.
+4. `python ops/backup.py` before touching a database with real rows.
 5. `alembic upgrade head`.
 6. `pytest` — including the guard in §4.
 7. If the migration drops something on purpose, add the acknowledgement line and say why.

@@ -2,15 +2,15 @@
 -- Only completed (or legacy NULL status) visits that have a P50 stored.
 --
 -- Run:
---   Get-Content .\scripts\SQL\calibration_error.sql -Raw |
+--   Get-Content .\ops\sql\calibration_error.sql -Raw |
 --     docker compose exec -T db psql -U muttmetrics -d muttmetrics
 
 -- ---------------------------------------------------------------------------
--- 1) By breed — “are we systematically underestimating Doodles?”
+-- 1) By breed ΓÇö ΓÇ£are we systematically underestimating Doodles?ΓÇ¥
 -- ---------------------------------------------------------------------------
--- error_p50 > 0  → actual longer than P50 (under-predicted)
--- error_p50 < 0  → actual shorter than P50 (over-predicted)
--- p90_hit_rate   → share of visits where actual <= P90 (aim ~0.9 when n is large)
+-- error_p50 > 0  ΓåÆ actual longer than P50 (under-predicted)
+-- error_p50 < 0  ΓåÆ actual shorter than P50 (over-predicted)
+-- p90_hit_rate   ΓåÆ share of visits where actual <= P90 (aim ~0.9 when n is large)
 
 SELECT
   COALESCE(b.name_en, '(no breed)') AS breed,
@@ -34,7 +34,7 @@ GROUP BY b.name_en
 ORDER BY n DESC, breed;
 
 -- ---------------------------------------------------------------------------
--- 2) By condition_score — coat condition vs error
+-- 2) By condition_score ΓÇö coat condition vs error
 -- ---------------------------------------------------------------------------
 SELECT
   v.condition_score,
@@ -55,7 +55,7 @@ GROUP BY v.condition_score
 ORDER BY v.condition_score NULLS LAST;
 
 -- ---------------------------------------------------------------------------
--- 3) Overall (one row) — weekly sanity check
+-- 3) Overall (one row) ΓÇö weekly sanity check
 -- ---------------------------------------------------------------------------
 SELECT
   COUNT(*) AS n,

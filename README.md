@@ -14,7 +14,7 @@ Duration intelligence for a dog grooming business: structured visit data and P50
 | **Product** | [Case study](docs/product/case-study.md) · [Vision](docs/product/vision.md) |
 | **Architecture** | [Schema](docs/architecture/schema.md) · [Privacy](docs/architecture/privacy.md) · [ADRs](docs/architecture/adr/) · [Rules prior](docs/prior.md) |
 | **Runbooks** | [Groomer trial](docs/runbooks/groomer-trial.md) · [DB peek](docs/runbooks/db-peek.md) · [Enrichment](docs/runbooks/enrichment.md) · [Photos](docs/runbooks/photos.md) · [Backups](docs/runbooks/backup.md) · [Compliance](docs/runbooks/compliance.md) |
-| **Scripts** | [Scripts map](scripts/README.md) — backup, photos, SQL recipes, package CLIs |
+| **Ops** | [Ops map](ops/README.md) — backup, photos, SQL recipes; package CLIs stay in `src/` |
 | **Contributing** | [Setup](#setup) · [CONTRIBUTING](./CONTRIBUTING.md) |
 | **Planning** | [Milestones](https://github.com/BOYSABIO/muttmetrics/milestones) · [Issues](https://github.com/BOYSABIO/muttmetrics/issues) |
 
@@ -25,10 +25,10 @@ docs/               # documentation — start at docs/README.md
   product/          #   vision, case study
   architecture/     #   schema, privacy, adr/
   runbooks/         #   step-by-step operating procedures
-src/muttmetrics/    # package (models/, api/, seed/, …)
+src/muttmetrics/    # package (api/, models/, priors/, media/, seed/, …)
 alembic/            # migration scripts (Alembic)
 frontend/           # Vite + React + TS capture SPA (#69–#72)
-scripts/            # ops — start at scripts/README.md (Python + SQL + CLI map)
+ops/                # maintainer tooling — start at ops/README.md (#125)
 tests/
 docker-compose.yml  # local Postgres (primary dev path)
 ```

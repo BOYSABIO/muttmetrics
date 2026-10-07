@@ -10,7 +10,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from muttmetrics.models import Breed, Dog, Service, Visit
-from muttmetrics.prior import rules_prior
+from muttmetrics.priors import rules_prior
 
 LOGGER = logging.getLogger(__name__)
 
