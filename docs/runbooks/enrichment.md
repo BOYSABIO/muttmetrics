@@ -20,7 +20,7 @@ Connect first: [`ops-db-peek.md`](./db-peek.md). Schema overview: [`schema.md`](
 |-------|----------------------------------|-----------|
 | `owner` | `phone`, `email`, `notes`, `address_area`, `preferred_channel`, `client_since`, `locale`, `name` | `visit_count`, `neglect_rate`, `lifetime_value`, … |
 | `dog` | `breed_id`, `breed_secondary_id`, `weight_kg`, coat/temperament/medical hand-entered fields, `name` | `size_band`, `visit_count`, `last_visit_date`, `avg_duration_min`, … |
-| `visit` | `visit_date`, `actual_minutes`, `condition_score`, `what_surprised_me`, `status`, service ids / prices / tips if needed | `days_since_last`, `predicted_min_p50`, `predicted_min_p90` |
+| `visit` | `visit_date`, `actual_minutes`, `condition_score` (**0 = worst … 5 = best**), `what_surprised_me`, `status`, service ids / prices / tips if needed | `days_since_last`, `predicted_min_p50`, `predicted_min_p90` |
 
 Why forbidden matters: derived values are **meant to be recomputed from visits**. If you type `last_visit_date` by hand, it can disagree with the real `visit` table. Later analytics/M4 will trust the wrong number. There is no DB “formula” that auto-fixes that — you just created a lie that looks official.
 
@@ -37,7 +37,7 @@ Why forbidden matters: derived values are **meant to be recomputed from visits**
 
 ## Recipes (explained)
 
-Each recipe has a matching file under [`scripts/SQL/`](../../scripts/SQL/). Open the file in the Postgres extension and run section by section.
+Each recipe has a matching file under [`scripts/SQL/`](../../scripts/SQL/). Index of all scripts: [`scripts/README.md`](../../scripts/README.md). Open the file in the Postgres extension and run section by section.
 
 ### 1. List breeds — `lookup_breeds.sql`
 

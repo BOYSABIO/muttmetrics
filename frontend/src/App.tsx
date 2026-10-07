@@ -839,12 +839,16 @@ function App() {
                 />
               </div>
               <div className="field">
-                <label htmlFor="condition_score">Condition (0–5, optional)</label>
+                <label htmlFor="condition_score">
+                  Coat condition (optional) — 0 worst … 5 best
+                </label>
                 <input
                   id="condition_score"
                   type="number"
                   min={0}
                   max={5}
+                  inputMode="numeric"
+                  placeholder="0–5"
                   value={conditionScore}
                   onChange={(e) => setConditionScore(e.target.value)}
                 />

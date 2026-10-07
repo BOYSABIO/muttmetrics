@@ -56,10 +56,12 @@ docker compose exec -T db psql -U muttmetrics -d muttmetrics -c "SELECT COUNT(*)
 
 ## Where SQL scripts live
 
+Full map (Python ops + SQL + package CLIs): [`scripts/README.md`](../../scripts/README.md).
+
 | Kind | Location |
 |------|----------|
-| Shared / reusable (peek, cleanup, enrichment) | Repo: [`scripts/SQL/`](../../scripts/SQL/) — commit these |
-| Personal one-offs | Editor scratch, or `scripts/*.local.sql` (gitignored) |
+| Shared / reusable (peek, cleanup, enrichment, compliance, calibration) | Repo: [`scripts/SQL/`](../../scripts/SQL/) — commit these |
+| Personal one-offs | Editor scratch, or `scripts/**/*.local.sql` (gitignored) |
 | Real client dumps / PII | Never commit — see Privacy in README |
 
 The extension is a **runner**, not the source of truth. Durable SQL belongs in git.

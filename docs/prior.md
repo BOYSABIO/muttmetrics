@@ -87,7 +87,7 @@ Locked by `tests/test_prior.py::test_walkthrough_example`.
 
 Once visits store both `actual_minutes` and `predicted_min_*`, check whether the rules are systematically wrong (e.g. underestimating a breed).
 
-**Script (not a DB view):** [`scripts/SQL/calibration_error.sql`](../scripts/SQL/calibration_error.sql). Open in the Postgres extension or:
+**Script (not a DB view):** [`scripts/SQL/calibration_error.sql`](../scripts/SQL/calibration_error.sql) — see also [`scripts/README.md`](../scripts/README.md). Open in the Postgres extension or:
 
 ```powershell
 Get-Content .\scripts\SQL\calibration_error.sql -Raw |

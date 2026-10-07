@@ -1,6 +1,6 @@
 # Runbook: backups — running them, checking them, restoring from them
 
-Operational reference for [#95](https://github.com/BOYSABIO/muttmetrics/issues/95). Related: `[photos.md](./photos.md)` (what is being backed up), `[privacy.md](../architecture/privacy.md)` (what the retention window means to a client), [ADR-002](../architecture/adr/002-photo-storage.md) (why photos are files, which is what makes this cheap).
+Operational reference for [#95](https://github.com/BOYSABIO/muttmetrics/issues/95). Related: [`photos.md`](./photos.md) (what is being backed up), [`privacy.md`](../architecture/privacy.md) (retention / client asks), [ADR-002](../architecture/adr/002-photo-storage.md) (why photos are files), [`scripts/README.md`](../../scripts/README.md) (script index).
 
 ---
 

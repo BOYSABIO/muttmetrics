@@ -12,8 +12,9 @@ Duration intelligence for a dog grooming business: structured visit data and P50
 | | |
 |---|---|
 | **Product** | [Case study](docs/product/case-study.md) · [Vision](docs/product/vision.md) |
-| **Architecture** | [Schema](docs/architecture/schema.md) · [Privacy](docs/architecture/privacy.md) · [ADRs](docs/architecture/adr/) |
-| **Runbooks** | [Groomer trial](docs/runbooks/groomer-trial.md) · [DB peek](docs/runbooks/db-peek.md) · [Enrichment](docs/runbooks/enrichment.md) · [Photos](docs/runbooks/photos.md) · [Backups](docs/runbooks/backup.md) |
+| **Architecture** | [Schema](docs/architecture/schema.md) · [Privacy](docs/architecture/privacy.md) · [ADRs](docs/architecture/adr/) · [Rules prior](docs/prior.md) |
+| **Runbooks** | [Groomer trial](docs/runbooks/groomer-trial.md) · [DB peek](docs/runbooks/db-peek.md) · [Enrichment](docs/runbooks/enrichment.md) · [Photos](docs/runbooks/photos.md) · [Backups](docs/runbooks/backup.md) · [Compliance](docs/runbooks/compliance.md) |
+| **Scripts** | [Scripts map](scripts/README.md) — backup, photos, SQL recipes, package CLIs |
 | **Contributing** | [Setup](#setup) · [CONTRIBUTING](./CONTRIBUTING.md) |
 | **Planning** | [Milestones](https://github.com/BOYSABIO/muttmetrics/milestones) · [Issues](https://github.com/BOYSABIO/muttmetrics/issues) |
 
@@ -27,7 +28,7 @@ docs/               # documentation — start at docs/README.md
 src/muttmetrics/    # package (models/, api/, seed/, …)
 alembic/            # migration scripts (Alembic)
 frontend/           # Vite + React + TS capture SPA (#69–#72)
-scripts/            # maintenance: SQL recipes (SQL/), photo purge/sweep
+scripts/            # ops — start at scripts/README.md (Python + SQL + CLI map)
 tests/
 docker-compose.yml  # local Postgres (primary dev path)
 ```
