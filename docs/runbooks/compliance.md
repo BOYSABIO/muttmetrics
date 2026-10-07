@@ -4,7 +4,7 @@ How the maintainer measures **% of real grooms that left a visit row** (#22).
 
 This is a **manual product metric**, not a dashboard. The groomer is asked for the denominator; SQL gives the numerator. Do it once per salon week (Mon–Sun) for the first month of formal capture.
 
-Schema / peek: [`db-peek.md`](./db-peek.md). Numerator SQL: [`scripts/SQL/compliance_week.sql`](../../scripts/SQL/compliance_week.sql).
+Schema / peek: [`db-peek.md`](./db-peek.md). Numerator SQL: [`scripts/SQL/compliance_week.sql`](../../scripts/SQL/compliance_week.sql). All scripts: [`scripts/README.md`](../../scripts/README.md).
 
 ## Definition
 

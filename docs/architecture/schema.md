@@ -44,7 +44,7 @@ erDiagram
         int actual_minutes "NOT NULL label"
         int days_since_last "system-computed"
         int predicted_min_p50 "system-computed"
-        int condition_score "0-5"
+        int condition_score "0 worst - 5 best"
         text status "completed|cancelled|no_show"
     }
 
@@ -112,7 +112,7 @@ erDiagram
 | Identity | `dog_id`, `owner_id`, `visit_date` |
 | Booking | `booked_service_id`, `booking_channel`, `is_emergency`, `quoted_price` |
 | System-computed at write | `days_since_last`, `predicted_min_p50`, `predicted_min_p90` |
-| Intake | `condition_score`, `matting_locations[]`, `fleas_or_parasites`, `arrived_wet_dirty` |
+| Intake | `condition_score` (**0 = worst … 5 = best**, or NULL), `matting_locations[]`, `fleas_or_parasites`, `arrived_wet_dirty` |
 | Outcome | `actual_service_id`, `pivoted`, `pivot_reason`, `shaved_down`, `actual_minutes`, `final_price`, `tip`, `add_ons[]` |
 | Qualitative | `what_surprised_me`, `behaviour_this_visit` |
 | Status | `status`, `cancelled_hours_before` |
@@ -139,6 +139,7 @@ Constraints: `kind` is checked; a `profile` photo must have no `visit_id` while 
 
 - **Arrays:** list fields use Postgres `ARRAY(Text)`, not JSON (`fear_triggers`, `matting_locations`, `add_ons`, etc.).
 - **CHECK constraints** (initial migration #8): `dog.handling_score` 1–5; `visit.condition_score` 0–5; `visit.behaviour_this_visit` 1–5; `visit.status` ∈ `completed`, `cancelled`, `no_show`. Postgres rejects invalid values even if application code bugs — e.g. `condition_score = 99` fails with `ck_visit_condition_score`.
+- **Scales (locked [#123](https://github.com/BOYSABIO/muttmetrics/issues/123)):** `visit.condition_score` — **0 = worst** coat / hardest job, **5 = best** / easiest, NULL = not assessed. `dog.handling_score` — **1 = easy** on the table, **5 = hardest**, NULL = unknown (rules prior treats **3** as neutral).
 - **Query indexes** (migration `bba4e6f67c96`, issue #9): FK columns on `dog` and `visit`, plus `visit.visit_date` — for owner/dog listings, visit history, day packing, and service-mix queries.
 - **Required columns:** `owner.name`, `dog.name`, `visit.visit_date`, `visit.actual_minutes`.
 - **Service prices:** `service.price_base` is an optional catalog **floor**. Committed seed leaves it NULL; a gitignored `data/private/pricing.json` overlay fills it locally. Size bands live on `dog`; on-the-spot charge on `visit.quoted_price` / `final_price` / `tip`.

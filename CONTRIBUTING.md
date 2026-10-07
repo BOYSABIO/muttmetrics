@@ -72,6 +72,8 @@ To inspect capture rows without a dashboard: connect the PostgreSQL extension or
 
 To enrich breed / owner / visit after thin capture (maintainer SQL only): [`docs/runbooks/enrichment.md`](./docs/runbooks/enrichment.md).
 
+**Where is script X?** See [`scripts/README.md`](./scripts/README.md) — backups/photos (Python), SQL recipes, and package CLIs (`duration_range`, seed).
+
 ### Alternative: Neon (hosted)
 
 For a shared or staging database later — not required for local dev.
@@ -314,7 +316,7 @@ Creates one `visit` row after a groom. Prefer registering via `#21` endpoints ab
 
 **Required JSON fields:** `dog_id`, `owner_id`, `visit_date`, `actual_minutes` (> 0).  
 **SPA also requires for completed saves:** `actual_service_id`, `final_price` ([#110](https://github.com/BOYSABIO/muttmetrics/issues/110)).  
-**Optional:** `condition_score` (0–5), `booked_service_id`, `quoted_price`, `tip`, photo URL lists (deprecated), `what_surprised_me`, `status`, `shaved_down` (when wired).
+**Optional:** `condition_score` (0–5; **0 = worst coat … 5 = best**), `booked_service_id`, `quoted_price`, `tip`, photo URL lists (deprecated), `what_surprised_me`, `status`, `shaved_down` (when wired).
 
 | Status | Meaning |
 |--------|---------|

@@ -28,6 +28,8 @@ Compliance (visit rows actually exist) is the product gate. Fancy UI and booking
 
 **Amendment (2026-10-06):** The rules prior may key off breed for cold start. Later fitted predictions (M7) should not *require* breed — **coat, size, and temperament/handling** (plus visit context) are the intended primary drivers, especially for mixes. See [#121](https://github.com/BOYSABIO/muttmetrics/issues/121).
 
+**Amendment (2026-10-07):** Between M4 and M5 sits **[M4.5 — Data clarity & ops hygiene](https://github.com/BOYSABIO/muttmetrics/milestone/13)**: lock groomer-facing scales (e.g. `condition_score` 0 = worst … 5 = best, [#123](https://github.com/BOYSABIO/muttmetrics/issues/123)), scripts discoverability, and a later ops-tree overhaul. **Do not** turn the visit form into a dog/owner CRM; enrich via maintainer tools when needed ([#127](https://github.com/BOYSABIO/muttmetrics/issues/127), [#117](https://github.com/BOYSABIO/muttmetrics/issues/117)). Empty nullable columns are fine; ambiguous labels are not. Recompute/derived jobs wait until there is data worth recomputing.
+
 Stack for that path: Python, Postgres, SQLAlchemy, Alembic, FastAPI. Groomer capture UI path (teach + build): **A** thin HTML/Jinja ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) → **B** Vite + React + TS SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) → **C** Next graduate for owner surfaces ([#41](https://github.com/BOYSABIO/muttmetrics/issues/41)). Same Python API throughout.
 
 **Amendment (2026-09-24):** Stage **A** is retired — Jinja `/capture` removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86). **B** (React SPA) is the only groomer capture UI. **C** remains later for owner surfaces.
