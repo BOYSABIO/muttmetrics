@@ -1,8 +1,9 @@
-"""Owner create-or-get helper."""
+"""Owner create-or-get and Directory profile reads."""
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
+from muttmetrics.api.schemas.owners import OwnerDogItem, OwnerProfile
 from muttmetrics.models import Owner
 
 
@@ -36,3 +37,20 @@ def create_or_get_owner(
     session.add(owner)
     session.flush()
     return owner, True
+
+
+def get_owner_profile(session: Session, *, owner_id: int) -> OwnerProfile:
+    """
+    Load one owner for Directory: contact fields + dog list.
+
+    Raises LookupError if owner_id missing (route -> 404).
+    """
+    owner = session.scalar(
+        select(Owner).options(selectinload(Owner.dogs)).where(Owner.owner_id == owner_id)
+    )
+    if owner is None:
+        raise LookupError(f"Owner {owner_id} not found")
+
+    dogs = sorted(owner.dogs, key=lambda d: d.name.lower())
+    profile = OwnerProfile.model_validate(owner)
+    return profile.model_copy(update={"dogs": [OwnerDogItem.model_validate(d) for d in dogs]})

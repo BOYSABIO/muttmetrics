@@ -1,4 +1,4 @@
-"""Owner onboarding - create-or-get by name."""
+"""Owner onboarding (create-or-get) and Directory profile reads."""
 
 from typing import Annotated
 
@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from muttmetrics.api.deps import get_db, require_api_key
-from muttmetrics.api.schemas.owners import OwnerResponse, UpsertOwnerRequest
-from muttmetrics.api.services.owners import create_or_get_owner
+from muttmetrics.api.schemas.owners import OwnerProfile, OwnerResponse, UpsertOwnerRequest
+from muttmetrics.api.services.owners import create_or_get_owner, get_owner_profile
 
 router = APIRouter(tags=["owners"])
 
@@ -33,3 +33,12 @@ def upsert_owner(
 
     response.status_code = 201 if created else 200
     return OwnerResponse.model_validate(owner)
+
+
+@router.get("/owners/{owner_id}", dependencies=[Depends(require_api_key)])
+def read_owner(owner_id: int, session: DbSession) -> OwnerProfile:
+    """Directory profile: owner contact fields + dog list (#131)."""
+    try:
+        return get_owner_profile(session, owner_id=owner_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

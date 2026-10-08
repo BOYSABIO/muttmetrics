@@ -1,10 +1,15 @@
-"""Dog create-or-get helper (scoped to owner)."""
+"""Dog create-or-get, search, and Directory profile reads."""
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
-from muttmetrics.api.schemas.dogs import DogSearchItem
-from muttmetrics.models import Breed, Dog, Owner
+from muttmetrics.api.schemas.dogs import (
+    DogProfile,
+    DogSearchItem,
+    OwnerSummary,
+    VisitSummary,
+)
+from muttmetrics.models import Breed, Dog, Owner, Visit
 
 
 def normalize_dog_name(name: str) -> str:
@@ -79,3 +84,35 @@ def search_dogs(
         )
         for dog in dogs
     ]
+
+
+def get_dog_profile(
+    session: Session,
+    *,
+    dog_id: int,
+    recent_limit: int = 10,
+) -> DogProfile:
+    """
+    Load one dog for Directory: hand-entered fields, owner stub, recent visits.
+
+    Raises LookupError if dog_id missing (route -> 404).
+    """
+    dog = session.scalar(select(Dog).options(joinedload(Dog.owner)).where(Dog.dog_id == dog_id))
+    if dog is None:
+        raise LookupError(f"Dog {dog_id} not found")
+
+    limit = max(0, min(recent_limit, 50))
+    visits = session.scalars(
+        select(Visit)
+        .where(Visit.dog_id == dog_id)
+        .order_by(Visit.visit_date.desc(), Visit.visit_id.desc())
+        .limit(limit)
+    ).all()
+
+    profile = DogProfile.model_validate(dog)
+    return profile.model_copy(
+        update={
+            "owner": OwnerSummary.model_validate(dog.owner),
+            "recent_visits": [VisitSummary.model_validate(v) for v in visits],
+        }
+    )

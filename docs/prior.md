@@ -116,15 +116,15 @@ Visit capture stays **thin** on purpose. Dog/owner detail is **enrichment**, not
 
 | Track | Who | What |
 |-------|-----|------|
-| **Visit form (SPA)** | Groomer | Name → minutes → service → money → optional condition/photos. No CRM fields. |
-| **Enrichment (SQL today)** | Maintainer | Breed/coat/size/handling, fixes — [`enrichment.md`](runbooks/enrichment.md) |
-| **Maintainer browse/edit UI** | Maintainer | When SQL friction hurts — [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) (not M9 client pages; not the groomer’s phone) |
+| **Visits (SPA)** | Groomer | Name → minutes → service → money → optional condition/photos. No CRM fields. |
+| **Directory (SPA)** | Maintainer (groomer offline OK) | Dog/owner profiles + safe edits — [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) / M4.75 (not M9; not mid-groom homework) |
+| **Enrichment SQL** | Maintainer | Escape hatch — [`enrichment.md`](runbooks/enrichment.md) |
 | **Derived recompute** | System | `visit_count`, `last_visit_date`, … — **after** there are rows worth recomputing |
 | **Coat-first predictions** | Later (M7) | Do not require breed — [#121](https://github.com/BOYSABIO/muttmetrics/issues/121) |
 
 ```text
 condition polarity (#123) → visit habit (#22)
-  → enrich when needed (#117 if SQL hurts)
+  → enrich via Directory (#117 / M4.75); SQL escape hatch if needed
   → M5 analytics on sparse-but-clear data
   → recompute / fitted model later
 ```

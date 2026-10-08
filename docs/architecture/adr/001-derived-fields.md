@@ -50,7 +50,7 @@ These are **not** filled by the owner/dog recompute job. They are written when t
 ### Consequences
 
 - Models issue (#7) includes derived columns on `owner` / `dog` as normal mapped attributes, nullable where history is missing; `visit` includes the system-computed columns above.
-- Capture and CSV import must not silently overwrite owner/dog derived columns, or visit `days_since_last` / `predicted_*`, from user input.
+- Capture, CSV import, and any later HTTP `PATCH` for dog/owner must not silently overwrite owner/dog derived columns, or visit `days_since_last` / `predicted_*`, from user input. Same safe lists as the enrichment runbook.
 - A `recompute_derived` CLI is part of the design (later issue on M2–M3), even if not built in this ADR.
 - Derived values may lag until recompute runs; at salon volume that is acceptable.
 - Analytics can still aggregate over `visit` when they need guaranteed freshness; stored derived fields are for product reads and priors.
