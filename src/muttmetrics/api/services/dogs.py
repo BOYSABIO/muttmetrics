@@ -7,6 +7,7 @@ from muttmetrics.api.schemas.dogs import (
     DogProfile,
     DogSearchItem,
     OwnerSummary,
+    PatchDogRequest,
     VisitSummary,
 )
 from muttmetrics.models import Breed, Dog, Owner, Visit
@@ -116,3 +117,40 @@ def get_dog_profile(
             "recent_visits": [VisitSummary.model_validate(v) for v in visits],
         }
     )
+
+
+def patch_dog(
+    session: Session,
+    *,
+    dog_id: int,
+    body: PatchDogRequest,
+) -> DogProfile:
+    """
+    Apply a partial dog update. Only fields present in the JSON are touched.
+
+    Raises LookupError if dog or breed id missing
+    Raises ValueError if name is sent but blank.
+    """
+    dog = session.get(Dog, dog_id)
+
+    if dog is None:
+        raise LookupError(f"Dog {dog_id} not found")
+
+    updates = body.model_dump(exclude_unset=True)
+
+    if "name" in updates:
+        cleaned = normalize_dog_name(updates["name"] or "")
+        if not cleaned:
+            raise ValueError("Dog name must not be empty")
+        updates["name"] = cleaned
+
+    for breed_key in ("breed_id", "breed_secondary_id"):
+        if breed_key in updates and updates[breed_key] is not None:
+            if session.get(Breed, updates[breed_key]) is None:
+                raise LookupError(f"Breed {updates[breed_key]} not found")
+
+    for key, value in updates.items():
+        setattr(dog, key, value)
+
+    session.flush()
+    return get_dog_profile(session, dog_id=dog_id)

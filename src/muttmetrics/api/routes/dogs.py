@@ -11,10 +11,16 @@ from muttmetrics.api.schemas.dogs import (
     DogProfile,
     DogResponse,
     DogSearchItem,
+    PatchDogRequest,
     UpsertDogRequest,
 )
 from muttmetrics.api.schemas.duration_range import DurationRangeResponse
-from muttmetrics.api.services.dogs import create_or_get_dog, get_dog_profile, search_dogs
+from muttmetrics.api.services.dogs import (
+    create_or_get_dog,
+    get_dog_profile,
+    patch_dog,
+    search_dogs,
+)
 from muttmetrics.api.services.visit_predictions import score_dog_duration_range
 
 router = APIRouter(tags=["dogs"])
@@ -106,3 +112,18 @@ def read_dog(
         return get_dog_profile(session, dog_id=dog_id, recent_limit=recent_limit)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.patch("/dogs/{dog_id}", dependencies=[Depends(require_api_key)])
+def update_dog(
+    dog_id: int,
+    body: PatchDogRequest,
+    session: DbSession,
+) -> DogProfile:
+    """Directory: partial update of hand-entered dog fields."""
+    try:
+        return patch_dog(session, dog_id=dog_id, body=body)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

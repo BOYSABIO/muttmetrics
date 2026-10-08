@@ -82,3 +82,63 @@ def test_get_owner_profile_includes_dogs(client: TestClient, auth_headers: dict[
     dog_ids = {d["dog_id"] for d in body["dogs"]}
     assert dog_a.json()["dog_id"] in dog_ids
     assert dog_b.json()["dog_id"] in dog_ids
+
+
+def test_patch_owner_requires_api_key(client: TestClient) -> None:
+    response = client.patch("/owners/1", json={"notes": "x"})
+    assert response.status_code == 401
+
+
+def test_patch_owner_404(client: TestClient, auth_headers: dict[str, str]) -> None:
+    response = client.patch(
+        "/owners/999999",
+        json={"notes": "ghost"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 404
+
+
+def test_patch_owner_updates_phone_leaves_name(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    name = f"Patch Owner {uuid.uuid4().hex[:8]}"
+    created = client.post(
+        "/owners",
+        json={"name": name, "phone": "+49 170 1111111"},
+        headers=auth_headers,
+    )
+    assert created.status_code == 201
+    owner_id = created.json()["owner_id"]
+
+    patched = client.patch(
+        f"/owners/{owner_id}",
+        json={"phone": "+49 170 2222222", "notes": "prefers mornings"},
+        headers=auth_headers,
+    )
+    assert patched.status_code == 200
+    body = patched.json()
+    assert body["name"] == name
+    assert body["phone"] == "+49 170 2222222"
+    assert body["notes"] == "prefers mornings"
+
+
+def test_patch_owner_rejects_derived_field(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    name = f"Derived Block {uuid.uuid4().hex[:8]}"
+    created = client.post(
+        "/owners",
+        json={"name": name},
+        headers=auth_headers,
+    )
+    assert created.status_code == 201
+    owner_id = created.json()["owner_id"]
+
+    patched = client.patch(
+        f"/owners/{owner_id}",
+        json={"visit_count": 99},
+        headers=auth_headers,
+    )
+    assert patched.status_code == 422

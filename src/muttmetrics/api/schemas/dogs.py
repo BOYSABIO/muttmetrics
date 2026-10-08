@@ -118,3 +118,33 @@ class DogProfile(BaseModel):
 
     owner: OwnerSummary
     recent_visits: list[VisitSummary] = Field(default_factory=list)
+
+
+class PatchDogRequest(BaseModel):
+    """Partial dog update - hand entered fields only."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = None
+    breed_id: int | None = None
+    breed_secondary_id: int | None = None
+    sex: str | None = None
+    date_of_birth: date | None = None
+    weight_kg: Decimal | None = None
+
+    coat_type: str | None = None
+    hair_or_fur: str | None = None
+    coat_density: str | None = None
+    undercoat: bool | None = None
+    sheds: bool | None = None
+
+    handling_score: int | None = Field(default=None, ge=1, le=5)
+    fear_triggers: list[str] | None = None
+    muzzle_required: bool | None = None
+    two_person_job: bool | None = None
+    temperament_notes: str | None = None
+
+    skin_conditions: list[str] | None = None
+    senior_flag: bool | None = None
+    mobility_notes: str | None = None
+    vet_notes: str | None = None
