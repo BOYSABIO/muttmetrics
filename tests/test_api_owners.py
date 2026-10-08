@@ -35,3 +35,50 @@ def test_upsert_owner_rejects_blank_name(client: TestClient, auth_headers: dict[
         headers=auth_headers,
     )
     assert response.status_code == 422
+
+
+def test_get_owner_profile_requires_api_key(client: TestClient) -> None:
+    response = client.get("/owners/1")
+    assert response.status_code == 401
+
+
+def test_get_owner_profile_404(client: TestClient, auth_headers: dict[str, str]) -> None:
+    response = client.get("/owners/999999", headers=auth_headers)
+    assert response.status_code == 404
+
+
+def test_get_owner_profile_includes_dogs(client: TestClient, auth_headers: dict[str, str]) -> None:
+    name = f"Profile Owner {uuid.uuid4().hex[:8]}"
+    created = client.post(
+        "/owners",
+        json={"name": name, "phone": "+49 170 1111111"},
+        headers=auth_headers,
+    )
+    assert created.status_code == 201
+    owner_id = created.json()["owner_id"]
+
+    dog_a = client.post(
+        "/dogs",
+        json={"owner_id": owner_id, "name": f"Alpha {uuid.uuid4().hex[:6]}"},
+        headers=auth_headers,
+    )
+    dog_b = client.post(
+        "/dogs",
+        json={"owner_id": owner_id, "name": f"Beta {uuid.uuid4().hex[:6]}"},
+        headers=auth_headers,
+    )
+    assert dog_a.status_code == 201
+    assert dog_b.status_code == 201
+
+    profile = client.get(f"/owners/{owner_id}", headers=auth_headers)
+    assert profile.status_code == 200
+    body = profile.json()
+    assert body["owner_id"] == owner_id
+    assert body["name"] == name
+    assert body["phone"] == "+49 170 1111111"
+    assert "notes" in body
+    assert "locale" in body
+    assert "visit_count" in body  # derived present (null ok)
+    dog_ids = {d["dog_id"] for d in body["dogs"]}
+    assert dog_a.json()["dog_id"] in dog_ids
+    assert dog_b.json()["dog_id"] in dog_ids

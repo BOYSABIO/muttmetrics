@@ -123,3 +123,76 @@ def test_list_dogs_q_filters_by_name_substring(
     miss = client.get("/dogs?q=zzznomatch999", headers=auth_headers)
     assert miss.status_code == 200
     assert miss.json() == []
+
+
+def test_get_dog_profile_requires_api_key(client: TestClient) -> None:
+    response = client.get("/dogs/1")
+    assert response.status_code == 401
+
+
+def test_get_dog_profile_404(client: TestClient, auth_headers: dict[str, str]) -> None:
+    response = client.get("/dogs/999999", headers=auth_headers)
+    assert response.status_code == 404
+
+
+def test_get_dog_profile_includes_owner_and_visits(
+    client: TestClient, owner_id: int, auth_headers: dict[str, str]
+) -> None:
+    dog_name = f"ProfileDog {uuid.uuid4().hex[:8]}"
+    created = client.post(
+        "/dogs",
+        json={"owner_id": owner_id, "name": dog_name},
+        headers=auth_headers,
+    )
+    assert created.status_code == 201
+    dog_id = created.json()["dog_id"]
+
+    visit = client.post(
+        "/visits",
+        json={
+            "dog_id": dog_id,
+            "owner_id": owner_id,
+            "visit_date": "2026-10-01",
+            "actual_minutes": 90,
+            "condition_score": 3,
+            "status": "completed",
+        },
+        headers=auth_headers,
+    )
+    assert visit.status_code == 201
+    visit_id = visit.json()["visit_id"]
+
+    profile = client.get(f"/dogs/{dog_id}", headers=auth_headers)
+    assert profile.status_code == 200
+    body = profile.json()
+    assert body["dog_id"] == dog_id
+    assert body["name"] == dog_name
+    assert body["owner"]["owner_id"] == owner_id
+    assert body["owner"]["name"]
+    assert "coat_type" in body
+    assert "handling_score" in body
+    assert "size_band" in body  # derived present (null ok)
+    assert isinstance(body["recent_visits"], list)
+    assert body["recent_visits"][0]["visit_id"] == visit_id
+    assert body["recent_visits"][0]["actual_minutes"] == 90
+    assert body["recent_visits"][0]["condition_score"] == 3
+
+    empty = client.get(f"/dogs/{dog_id}?recent_limit=0", headers=auth_headers)
+    assert empty.status_code == 200
+    assert empty.json()["recent_visits"] == []
+
+
+def test_get_dog_duration_range_still_works(
+    client: TestClient, owner_id: int, auth_headers: dict[str, str]
+) -> None:
+    """Static path /duration-range must not be stolen by /dogs/{id}."""
+    created = client.post(
+        "/dogs",
+        json={"owner_id": owner_id, "name": f"RangeDog {uuid.uuid4().hex[:8]}"},
+        headers=auth_headers,
+    )
+    assert created.status_code == 201
+    dog_id = created.json()["dog_id"]
+    response = client.get(f"/dogs/{dog_id}/duration-range", headers=auth_headers)
+    assert response.status_code == 200
+    assert response.json()["dog_id"] == dog_id

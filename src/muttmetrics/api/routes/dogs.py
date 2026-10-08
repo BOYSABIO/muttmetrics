@@ -1,4 +1,4 @@
-"""Dog onboarding (create-or-get), directory search, and duration-range preview."""
+"""Dog onboarding (create-or-get), directory search/profile, duration-range."""
 
 from datetime import date
 from typing import Annotated
@@ -7,9 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from muttmetrics.api.deps import get_db, require_api_key
-from muttmetrics.api.schemas.dogs import DogResponse, DogSearchItem, UpsertDogRequest
+from muttmetrics.api.schemas.dogs import (
+    DogProfile,
+    DogResponse,
+    DogSearchItem,
+    UpsertDogRequest,
+)
 from muttmetrics.api.schemas.duration_range import DurationRangeResponse
-from muttmetrics.api.services.dogs import create_or_get_dog, search_dogs
+from muttmetrics.api.services.dogs import create_or_get_dog, get_dog_profile, search_dogs
 from muttmetrics.api.services.visit_predictions import score_dog_duration_range
 
 router = APIRouter(tags=["dogs"])
@@ -85,3 +90,19 @@ def get_duration_range(
         predicted_min_p90=result.predicted_min_p90,
         skipped_reason=result.skipped_reason,
     )
+
+
+@router.get("/dogs/{dog_id}", dependencies=[Depends(require_api_key)])
+def read_dog(
+    dog_id: int,
+    session: DbSession,
+    recent_limit: Annotated[
+        int,
+        Query(ge=0, le=50, description="Max recent visits to include"),
+    ] = 10,
+) -> DogProfile:
+    """Directory profile: dog fields, owner summary, recent visits (#131)."""
+    try:
+        return get_dog_profile(session, dog_id=dog_id, recent_limit=recent_limit)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

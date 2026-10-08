@@ -1,10 +1,21 @@
 # Ops: maintainer enrichment playbook
 
-How to **fix and enrich** rows after thin capture — without a CRM UI and without corrupting derived fields ([ADR-001](../architecture/adr/001-derived-fields.md)).
+How to **fix and enrich** rows after thin capture without corrupting derived fields ([ADR-001](../architecture/adr/001-derived-fields.md)).
 
-Connect first: [`ops-db-peek.md`](./db-peek.md). Schema overview: [`schema.md`](../architecture/schema.md).
+**Preferred path (shipping under [M4.75](https://github.com/BOYSABIO/muttmetrics/milestone/14) / epic [#117](https://github.com/BOYSABIO/muttmetrics/issues/117)):** SPA **Directory** — Visits stay thin capture; Directory is profiles + safe edits (hand backfill when there was never Excel). Children: [#131](https://github.com/BOYSABIO/muttmetrics/issues/131) read API → [#132](https://github.com/BOYSABIO/muttmetrics/issues/132) PATCH → [#138](https://github.com/BOYSABIO/muttmetrics/issues/138) shell → [#139](https://github.com/BOYSABIO/muttmetrics/issues/139)/[#140](https://github.com/BOYSABIO/muttmetrics/issues/140) profiles → [#141](https://github.com/BOYSABIO/muttmetrics/issues/141) docs. Until that UI is usable, use the SQL recipes below.
 
-**Audience:** Owner (maintainer). User’s capture SPA stays thin on purpose.
+Connect first: [`ops-db-peek.md`](./db-peek.md). Schema overview: [`schema.md`](../architecture/schema.md). Product split: [`vision.md`](../product/vision.md).
+
+**Audience:** Owner (maintainer). Groomer’s visit SPA stays thin on purpose — do not stuff CRM fields into the visit form.
+
+### When to use what
+
+| Path | Use when |
+|------|----------|
+| **Visits (SPA)** | Mid-groom / post-groom: create the visit row |
+| **Directory (SPA)** | Browse/edit dog or owner hand-entered fields; preferred enrichment once M4.75 lands |
+| **SQL recipes (this playbook)** | Escape hatch: bulk fixes, edge cases, or Directory not ready yet |
+| **Insights / analytics UI** | Later ([#130](https://github.com/BOYSABIO/muttmetrics/issues/130)) — not enrichment |
 
 ## Golden rules
 
@@ -97,12 +108,15 @@ LIMIT 20;
 
 ## Out of scope (this playbook)
 
-- PATCH HTTP APIs (add later only if SQL gets painful)
+- Implementing Directory UI/API (that is M4.75 / [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) children — not forever deferred)
 - Recompute-derived CLI
-- User-facing profile editor
-- Predictions / M4
+- Pet-owner self-serve accounts (icebox; depends on Directory APIs)
+- Predictions / M5 charts ([#130](https://github.com/BOYSABIO/muttmetrics/issues/130))
+
+**Note:** HTTP `PATCH` for dog/owner must obey the same safe vs forbidden columns as this SQL playbook ([ADR-001](../architecture/adr/001-derived-fields.md)).
 
 ## Related
 
+- Epic: [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) — Visits vs Directory
 - Synthetic junk cleanup: `ops/sql/cleanup_synthetic_clients.local.sql` *(local only, gitignored: it names real rows to protect)*
 - Peek starters: [`ops-db-peek.md`](./db-peek.md)

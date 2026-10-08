@@ -30,6 +30,8 @@ Compliance (visit rows actually exist) is the product gate. Fancy UI and booking
 
 **Amendment (2026-10-07):** Between M4 and M5 sits **[M4.5 — Data clarity & ops hygiene](https://github.com/BOYSABIO/muttmetrics/milestone/13)**: lock groomer-facing scales (e.g. `condition_score` 0 = worst … 5 = best, [#123](https://github.com/BOYSABIO/muttmetrics/issues/123)), scripts discoverability, and a later ops-tree overhaul. **Do not** turn the visit form into a dog/owner CRM; enrich via maintainer tools when needed ([#127](https://github.com/BOYSABIO/muttmetrics/issues/127), [#117](https://github.com/BOYSABIO/muttmetrics/issues/117)). Empty nullable columns are fine; ambiguous labels are not. Recompute/derived jobs wait until there is data worth recomputing.
 
+**Amendment (2026-10-07, evening):** After thin capture works, the bottleneck is **incomplete entity rows** (dog/owner), not missing charts. **[M4.75 — Dog/owner directory](https://github.com/BOYSABIO/muttmetrics/milestone/14)** ([#117](https://github.com/BOYSABIO/muttmetrics/issues/117)): same product shell, **separate areas** — Visits (unchanged capture) vs Directory (profiles + safe edits). That is hand backfill for a shop with **no Excel history** (M2 CSV stays deferred). M5 renamed to **fact-table metric stubs (SQL)** — definitions/scripts, not a BI milestone; in-app analytics later ([#130](https://github.com/BOYSABIO/muttmetrics/issues/130)). Do not rush M6/M7 “for when data is ready” while enrichment is still SQL-only and only the maintainer can practically thicken rows.
+
 Stack for that path: Python, Postgres, SQLAlchemy, Alembic, FastAPI. Groomer capture UI path (teach + build): **A** thin HTML/Jinja ([#63](https://github.com/BOYSABIO/muttmetrics/issues/63)) → **B** Vite + React + TS SPA ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)) → **C** Next graduate for owner surfaces ([#41](https://github.com/BOYSABIO/muttmetrics/issues/41)). Same Python API throughout.
 
 **Amendment (2026-09-24):** Stage **A** is retired — Jinja `/capture` removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86). **B** (React SPA) is the only groomer capture UI. **C** remains later for owner surfaces.
@@ -72,6 +74,7 @@ The end state is an **intelligence layer on owned data**, not a salon suite.
 ## Success signals
 
 - Visit rows actually get entered after grooms (phone form, not spreadsheet homework)
+- Dog/owner profiles can be thickened in **Directory** without SQL (hand backfill when there was never Excel)
 - Predicted ranges exist and calibration is measurable
 - Schedule decisions use P90, not a hard “max 2 forever”
-- Scope stays on data + prediction first; booking/UI polish after compliance is real
+- Scope stays on data + prediction first; booking/invoicing/UI polish after capture + enrichment are real
