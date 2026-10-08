@@ -71,3 +71,18 @@ class OwnerProfile(BaseModel):
     reliability_score: Decimal | None = Field(default=None, description="Derived — display only")
 
     dogs: list[OwnerDogItem] = Field(default_factory=list)
+
+
+class PatchOwnerRequest(BaseModel):
+    """Partial owner update - hand entered fields only."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    locale: str | None = None
+    address_area: str | None = None
+    preferred_channel: str | None = None
+    client_since: date | None = None
+    notes: str | None = None

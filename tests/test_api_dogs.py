@@ -196,3 +196,66 @@ def test_get_dog_duration_range_still_works(
     response = client.get(f"/dogs/{dog_id}/duration-range", headers=auth_headers)
     assert response.status_code == 200
     assert response.json()["dog_id"] == dog_id
+
+
+def test_patch_dog_requires_api_key(client: TestClient) -> None:
+    response = client.patch("/dogs/1", json={"coat_type": "curly"})
+    assert response.status_code == 401
+
+
+def test_patch_dog_404(client: TestClient, auth_headers: dict[str, str]) -> None:
+    response = client.patch(
+        "/dogs/999999",
+        json={"coat_type": "curly"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 404
+
+
+def test_patch_dog_updates_coat_and_handling(
+    client: TestClient, owner_id: int, auth_headers: dict[str, str]
+) -> None:
+    dog_name = f"PatchDog {uuid.uuid4().hex[:8]}"
+    created = client.post(
+        "/dogs",
+        json={"owner_id": owner_id, "name": dog_name},
+        headers=auth_headers,
+    )
+    assert created.status_code == 201
+    dog_id = created.json()["dog_id"]
+
+    patched = client.patch(
+        f"/dogs/{dog_id}",
+        json={
+            "coat_type": "curly",
+            "handling_score": 4,
+            "temperament_notes": "nervous around dryers",
+        },
+        headers=auth_headers,
+    )
+    assert patched.status_code == 200
+    body = patched.json()
+    assert body["name"] == dog_name  # omitted → unchanged
+    assert body["coat_type"] == "curly"
+    assert body["handling_score"] == 4
+    assert body["temperament_notes"] == "nervous around dryers"
+    assert "owner" in body  # still a full profile
+
+
+def test_patch_dog_rejects_derived_field(
+    client: TestClient, owner_id: int, auth_headers: dict[str, str]
+) -> None:
+    created = client.post(
+        "/dogs",
+        json={"owner_id": owner_id, "name": f"DerivedDog {uuid.uuid4().hex[:8]}"},
+        headers=auth_headers,
+    )
+    assert created.status_code == 201
+    dog_id = created.json()["dog_id"]
+
+    response = client.patch(
+        f"/dogs/{dog_id}",
+        json={"size_band": "xl"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
