@@ -28,6 +28,29 @@ main.app {
   color: var(--ink-muted);
 }
 
+.area-nav {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.area-nav-btn {
+  flex: 1;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface, #fff);
+  color: var(--ink-muted);
+}
+
+.area-nav-btn.active {
+  border-color: var(--accent, #2a6f4e);
+  background: var(--accent-soft);
+  color: var(--accent-press);
+}
+
 .status {
   margin: 0;
   padding: 0.7rem 0.85rem;

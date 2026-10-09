@@ -26,6 +26,7 @@ function todayISODate(): string {
 }
 
 type Mode = 'search' | 'new' | 'visit'
+type Area = 'visits' | 'directory'
 
 type SelectedDog = {
   dog_id: number
@@ -222,6 +223,7 @@ function App() {
   const [message, setMessage] = useState('')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<DogSearchItem[]>([])
+  const [area, setArea] = useState<Area>('visits')
   const [mode, setMode] = useState<Mode>('search')
   const [selectedDog, setSelectedDog] = useState<SelectedDog | null>(null)
   const [visitStep, setVisitStep] = useState<VisitStep>(1)
@@ -553,11 +555,37 @@ function App() {
     <main className="app">
       <header className="app-header">
         <h1>MuttMetrics</h1>
-        <p className="tagline">Salon capture</p>
+        <p className="tagline">
+          {area === 'visits' ? 'Salon capture' : 'Dog & Owner Directory'}
+        </p>
+        <nav className="area-nav" aria-label="App sections">
+          <button
+            type="button"
+            className={area === 'visits' ? 'area-nav-btn active' : 'area-nav-btn'}
+            onClick={() => {
+              setArea('visits')
+              setMessage('')
+            }}
+          >
+            Visits
+          </button>
+          <button
+            type="button"
+            className={area === 'directory' ? 'area-nav-btn active' : 'area-nav-btn'}
+            onClick={() => {
+              setArea('directory')
+              setMessage('')
+            }}
+          >
+            Directory
+          </button>
+        </nav>
       </header>
 
       {message !== '' && <p className="status" role="status">{message}</p>}
 
+      {area === 'visits' && (
+        <>
       {mode === 'search' && (
         <section className="panel">
           <h2>Find a dog</h2>
@@ -918,6 +946,66 @@ function App() {
           >
             Cancel to search
           </button>
+        </section>
+      )}
+        </>
+      )}
+      {area === 'directory' && (
+        <section className="panel">
+          <h2>Directory</h2>
+          <p className="step-meta">
+            Browse dogs and owners here. Profile edit comes in a later step -
+            this screen will not start a visit.
+          </p>
+          <div className="field">
+            <label htmlFor="directory_dog_search">Dog name</label>
+            <input
+              id="directory_dog_search"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search..."
+              autoComplete="off"
+            />
+          </div>
+          <div className="actions">
+            <button
+              type="button"
+              className="primary"
+              onClick={async () => {
+                try {
+                  setMessage('Searching...')
+                  const rows = await searchDogs(query)
+                  setResults(rows)
+                  setMessage(`Found ${rows.length}`)
+                } catch (error) {
+                  console.error(error)
+                  if (error instanceof TypeError) {
+                    setMessage("Can't reach server - check your connection")
+                  } else if (error instanceof Error) {
+                    setMessage(error.message)
+                  } else {
+                    setMessage(String(error))
+                  }
+                }
+              }}
+            >
+              Search
+            </button>
+          </div>
+          <ul className="dog-list">
+            {results.map((dog) => (
+              <li key={dog.dog_id}>
+                <div className="dog-meta">
+                  {dog.name}
+                  <span>{dog.owner_name}</span>
+                </div>
+                <button type="button" disabled>
+                  Profile soon...
+                </button>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
     </main>
