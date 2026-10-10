@@ -43,6 +43,49 @@ type DogSearchItem = {
   last_visit_date: string | null
 }
 
+type VisitSummary = {
+  visit_id: number
+  visit_date: string
+  actual_minutes: number
+  condition_score: number
+  status: string | null
+}
+
+type DogProfile = {
+dog_id: number
+  owner_id: number
+  name: string
+  breed_id: number | null
+  breed_secondary_id: number | null
+  sex: string | null
+  date_of_birth: string | null
+  weight_kg: string | null
+  coat_type: string | null
+  hair_or_fur: string | null
+  coat_density: string | null
+  undercoat: boolean | null
+  sheds: boolean | null
+  handling_score: number | null
+  fear_triggers: string[] | null
+  muzzle_required: boolean | null
+  two_person_job: boolean | null
+  temperament_notes: string | null
+  skin_conditions: string[] | null
+  senior_flag: boolean | null
+  mobility_notes: string | null
+  vet_notes: string | null
+  size_band: string | null
+  visit_count: number | null
+  last_visit_date: string | null
+  owner: {
+    owner_id: number
+    name: string
+    phone: string | null
+    email: string | null
+  }
+  recent_visits: VisitSummary[]
+}
+
 type ServiceListItem = {
   service_id: number
   slug: string | null
@@ -117,6 +160,28 @@ async function searchDogs(q: string): Promise<DogSearchItem[]> {
   })
   const data = await readJson(res)
   return data as DogSearchItem[]
+}
+
+async function fetchDogProfile(dogId: number): Promise<DogProfile> {
+  const res = await fetch(`/api/dogs/${dogId}`, {
+    method: 'GET',
+    headers: apiHeaders(),
+  })
+  const data = await readJson(res)
+  return data as DogProfile
+}
+
+async function patchDog(
+  dogId: number,
+  body: Record<string, unknown>,
+): Promise<DogProfile> {
+  const res = await fetch(`/api/dogs/${dogId}`, {
+    method: 'PATCH',
+    headers: apiHeaders(),
+    body: JSON.stringify(body),
+  })
+  const data = await readJson(res)
+  return data as DogProfile
 }
 
 async function listServices(): Promise<ServiceListItem[]> {
@@ -241,6 +306,27 @@ function App() {
   // One in-flight guard for both write flows: a second tap while a request
   // is running creates duplicate visits / owners (#92 phone trial).
   const [isBusy, setIsBusy] = useState(false)
+  // Directory: null = search list; set = dog profile open
+  const [directoryProfile, setDirectoryProfile] = useState<DogProfile | null>(
+    null,
+  )
+  const [dirName, setDirName] = useState('')
+  const [dirBreedId, setDirBreedId] = useState('')
+  const [dirSex, setDirSex] = useState('')
+  const [dirWeightKg, setDirWeightKg] = useState('')
+  const [dirCoatType, setDirCoatType] = useState('')
+  const [dirHairOrFur, setDirHairOrFur] = useState('')
+  const [dirCoatDensity, setDirCoatDensity] = useState('')
+  const [dirUndercoat, setDirUndercoat] = useState(false)
+  const [dirSheds, setDirSheds] = useState(false)
+  const [dirHandlingScore, setDirHandlingScore] = useState('')
+  const [dirMuzzleRequired, setDirMuzzleRequired] = useState(false)
+  const [dirTwoPersonJob, setDirTwoPersonJob] = useState(false)
+  const [dirTemperamentNotes, setDirTemperamentNotes] = useState('')
+  const [dirSeniorFlag, setDirSeniorFlag] = useState(false)
+  const [dirMobilityNotes, setDirMobilityNotes] = useState('')
+  const [dirVetNotes, setDirVetNotes] = useState('')
+
 
   useEffect(() => {
     const draft = loadDraft()
@@ -386,6 +472,31 @@ function App() {
     setTip('')
     setQuotedPrice('')
     setShavedDown(false)
+  }
+
+  function fillDirFormFromProfile(profile: DogProfile): void {
+    setDirName(profile.name)
+    setDirBreedId(profile.breed_id !== null ? String(profile.breed_id) : '')
+    setDirSex(profile.sex ?? '')
+    setDirWeightKg(
+      profile.weight_kg !== null && profile.weight_kg !== undefined
+      ? String(profile.weight_kg)
+      : ''
+    )
+    setDirCoatType(profile.coat_type ?? '')
+    setDirHairOrFur(profile.hair_or_fur ?? '')
+    setDirCoatDensity(profile.coat_density ?? '')
+    setDirUndercoat(profile.undercoat === true)
+    setDirSheds(profile.sheds === true)
+    setDirHandlingScore(
+      profile.handling_score !== null ? String(profile.handling_score) : '',
+    )
+    setDirMuzzleRequired(profile.muzzle_required === true)
+    setDirTwoPersonJob(profile.two_person_job === true)
+    setDirTemperamentNotes(profile.temperament_notes ?? '')
+    setDirSeniorFlag(profile.senior_flag === true)
+    setDirMobilityNotes(profile.mobility_notes ?? '')
+    setDirVetNotes(profile.vet_notes ?? '')
   }
 
   async function saveVisit() {
@@ -540,6 +651,84 @@ function App() {
     } catch (error) {
       setMessage(`Could not create client — try again`)
       console.error(error)
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
+  async function openDirectoryDog(dogId: number): Promise<void> {
+    if (isBusy) {
+      return
+    }
+    setIsBusy(true)
+    setMessage('Loading profile...')
+    try {
+      const profile = await fetchDogProfile(dogId)
+      fillDirFormFromProfile(profile)
+      setDirectoryProfile(profile)
+      setMessage('')
+    } catch (error) {
+      console.error(error)
+      if (error instanceof Error) {
+        setMessage(error.message)
+      } else {
+        setMessage(String(error))
+      }
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
+  function closeDirectoryDog(): void {
+    setDirectoryProfile(null)
+    setMessage('')
+  }
+
+  async function saveDirectoryDog(): Promise<void> {
+    if (directoryProfile === null) {
+      return
+    }
+    if (dirName.trim() === '') {
+      setMessage('Dog name cannot be empty')
+      return
+    }
+
+    setIsBusy(true)
+    setMessage('Saving...')
+    try {
+      const body: Record<string, unknown> = {
+        name: dirName.trim(),
+        breed_id: dirBreedId.trim() === '' ? null : Number(dirBreedId),
+        sex: dirSex.trim() === '' ? null : dirSex.trim(),
+        weight_kg: dirWeightKg.trim() === '' ? null : Number(dirWeightKg),
+        coat_type: dirCoatType.trim() === '' ? null : dirCoatType.trim(),
+        hair_or_fur: dirHairOrFur.trim() === '' ? null : dirHairOrFur.trim(),
+        coat_density: dirCoatDensity.trim() === '' ? null : dirCoatDensity.trim(),
+        undercoat: dirUndercoat,
+        sheds: dirSheds,
+        handling_score:
+          dirHandlingScore.trim() === '' ? null : Number(dirHandlingScore),
+        muzzle_required: dirMuzzleRequired,
+        two_person_job: dirTwoPersonJob,
+        temperament_notes:
+          dirTemperamentNotes.trim() === '' ? null : dirTemperamentNotes.trim(),
+        senior_flag: dirSeniorFlag,
+        mobility_notes:
+          dirMobilityNotes.trim() === '' ? null : dirMobilityNotes.trim(),
+        vet_notes: dirVetNotes.trim() === '' ? null : dirVetNotes.trim(),
+      }
+
+      const updated = await patchDog(directoryProfile.dog_id, body)
+      fillDirFormFromProfile(updated)
+      setDirectoryProfile(updated)
+      setMessage('Profile saved')
+    } catch (error) {
+      console.error(error)
+      if (error instanceof Error) {
+        setMessage(error.message)
+      } else {
+        setMessage(String(error))
+      }
     } finally {
       setIsBusy(false)
     }
@@ -950,7 +1139,7 @@ function App() {
       )}
         </>
       )}
-      {area === 'directory' && (
+      {area === 'directory' && directoryProfile === null && (
         <section className="panel">
           <h2>Directory</h2>
           <p className="step-meta">
@@ -1000,12 +1189,216 @@ function App() {
                   {dog.name}
                   <span>{dog.owner_name}</span>
                 </div>
-                <button type="button" disabled>
-                  Profile soon...
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={isBusy}
+                  onClick={() => {
+                    openDirectoryDog(dog.dog_id)
+                  }}
+                >
+                  Open profile
                 </button>
               </li>
             ))}
           </ul>
+        </section>
+      )}
+      {area === 'directory' && directoryProfile !== null && (
+        <section className="panel">
+          <h2>{directoryProfile.name}</h2>
+          <p className="step-meta">
+            Owner: {directoryProfile.owner.name}
+            {directoryProfile.owner.phone
+              ? ` · ${directoryProfile.owner.phone}`
+              : ''}
+            {' '}
+            (owner editor comes in #140)
+          </p>
+          <p className="step-meta">
+            Derived (read-only): size_band={directoryProfile.size_band ?? '—'}
+            {' · '}
+            visits={directoryProfile.visit_count ?? '—'}
+            {' · '}
+            last={directoryProfile.last_visit_date ?? '—'}
+          </p>
+
+          <div className="field">
+            <label htmlFor="dir_name">Name</label>
+            <input
+              id="dir_name"
+              value={dirName}
+              onChange={(e) => setDirName(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="dir_breed_id">Breed id</label>
+            <input
+              id="dir_breed_id"
+              inputMode="numeric"
+              value={dirBreedId}
+              onChange={(e) => setDirBreedId(e.target.value)}
+              placeholder="e.g. 1 — leave blank for none"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="dir_sex">Sex</label>
+            <input
+              id="dir_sex"
+              value={dirSex}
+              onChange={(e) => setDirSex(e.target.value)}
+              placeholder="optional"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="dir_weight">Weight (kg)</label>
+            <input
+              id="dir_weight"
+              inputMode="decimal"
+              value={dirWeightKg}
+              onChange={(e) => setDirWeightKg(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="dir_coat_type">Coat type</label>
+            <input
+              id="dir_coat_type"
+              value={dirCoatType}
+              onChange={(e) => setDirCoatType(e.target.value)}
+              placeholder="e.g. curly, wire"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="dir_hair_or_fur">Hair or fur</label>
+            <input
+              id="dir_hair_or_fur"
+              value={dirHairOrFur}
+              onChange={(e) => setDirHairOrFur(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="dir_coat_density">Coat density</label>
+            <input
+              id="dir_coat_density"
+              value={dirCoatDensity}
+              onChange={(e) => setDirCoatDensity(e.target.value)}
+            />
+          </div>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={dirUndercoat}
+              onChange={(e) => setDirUndercoat(e.target.checked)}
+            />
+            Undercoat
+          </label>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={dirSheds}
+              onChange={(e) => setDirSheds(e.target.checked)}
+            />
+            Sheds
+          </label>
+          <div className="field">
+            <label htmlFor="dir_handling">Handling score (1–5)</label>
+            <input
+              id="dir_handling"
+              inputMode="numeric"
+              value={dirHandlingScore}
+              onChange={(e) => setDirHandlingScore(e.target.value)}
+            />
+          </div>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={dirMuzzleRequired}
+              onChange={(e) => setDirMuzzleRequired(e.target.checked)}
+            />
+            Muzzle required
+          </label>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={dirTwoPersonJob}
+              onChange={(e) => setDirTwoPersonJob(e.target.checked)}
+            />
+            Two-person job
+          </label>
+          <div className="field">
+            <label htmlFor="dir_temp_notes">Temperament notes</label>
+            <textarea
+              id="dir_temp_notes"
+              rows={3}
+              value={dirTemperamentNotes}
+              onChange={(e) => setDirTemperamentNotes(e.target.value)}
+            />
+          </div>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={dirSeniorFlag}
+              onChange={(e) => setDirSeniorFlag(e.target.checked)}
+            />
+            Senior
+          </label>
+          <div className="field">
+            <label htmlFor="dir_mobility">Mobility notes</label>
+            <textarea
+              id="dir_mobility"
+              rows={2}
+              value={dirMobilityNotes}
+              onChange={(e) => setDirMobilityNotes(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="dir_vet">Vet notes</label>
+            <textarea
+              id="dir_vet"
+              rows={2}
+              value={dirVetNotes}
+              onChange={(e) => setDirVetNotes(e.target.value)}
+            />
+          </div>
+
+          <h3>Recent visits</h3>
+          {directoryProfile.recent_visits.length === 0 ? (
+            <p className="step-meta">No visits yet.</p>
+          ) : (
+            <ul className="dog-list">
+              {directoryProfile.recent_visits.map((v) => (
+                <li key={v.visit_id}>
+                  <div className="dog-meta">
+                    {v.visit_date} · {v.actual_minutes} min
+                    <span>
+                      condition {v.condition_score ?? '—'} · {v.status ?? '—'}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="actions">
+            <button
+              type="button"
+              className="primary"
+              disabled={isBusy}
+              onClick={() => {
+                void saveDirectoryDog()
+              }}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              className="ghost"
+              disabled={isBusy}
+              onClick={closeDirectoryDog}
+            >
+              Back to list
+            </button>
+          </div>
         </section>
       )}
     </main>
