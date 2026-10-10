@@ -154,3 +154,51 @@ def test_get_photo_requires_api_key(
     photo_id = _upload(client, visit_id, _png(100, 100), auth_headers).json()["photo_id"]
 
     assert client.get(f"/photos/{photo_id}").status_code == 401
+
+
+def test_upload_dog_profile_photo_sets_avatar(
+    client: TestClient, auth_headers: dict[str, str], photo_root: Path
+) -> None:
+    import uuid
+
+    suffix = uuid.uuid4().hex[:8]
+    owner = client.post("/owners", json={"name": f"Photo Owner {suffix}"}, headers=auth_headers)
+    dog = client.post(
+        "/dogs",
+        json={
+            "owner_id": owner.json()["owner_id"],
+            "name": f"Photo Dog {suffix}",
+        },
+        headers=auth_headers,
+    )
+    dog_id = dog.json()["dog_id"]
+
+    before = client.get(f"/dogs/{dog_id}", headers=auth_headers)
+    assert before.status_code == 200
+    assert before.json()["avatar_photo_id"] is None
+
+    uploaded = client.post(
+        f"/dogs/{dog_id}/photos",
+        files={"file": ("face.png", _png(640, 640), "image/png")},
+        headers=auth_headers,
+    )
+    assert uploaded.status_code == 201
+    body = uploaded.json()
+    assert body["kind"] == "profile"
+    assert body["dog_id"] == dog_id
+    assert body["visit_id"] is None
+    assert list(photo_root.rglob("*.jpg"))
+
+    after = client.get(f"/dogs/{dog_id}", headers=auth_headers)
+    assert after.json()["avatar_photo_id"] == body["photo_id"]
+
+
+def test_upload_dog_profile_unknown_dog_is_404(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    response = client.post(
+        "/dogs/999999/photos",
+        files={"file": ("face.png", _png(100, 100), "image/png")},
+        headers=auth_headers,
+    )
+    assert response.status_code == 404

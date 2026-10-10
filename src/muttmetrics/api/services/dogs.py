@@ -10,7 +10,7 @@ from muttmetrics.api.schemas.dogs import (
     PatchDogRequest,
     VisitSummary,
 )
-from muttmetrics.models import Breed, Dog, Owner, Visit
+from muttmetrics.models import Breed, Dog, Owner, Photo, Visit
 
 
 def normalize_dog_name(name: str) -> str:
@@ -110,11 +110,37 @@ def get_dog_profile(
         .limit(limit)
     ).all()
 
+    # Live count from visit rows — derived dog.visit_count can lag / be null
+    # when recompute hasn't run (Directory should still show the truth).
+    visit_count = session.scalar(
+        select(func.count()).select_from(Visit).where(Visit.dog_id == dog_id)
+    )
+    last_visit_date = session.scalar(
+        select(func.max(Visit.visit_date)).where(Visit.dog_id == dog_id)
+    )
+
+    avatar_photo_id = session.scalar(
+        select(Photo.photo_id)
+        .where(Photo.dog_id == dog_id, Photo.kind == "profile")
+        .order_by(Photo.photo_id.desc())
+        .limit(1)
+    )
+    if avatar_photo_id is None:
+        avatar_photo_id = session.scalar(
+            select(Photo.photo_id)
+            .where(Photo.dog_id == dog_id, Photo.kind == "intake")
+            .order_by(Photo.photo_id.desc())
+            .limit(1)
+        )
+
     profile = DogProfile.model_validate(dog)
     return profile.model_copy(
         update={
             "owner": OwnerSummary.model_validate(dog.owner),
             "recent_visits": [VisitSummary.model_validate(v) for v in visits],
+            "avatar_photo_id": avatar_photo_id,
+            "visit_count": int(visit_count or 0),
+            "last_visit_date": last_visit_date,
         }
     )
 

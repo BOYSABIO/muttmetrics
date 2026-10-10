@@ -3,6 +3,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from muttmetrics.api.routes.breeds import router as breeds_router
 from muttmetrics.api.routes.dogs import router as dogs_router
 from muttmetrics.api.routes.health import router as health_router
 from muttmetrics.api.routes.owners import router as owners_router
@@ -35,6 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(dogs_router)
     app.include_router(photos_router)
     app.include_router(services_router)
+    app.include_router(breeds_router)
     return app
 
 

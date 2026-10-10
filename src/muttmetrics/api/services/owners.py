@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from muttmetrics.api.schemas.owners import OwnerDogItem, OwnerProfile, PatchOwnerRequest
-from muttmetrics.models import Owner
+from muttmetrics.models import Owner, Visit
 
 
 def normalize_owner_name(name: str) -> str:
@@ -52,8 +52,17 @@ def get_owner_profile(session: Session, *, owner_id: int) -> OwnerProfile:
         raise LookupError(f"Owner {owner_id} not found")
 
     dogs = sorted(owner.dogs, key=lambda d: d.name.lower())
+    # Live total across all dogs — derived owner.visit_count can lag / be null.
+    visit_count = session.scalar(
+        select(func.count()).select_from(Visit).where(Visit.owner_id == owner_id)
+    )
     profile = OwnerProfile.model_validate(owner)
-    return profile.model_copy(update={"dogs": [OwnerDogItem.model_validate(d) for d in dogs]})
+    return profile.model_copy(
+        update={
+            "dogs": [OwnerDogItem.model_validate(d) for d in dogs],
+            "visit_count": int(visit_count or 0),
+        }
+    )
 
 
 def patch_owner(

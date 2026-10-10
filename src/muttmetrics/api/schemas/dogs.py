@@ -116,6 +116,11 @@ class DogProfile(BaseModel):
     last_visit_date: date | None = Field(default=None, description="Derived — display only")
     next_due_date: date | None = Field(default=None, description="Derived — display only")
 
+    avatar_photo_id: int | None = Field(
+        default=None,
+        description="Newest profile photo, else newest intake; for Directory avatar",
+    )
+
     owner: OwnerSummary
     recent_visits: list[VisitSummary] = Field(default_factory=list)
 
