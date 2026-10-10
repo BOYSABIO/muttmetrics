@@ -117,8 +117,8 @@ Visit capture stays **thin** on purpose. Dog/owner detail is **enrichment**, not
 | Track | Who | What |
 |-------|-----|------|
 | **Visits (SPA)** | Groomer | Name → minutes → service → money → optional condition/photos. No CRM fields. |
-| **Directory (SPA)** | Maintainer (groomer offline OK) | Dog/owner profiles + safe edits — [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) / M4.75 (not M9; not mid-groom homework) |
-| **Enrichment SQL** | Maintainer | Escape hatch — [`enrichment.md`](runbooks/enrichment.md) |
+| **Directory (SPA)** | Maintainer (groomer offline OK) | Dog/owner profiles + safe edits (shipped) — [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) / M4.75 (not M9; not mid-groom homework) |
+| **Enrichment SQL** | Maintainer | Escape hatch (bulk / visit fixes) — [`enrichment.md`](runbooks/enrichment.md) |
 | **Derived recompute** | System | `visit_count`, `last_visit_date`, … — **after** there are rows worth recomputing |
 | **Coat-first predictions** | Later (M7) | Do not require breed — [#121](https://github.com/BOYSABIO/muttmetrics/issues/121) |
 
