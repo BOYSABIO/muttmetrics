@@ -86,6 +86,26 @@ dog_id: number
   recent_visits: VisitSummary[]
 }
 
+type OwnerDogItem = {
+  dog_id: number
+  name: string
+}
+
+type OwnerProfile = {
+  owner_id: number
+  name: string
+  phone: string | null
+  email: string | null
+  locale: string
+  address_area: string | null
+  preferred_channel: string | null
+  client_since: string | null
+  notes: string | null
+  visit_count: number | null
+  lifetime_value: number | null
+  dogs: OwnerDogItem[]
+}
+
 type ServiceListItem = {
   service_id: number
   slug: string | null
@@ -182,6 +202,28 @@ async function patchDog(
   })
   const data = await readJson(res)
   return data as DogProfile
+}
+
+async function fetchOwnerProfile(ownerId: number): Promise<OwnerProfile> {
+  const res = await fetch(`/api/owners/${ownerId}`, {
+    method: 'GET',
+    headers: apiHeaders(),
+  })
+  const data = await readJson(res)
+  return data as OwnerProfile
+}
+
+async function patchOwner(
+  ownerId: number,
+  body: Record<string, unknown>,
+): Promise<OwnerProfile> {
+  const res = await fetch(`/api/owners/${ownerId}`, {
+    method: 'PATCH',
+    headers: apiHeaders(),
+    body: JSON.stringify(body),
+  })
+  const data = await readJson(res)
+  return data as OwnerProfile
 }
 
 async function listServices(): Promise<ServiceListItem[]> {
@@ -326,7 +368,16 @@ function App() {
   const [dirSeniorFlag, setDirSeniorFlag] = useState(false)
   const [dirMobilityNotes, setDirMobilityNotes] = useState('')
   const [dirVetNotes, setDirVetNotes] = useState('')
-
+  // Directory owner profile (#140): null = not on owner screen
+  const [directoryOwner, setDirectoryOwner] = useState<OwnerProfile | null>(null)
+  const [ownName, setOwnName] = useState('')
+  const [ownPhone, setOwnPhone] = useState('')
+  const [ownEmail, setOwnEmail] = useState('')
+  const [ownLocale, setOwnLocale] = useState('de')
+  const [ownAddressArea, setOwnAddressArea] = useState('')
+  const [ownPreferredChannel, setOwnPreferredChannel] = useState('')
+  const [ownClientSince, setOwnClientSince] = useState('')
+  const [ownNotes, setOwnNotes] = useState('')
 
   useEffect(() => {
     const draft = loadDraft()
@@ -499,6 +550,17 @@ function App() {
     setDirVetNotes(profile.vet_notes ?? '')
   }
 
+  function fillOwnerFormFromProfile(profile: OwnerProfile): void {
+    setOwnName(profile.name)
+    setOwnPhone(profile.phone ?? '')
+    setOwnEmail(profile.email ?? '')
+    setOwnLocale(profile.locale || 'de')
+    setOwnAddressArea(profile.address_area ?? '')
+    setOwnPreferredChannel(profile.preferred_channel ?? '')
+    setOwnClientSince(profile.client_since ?? '')
+    setOwnNotes(profile.notes ?? '')
+  }
+
   async function saveVisit() {
     if (selectedDog === null) {
       setMessage('No dog selected - go back and pick one.')
@@ -665,6 +727,7 @@ function App() {
     try {
       const profile = await fetchDogProfile(dogId)
       fillDirFormFromProfile(profile)
+      setDirectoryOwner(null)
       setDirectoryProfile(profile)
       setMessage('')
     } catch (error) {
@@ -684,8 +747,37 @@ function App() {
     setMessage('')
   }
 
+  async function openDirectoryOwner(ownerId: number): Promise<void> {
+    if (isBusy) {
+      return
+    }
+    setIsBusy(true)
+    setMessage('Loading owner...')
+    try {
+      const profile = await fetchOwnerProfile(ownerId)
+      fillOwnerFormFromProfile(profile)
+      setDirectoryProfile(null)
+      setDirectoryOwner(profile)
+      setMessage('')
+    } catch (error) {
+      console.error(error)
+      if (error instanceof Error) {
+        setMessage(error.message)
+      } else {
+        setMessage(String(error))
+      }
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
+  function closeDirectoryOwner(): void {
+    setDirectoryOwner(null)
+    setMessage('')
+  }
+
   async function saveDirectoryDog(): Promise<void> {
-    if (directoryProfile === null) {
+    if (directoryProfile === null || isBusy) {
       return
     }
     if (dirName.trim() === '') {
@@ -722,6 +814,46 @@ function App() {
       fillDirFormFromProfile(updated)
       setDirectoryProfile(updated)
       setMessage('Profile saved')
+    } catch (error) {
+      console.error(error)
+      if (error instanceof Error) {
+        setMessage(error.message)
+      } else {
+        setMessage(String(error))
+      }
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
+  async function saveDirectoryOwner(): Promise<void> {
+    if (directoryOwner === null || isBusy) {
+      return
+    }
+    if (ownName.trim() === '') {
+      setMessage('Owner name cannot be empty')
+      return
+    }
+
+    setIsBusy(true)
+    setMessage('Saving...')
+    try {
+      const body: Record<string, unknown> = {
+        name: ownName.trim(),
+        phone: ownPhone.trim() === '' ? null : ownPhone.trim(),
+        email: ownEmail.trim() === '' ? null : ownEmail.trim(),
+        locale: ownLocale.trim() === '' ? 'de' : ownLocale.trim(),
+        address_area: ownAddressArea.trim() === '' ? null : ownAddressArea.trim(),
+        preferred_channel:
+          ownPreferredChannel.trim() === '' ? null : ownPreferredChannel.trim(),
+        client_since: ownClientSince.trim() === '' ? null : ownClientSince.trim(),
+        notes: ownNotes.trim() === '' ? null : ownNotes.trim(),
+      }
+
+      const updated = await patchOwner(directoryOwner.owner_id, body)
+      fillOwnerFormFromProfile(updated)
+      setDirectoryOwner(updated)
+      setMessage('Owner saved')
     } catch (error) {
       console.error(error)
       if (error instanceof Error) {
@@ -1139,12 +1271,14 @@ function App() {
       )}
         </>
       )}
-      {area === 'directory' && directoryProfile === null && (
+      {area === 'directory' &&
+        directoryProfile === null &&
+        directoryOwner === null && (
         <section className="panel">
           <h2>Directory</h2>
           <p className="step-meta">
-            Browse dogs and owners here. Profile edit comes in a later step -
-            this screen will not start a visit.
+            Search dogs, open a dog or owner profile to enrich fields. This
+            screen will not start a visit.
           </p>
           <div className="field">
             <label htmlFor="directory_dog_search">Dog name</label>
@@ -1189,16 +1323,27 @@ function App() {
                   {dog.name}
                   <span>{dog.owner_name}</span>
                 </div>
-                <button
-                  type="button"
-                  className="primary"
-                  disabled={isBusy}
-                  onClick={() => {
-                    openDirectoryDog(dog.dog_id)
-                  }}
-                >
-                  Open profile
-                </button>
+                <div className="actions">
+                  <button
+                    type="button"
+                    className="primary"
+                    disabled={isBusy}
+                    onClick={() => {
+                      void openDirectoryDog(dog.dog_id)
+                    }}
+                  >
+                    Open dog
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => {
+                      void openDirectoryOwner(dog.owner_id)
+                    }}
+                  >
+                    Open owner
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -1208,12 +1353,20 @@ function App() {
         <section className="panel">
           <h2>{directoryProfile.name}</h2>
           <p className="step-meta">
-            Owner: {directoryProfile.owner.name}
-            {directoryProfile.owner.phone
-              ? ` · ${directoryProfile.owner.phone}`
-              : ''}
-            {' '}
-            (owner editor comes in #140)
+            Owner:{' '}
+            <button
+              type="button"
+              className="ghost"
+              disabled={isBusy}
+              onClick={() => {
+                void openDirectoryOwner(directoryProfile.owner.owner_id)
+              }}
+            >
+              {directoryProfile.owner.name}
+              {directoryProfile.owner.phone
+                ? ` · ${directoryProfile.owner.phone}`
+                : ''}
+            </button>
           </p>
           <p className="step-meta">
             Derived (read-only): size_band={directoryProfile.size_band ?? '—'}
@@ -1395,6 +1548,131 @@ function App() {
               className="ghost"
               disabled={isBusy}
               onClick={closeDirectoryDog}
+            >
+              Back to list
+            </button>
+          </div>
+        </section>
+      )}
+      {area === 'directory' && directoryOwner !== null && (
+        <section className="panel">
+          <h2>{directoryOwner.name}</h2>
+          <p className="step-meta">
+            Derived (read-only): visits={directoryOwner.visit_count ?? '—'}
+            {' · '}
+            LTV={directoryOwner.lifetime_value ?? '—'}
+          </p>
+
+          <div className="field">
+            <label htmlFor="own_name">Name</label>
+            <input
+              id="own_name"
+              value={ownName}
+              onChange={(e) => setOwnName(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="own_phone">Phone</label>
+            <input
+              id="own_phone"
+              type="tel"
+              value={ownPhone}
+              onChange={(e) => setOwnPhone(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="own_email">Email</label>
+            <input
+              id="own_email"
+              type="email"
+              value={ownEmail}
+              onChange={(e) => setOwnEmail(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="own_locale">Locale</label>
+            <input
+              id="own_locale"
+              value={ownLocale}
+              onChange={(e) => setOwnLocale(e.target.value)}
+              placeholder="de"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="own_area">Address area</label>
+            <input
+              id="own_area"
+              value={ownAddressArea}
+              onChange={(e) => setOwnAddressArea(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="own_channel">Preferred channel</label>
+            <input
+              id="own_channel"
+              value={ownPreferredChannel}
+              onChange={(e) => setOwnPreferredChannel(e.target.value)}
+              placeholder="e.g. whatsapp, phone"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="own_since">Client since</label>
+            <input
+              id="own_since"
+              type="date"
+              value={ownClientSince}
+              onChange={(e) => setOwnClientSince(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="own_notes">Notes</label>
+            <textarea
+              id="own_notes"
+              rows={3}
+              value={ownNotes}
+              onChange={(e) => setOwnNotes(e.target.value)}
+            />
+          </div>
+
+          <h3>Dogs</h3>
+          {directoryOwner.dogs.length === 0 ? (
+            <p className="step-meta">No dogs on this owner.</p>
+          ) : (
+            <ul className="dog-list">
+              {directoryOwner.dogs.map((d) => (
+                <li key={d.dog_id}>
+                  <div className="dog-meta">{d.name}</div>
+                  <button
+                    type="button"
+                    className="primary"
+                    disabled={isBusy}
+                    onClick={() => {
+                      void openDirectoryDog(d.dog_id)
+                    }}
+                  >
+                    Open dog
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="actions">
+            <button
+              type="button"
+              className="primary"
+              disabled={isBusy}
+              onClick={() => {
+                void saveDirectoryOwner()
+              }}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              className="ghost"
+              disabled={isBusy}
+              onClick={closeDirectoryOwner}
             >
               Back to list
             </button>
