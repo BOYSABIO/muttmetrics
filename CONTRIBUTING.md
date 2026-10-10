@@ -70,7 +70,7 @@ If port 5432 is in use, stop any old `muttmetrics-pg` container or native Postgr
 
 To inspect capture rows without a dashboard: connect the PostgreSQL extension or `psql`, then run the starter SELECTs in [`docs/runbooks/db-peek.md`](./docs/runbooks/db-peek.md). That doc also covers the host-vs-database footgun, pytest clutter, and wipe/cleanup.
 
-To enrich breed / owner / visit after thin capture (maintainer SQL only): [`docs/runbooks/enrichment.md`](./docs/runbooks/enrichment.md).
+To enrich dog / owner after thin capture: prefer the SPA **Directory** tab; SQL recipes are the escape hatch (visit fact fixes, bulk). Playbook: [`docs/runbooks/enrichment.md`](./docs/runbooks/enrichment.md).
 
 **Where is ops tool X?** See [`ops/README.md`](./ops/README.md) — backups/photos (Python), SQL recipes, and package CLIs (`python -m muttmetrics.priors`, seed). Layout: [`docs/architecture/ops-layout.md`](./docs/architecture/ops-layout.md).
 
@@ -238,7 +238,7 @@ Never commit real `.env` values. CI/tests set `API_KEY` via monkeypatch.
 
 ### React capture SPA (#69–#72)
 
-**Only** groomer-facing UI (not `/docs`). Vite + React + TypeScript in `frontend/`. Modes: **search** (directory) → **visit**, or **new** client → **visit**. Jinja `/capture` (stage A, #63) was removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86) — no templates, no unauthenticated write path. Phone trial over Tailscale: [`docs/runbooks/groomer-trial.md`](./docs/runbooks/groomer-trial.md).
+**Only** app UI for groomer/maintainer (not `/docs`). Vite + React + TypeScript in `frontend/`. Top areas: **Visits** | **Directory** ([#138](https://github.com/BOYSABIO/muttmetrics/issues/138)). Visits modes: **search** → **visit**, or **new** client → **visit**. Directory: dog/owner profiles + safe PATCH ([#139](https://github.com/BOYSABIO/muttmetrics/issues/139), [#140](https://github.com/BOYSABIO/muttmetrics/issues/140)). Jinja `/capture` (stage A, #63) was removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86) — no templates, no unauthenticated write path. Phone trial over Tailscale: [`docs/runbooks/groomer-trial.md`](./docs/runbooks/groomer-trial.md).
 
 | Path | API calls |
 |------|-----------|
@@ -282,6 +282,8 @@ npm run dev
 | `http://<pc-ip>:5174` | Vite **preview** server — built `dist/`, network-facing, for the groomer trial |
 | `/api/*` in the SPA | Proxied to `http://127.0.0.1:8000/*` (see `frontend/vite.config.ts`) |
 | `GET /dogs?q=` | Directory browse/search — returns `owner_name` on each row (cap 50) |
+| `GET` / `PATCH /dogs/{id}` | Dog profile read / safe enrichment (#131, #132) |
+| `GET` / `PATCH /owners/{id}` | Owner profile read / safe enrichment (#131, #132) |
 | Visit step 2 timer | Client-only; fills `actual_minutes` (floor); editable override. In-progress visit (dog + wizard + timer) persists in `localStorage` (`muttmetrics.draftVisit`) so a phone tab kill / reload can resume ([#88](https://github.com/BOYSABIO/muttmetrics/issues/88)). Cleared on save / cancel / reset. |
 | `frontend/.env` | `VITE_API_KEY` only — gitignored; never commit |
 | `npm run build` | Production bundle to `frontend/dist/` (`tsc -b` type-checks first) |

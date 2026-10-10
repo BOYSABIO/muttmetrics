@@ -26,7 +26,7 @@ Personal / PII-named SQL: `*.local.sql` under `ops/` (gitignored) — never comm
 
 ## SQL recipes (`ops/sql/`)
 
-Full enrichment workflow: [`docs/runbooks/enrichment.md`](../docs/runbooks/enrichment.md). Connection / peek: [`db-peek.md`](../docs/runbooks/db-peek.md).
+Enrichment: prefer SPA **Directory**; SQL below is the escape hatch — [`docs/runbooks/enrichment.md`](../docs/runbooks/enrichment.md). Connection / peek: [`db-peek.md`](../docs/runbooks/db-peek.md).
 
 | File | Use when | More |
 |------|----------|------|

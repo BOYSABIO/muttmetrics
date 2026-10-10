@@ -9,30 +9,21 @@ from sqlalchemy.orm import Session
 from muttmetrics.api.deps import get_db, require_api_key
 from muttmetrics.api.schemas.photos import PhotoResponse
 from muttmetrics.media import images, storage
-from muttmetrics.models import Photo, Visit
+from muttmetrics.models import Dog, Photo, Visit
 
 router = APIRouter(tags=["photos"])
 
 DbSession = Annotated[Session, Depends(get_db)]
 
 
-@router.post(
-    "/visits/{visit_id}/photos",
-    status_code=201,
-    dependencies=[Depends(require_api_key)],
-)
-def upload_visit_photo(
-    visit_id: int,
-    session: DbSession,
-    file: Annotated[UploadFile, File()],
-    kind: Annotated[Literal["intake", "after"], Form()] = "intake",
-) -> PhotoResponse:
-    """Store one photo for a visit: validate, strip metadata, save."""
-    visit = session.get(Visit, visit_id)
-    if visit is None:
-        raise HTTPException(status_code=404, detail=f"Visit {visit_id} not found")
-
-    raw = file.file.read()
+def _store_photo(
+    *,
+    session: Session,
+    dog_id: int,
+    visit_id: int | None,
+    kind: Literal["intake", "after", "profile"],
+    raw: bytes,
+) -> Photo:
     try:
         processed = images.process_upload(raw)
     except images.ImageTooLarge as exc:
@@ -44,8 +35,8 @@ def upload_visit_photo(
     storage.write_bytes(key, processed)
 
     photo = Photo(
-        dog_id=visit.dog_id,
-        visit_id=visit.visit_id,
+        dog_id=dog_id,
+        visit_id=visit_id,
         kind=kind,
         storage_key=key,
         content_type="image/jpeg",
@@ -65,6 +56,56 @@ def upload_visit_photo(
             pass
         raise
 
+    return photo
+
+
+@router.post(
+    "/visits/{visit_id}/photos",
+    status_code=201,
+    dependencies=[Depends(require_api_key)],
+)
+def upload_visit_photo(
+    visit_id: int,
+    session: DbSession,
+    file: Annotated[UploadFile, File()],
+    kind: Annotated[Literal["intake", "after"], Form()] = "intake",
+) -> PhotoResponse:
+    """Store one photo for a visit: validate, strip metadata, save."""
+    visit = session.get(Visit, visit_id)
+    if visit is None:
+        raise HTTPException(status_code=404, detail=f"Visit {visit_id} not found")
+
+    photo = _store_photo(
+        session=session,
+        dog_id=visit.dog_id,
+        visit_id=visit.visit_id,
+        kind=kind,
+        raw=file.file.read(),
+    )
+    return PhotoResponse.model_validate(photo)
+
+
+@router.post(
+    "/dogs/{dog_id}/photos",
+    status_code=201,
+    dependencies=[Depends(require_api_key)],
+)
+def upload_dog_profile_photo(
+    dog_id: int,
+    session: DbSession,
+    file: Annotated[UploadFile, File()],
+) -> PhotoResponse:
+    """Store a profile photo for a dog (Directory avatar). visit_id stays null."""
+    if session.get(Dog, dog_id) is None:
+        raise HTTPException(status_code=404, detail=f"Dog {dog_id} not found")
+
+    photo = _store_photo(
+        session=session,
+        dog_id=dog_id,
+        visit_id=None,
+        kind="profile",
+        raw=file.file.read(),
+    )
     return PhotoResponse.model_validate(photo)
 
 

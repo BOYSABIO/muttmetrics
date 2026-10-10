@@ -172,6 +172,7 @@ def test_get_dog_profile_includes_owner_and_visits(
     assert "coat_type" in body
     assert "handling_score" in body
     assert "size_band" in body  # derived present (null ok)
+    assert "avatar_photo_id" in body  # null until a profile/intake photo exists
     assert isinstance(body["recent_visits"], list)
     assert body["recent_visits"][0]["visit_id"] == visit_id
     assert body["recent_visits"][0]["actual_minutes"] == 90

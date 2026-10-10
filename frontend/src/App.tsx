@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+import { Directory } from './Directory'
 import { PhotoPicker } from './PhotoPicker'
 
 type TimerStatus = 'idle' | 'running' | 'stopped'
@@ -26,7 +27,7 @@ function todayISODate(): string {
 }
 
 type Mode = 'search' | 'new' | 'visit'
-type Area = 'visits' | 'directory'
+type Screen = 'home' | 'capture'
 
 type SelectedDog = {
   dog_id: number
@@ -43,68 +44,6 @@ type DogSearchItem = {
   last_visit_date: string | null
 }
 
-type VisitSummary = {
-  visit_id: number
-  visit_date: string
-  actual_minutes: number
-  condition_score: number
-  status: string | null
-}
-
-type DogProfile = {
-dog_id: number
-  owner_id: number
-  name: string
-  breed_id: number | null
-  breed_secondary_id: number | null
-  sex: string | null
-  date_of_birth: string | null
-  weight_kg: string | null
-  coat_type: string | null
-  hair_or_fur: string | null
-  coat_density: string | null
-  undercoat: boolean | null
-  sheds: boolean | null
-  handling_score: number | null
-  fear_triggers: string[] | null
-  muzzle_required: boolean | null
-  two_person_job: boolean | null
-  temperament_notes: string | null
-  skin_conditions: string[] | null
-  senior_flag: boolean | null
-  mobility_notes: string | null
-  vet_notes: string | null
-  size_band: string | null
-  visit_count: number | null
-  last_visit_date: string | null
-  owner: {
-    owner_id: number
-    name: string
-    phone: string | null
-    email: string | null
-  }
-  recent_visits: VisitSummary[]
-}
-
-type OwnerDogItem = {
-  dog_id: number
-  name: string
-}
-
-type OwnerProfile = {
-  owner_id: number
-  name: string
-  phone: string | null
-  email: string | null
-  locale: string
-  address_area: string | null
-  preferred_channel: string | null
-  client_since: string | null
-  notes: string | null
-  visit_count: number | null
-  lifetime_value: number | null
-  dogs: OwnerDogItem[]
-}
 
 type ServiceListItem = {
   service_id: number
@@ -182,49 +121,6 @@ async function searchDogs(q: string): Promise<DogSearchItem[]> {
   return data as DogSearchItem[]
 }
 
-async function fetchDogProfile(dogId: number): Promise<DogProfile> {
-  const res = await fetch(`/api/dogs/${dogId}`, {
-    method: 'GET',
-    headers: apiHeaders(),
-  })
-  const data = await readJson(res)
-  return data as DogProfile
-}
-
-async function patchDog(
-  dogId: number,
-  body: Record<string, unknown>,
-): Promise<DogProfile> {
-  const res = await fetch(`/api/dogs/${dogId}`, {
-    method: 'PATCH',
-    headers: apiHeaders(),
-    body: JSON.stringify(body),
-  })
-  const data = await readJson(res)
-  return data as DogProfile
-}
-
-async function fetchOwnerProfile(ownerId: number): Promise<OwnerProfile> {
-  const res = await fetch(`/api/owners/${ownerId}`, {
-    method: 'GET',
-    headers: apiHeaders(),
-  })
-  const data = await readJson(res)
-  return data as OwnerProfile
-}
-
-async function patchOwner(
-  ownerId: number,
-  body: Record<string, unknown>,
-): Promise<OwnerProfile> {
-  const res = await fetch(`/api/owners/${ownerId}`, {
-    method: 'PATCH',
-    headers: apiHeaders(),
-    body: JSON.stringify(body),
-  })
-  const data = await readJson(res)
-  return data as OwnerProfile
-}
 
 async function listServices(): Promise<ServiceListItem[]> {
   const res = await fetch('/api/services', {
@@ -330,7 +226,7 @@ function App() {
   const [message, setMessage] = useState('')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<DogSearchItem[]>([])
-  const [area, setArea] = useState<Area>('visits')
+  const [screen, setScreen] = useState<Screen>('home')
   const [mode, setMode] = useState<Mode>('search')
   const [selectedDog, setSelectedDog] = useState<SelectedDog | null>(null)
   const [visitStep, setVisitStep] = useState<VisitStep>(1)
@@ -348,37 +244,6 @@ function App() {
   // One in-flight guard for both write flows: a second tap while a request
   // is running creates duplicate visits / owners (#92 phone trial).
   const [isBusy, setIsBusy] = useState(false)
-  // Directory: null = search list; set = dog profile open
-  const [directoryProfile, setDirectoryProfile] = useState<DogProfile | null>(
-    null,
-  )
-  const [dirName, setDirName] = useState('')
-  const [dirBreedId, setDirBreedId] = useState('')
-  const [dirSex, setDirSex] = useState('')
-  const [dirWeightKg, setDirWeightKg] = useState('')
-  const [dirCoatType, setDirCoatType] = useState('')
-  const [dirHairOrFur, setDirHairOrFur] = useState('')
-  const [dirCoatDensity, setDirCoatDensity] = useState('')
-  const [dirUndercoat, setDirUndercoat] = useState(false)
-  const [dirSheds, setDirSheds] = useState(false)
-  const [dirHandlingScore, setDirHandlingScore] = useState('')
-  const [dirMuzzleRequired, setDirMuzzleRequired] = useState(false)
-  const [dirTwoPersonJob, setDirTwoPersonJob] = useState(false)
-  const [dirTemperamentNotes, setDirTemperamentNotes] = useState('')
-  const [dirSeniorFlag, setDirSeniorFlag] = useState(false)
-  const [dirMobilityNotes, setDirMobilityNotes] = useState('')
-  const [dirVetNotes, setDirVetNotes] = useState('')
-  // Directory owner profile (#140): null = not on owner screen
-  const [directoryOwner, setDirectoryOwner] = useState<OwnerProfile | null>(null)
-  const [ownName, setOwnName] = useState('')
-  const [ownPhone, setOwnPhone] = useState('')
-  const [ownEmail, setOwnEmail] = useState('')
-  const [ownLocale, setOwnLocale] = useState('de')
-  const [ownAddressArea, setOwnAddressArea] = useState('')
-  const [ownPreferredChannel, setOwnPreferredChannel] = useState('')
-  const [ownClientSince, setOwnClientSince] = useState('')
-  const [ownNotes, setOwnNotes] = useState('')
-
   useEffect(() => {
     const draft = loadDraft()
     if (draft === null) {
@@ -398,24 +263,24 @@ function App() {
     setTip(draft.tip ?? '')
     setQuotedPrice(draft.quotedPrice ?? '')
     setShavedDown(draft.shavedDown ?? false)
+    setScreen('capture')
     setMode('visit')
     setTickNow(Date.now())
-    
+
     const lost: string[] = []
     if (draft.hadIntakeFile) {
       lost.push('before')
       if (draft.hadAfterFile) {
         lost.push('after')
       }
-
-      setMessage(
-        lost.length === 0
-        ? `Resumed timer for ${draft.selectedDog.dog_name}`
-        : `Resumed timer for ${draft.selectedDog.dog_name} - the ${lost.join(' and ')} ` +
-          `photo${lost.length > 1 ? 's' : ''} could not be kept, please pick ` +
-          `${lost.length > 1 ? 'them' : 'it'} again`,
-      )
     }
+    setMessage(
+      lost.length === 0
+        ? `Resumed timer for ${draft.selectedDog.dog_name}`
+        : `Resumed timer for ${draft.selectedDog.dog_name} — the ${lost.join(' and ')} ` +
+            `photo${lost.length > 1 ? 's' : ''} could not be kept, please pick ` +
+            `${lost.length > 1 ? 'them' : 'it'} again`,
+    )
   }, []) // empty deps = run once after first paint
 
   useEffect(() => {
@@ -525,41 +390,6 @@ function App() {
     setShavedDown(false)
   }
 
-  function fillDirFormFromProfile(profile: DogProfile): void {
-    setDirName(profile.name)
-    setDirBreedId(profile.breed_id !== null ? String(profile.breed_id) : '')
-    setDirSex(profile.sex ?? '')
-    setDirWeightKg(
-      profile.weight_kg !== null && profile.weight_kg !== undefined
-      ? String(profile.weight_kg)
-      : ''
-    )
-    setDirCoatType(profile.coat_type ?? '')
-    setDirHairOrFur(profile.hair_or_fur ?? '')
-    setDirCoatDensity(profile.coat_density ?? '')
-    setDirUndercoat(profile.undercoat === true)
-    setDirSheds(profile.sheds === true)
-    setDirHandlingScore(
-      profile.handling_score !== null ? String(profile.handling_score) : '',
-    )
-    setDirMuzzleRequired(profile.muzzle_required === true)
-    setDirTwoPersonJob(profile.two_person_job === true)
-    setDirTemperamentNotes(profile.temperament_notes ?? '')
-    setDirSeniorFlag(profile.senior_flag === true)
-    setDirMobilityNotes(profile.mobility_notes ?? '')
-    setDirVetNotes(profile.vet_notes ?? '')
-  }
-
-  function fillOwnerFormFromProfile(profile: OwnerProfile): void {
-    setOwnName(profile.name)
-    setOwnPhone(profile.phone ?? '')
-    setOwnEmail(profile.email ?? '')
-    setOwnLocale(profile.locale || 'de')
-    setOwnAddressArea(profile.address_area ?? '')
-    setOwnPreferredChannel(profile.preferred_channel ?? '')
-    setOwnClientSince(profile.client_since ?? '')
-    setOwnNotes(profile.notes ?? '')
-  }
 
   async function saveVisit() {
     if (selectedDog === null) {
@@ -653,8 +483,9 @@ function App() {
       setVisitDate(todayISODate())
       resetTimer()
       setMode('search')
+      setScreen('home')
       setMessage(
-        `Saved visit_id=${savedId} (${selectedDog.dog_name} · ${selectedDog.owner_name})${photoNote}`,
+        `Saved ${selectedDog.dog_name} · ${selectedDog.owner_name}${photoNote}`,
       )
     } catch (error) {
       setMessage(`Not saved — try again`)
@@ -663,6 +494,56 @@ function App() {
       // Always re-enable, or one failed save locks the screen until a reload.
       setIsBusy(false)
     }
+  }
+
+  function openCapture(): void {
+    setScreen('capture')
+    setMode('search')
+    setQuery('')
+    setSelectedDog(null)
+    setMessage('')
+    void (async () => {
+      try {
+        const rows = await searchDogs('')
+        setResults(rows)
+      } catch (error) {
+        console.error(error)
+        setResults([])
+        if (error instanceof TypeError) {
+          setMessage("Can't reach server — check your connection")
+        } else if (error instanceof Error) {
+          setMessage(error.message)
+        }
+      }
+    })()
+  }
+
+  function exitCapture(): void {
+    clearDraft()
+    setSelectedDog(null)
+    resetVisitDetails()
+    setVisitStep(1)
+    setIntakeFile(null)
+    setAfterFile(null)
+    resetTimer()
+    setMode('search')
+    setQuery('')
+    setResults([])
+    setScreen('home')
+    setMessage('')
+  }
+
+  function startVisitForDog(dog: SelectedDog): void {
+    setSelectedDog(dog)
+    resetVisitDetails()
+    setVisitStep(1)
+    setIntakeFile(null)
+    setAfterFile(null)
+    setVisitDate(todayISODate())
+    resetTimer()
+    setScreen('capture')
+    setMode('visit')
+    setMessage('')
   }
 
   async function continueNewClient() {
@@ -718,153 +599,6 @@ function App() {
     }
   }
 
-  async function openDirectoryDog(dogId: number): Promise<void> {
-    if (isBusy) {
-      return
-    }
-    setIsBusy(true)
-    setMessage('Loading profile...')
-    try {
-      const profile = await fetchDogProfile(dogId)
-      fillDirFormFromProfile(profile)
-      setDirectoryOwner(null)
-      setDirectoryProfile(profile)
-      setMessage('')
-    } catch (error) {
-      console.error(error)
-      if (error instanceof Error) {
-        setMessage(error.message)
-      } else {
-        setMessage(String(error))
-      }
-    } finally {
-      setIsBusy(false)
-    }
-  }
-
-  function closeDirectoryDog(): void {
-    setDirectoryProfile(null)
-    setMessage('')
-  }
-
-  async function openDirectoryOwner(ownerId: number): Promise<void> {
-    if (isBusy) {
-      return
-    }
-    setIsBusy(true)
-    setMessage('Loading owner...')
-    try {
-      const profile = await fetchOwnerProfile(ownerId)
-      fillOwnerFormFromProfile(profile)
-      setDirectoryProfile(null)
-      setDirectoryOwner(profile)
-      setMessage('')
-    } catch (error) {
-      console.error(error)
-      if (error instanceof Error) {
-        setMessage(error.message)
-      } else {
-        setMessage(String(error))
-      }
-    } finally {
-      setIsBusy(false)
-    }
-  }
-
-  function closeDirectoryOwner(): void {
-    setDirectoryOwner(null)
-    setMessage('')
-  }
-
-  async function saveDirectoryDog(): Promise<void> {
-    if (directoryProfile === null || isBusy) {
-      return
-    }
-    if (dirName.trim() === '') {
-      setMessage('Dog name cannot be empty')
-      return
-    }
-
-    setIsBusy(true)
-    setMessage('Saving...')
-    try {
-      const body: Record<string, unknown> = {
-        name: dirName.trim(),
-        breed_id: dirBreedId.trim() === '' ? null : Number(dirBreedId),
-        sex: dirSex.trim() === '' ? null : dirSex.trim(),
-        weight_kg: dirWeightKg.trim() === '' ? null : Number(dirWeightKg),
-        coat_type: dirCoatType.trim() === '' ? null : dirCoatType.trim(),
-        hair_or_fur: dirHairOrFur.trim() === '' ? null : dirHairOrFur.trim(),
-        coat_density: dirCoatDensity.trim() === '' ? null : dirCoatDensity.trim(),
-        undercoat: dirUndercoat,
-        sheds: dirSheds,
-        handling_score:
-          dirHandlingScore.trim() === '' ? null : Number(dirHandlingScore),
-        muzzle_required: dirMuzzleRequired,
-        two_person_job: dirTwoPersonJob,
-        temperament_notes:
-          dirTemperamentNotes.trim() === '' ? null : dirTemperamentNotes.trim(),
-        senior_flag: dirSeniorFlag,
-        mobility_notes:
-          dirMobilityNotes.trim() === '' ? null : dirMobilityNotes.trim(),
-        vet_notes: dirVetNotes.trim() === '' ? null : dirVetNotes.trim(),
-      }
-
-      const updated = await patchDog(directoryProfile.dog_id, body)
-      fillDirFormFromProfile(updated)
-      setDirectoryProfile(updated)
-      setMessage('Profile saved')
-    } catch (error) {
-      console.error(error)
-      if (error instanceof Error) {
-        setMessage(error.message)
-      } else {
-        setMessage(String(error))
-      }
-    } finally {
-      setIsBusy(false)
-    }
-  }
-
-  async function saveDirectoryOwner(): Promise<void> {
-    if (directoryOwner === null || isBusy) {
-      return
-    }
-    if (ownName.trim() === '') {
-      setMessage('Owner name cannot be empty')
-      return
-    }
-
-    setIsBusy(true)
-    setMessage('Saving...')
-    try {
-      const body: Record<string, unknown> = {
-        name: ownName.trim(),
-        phone: ownPhone.trim() === '' ? null : ownPhone.trim(),
-        email: ownEmail.trim() === '' ? null : ownEmail.trim(),
-        locale: ownLocale.trim() === '' ? 'de' : ownLocale.trim(),
-        address_area: ownAddressArea.trim() === '' ? null : ownAddressArea.trim(),
-        preferred_channel:
-          ownPreferredChannel.trim() === '' ? null : ownPreferredChannel.trim(),
-        client_since: ownClientSince.trim() === '' ? null : ownClientSince.trim(),
-        notes: ownNotes.trim() === '' ? null : ownNotes.trim(),
-      }
-
-      const updated = await patchOwner(directoryOwner.owner_id, body)
-      fillOwnerFormFromProfile(updated)
-      setDirectoryOwner(updated)
-      setMessage('Owner saved')
-    } catch (error) {
-      console.error(error)
-      if (error instanceof Error) {
-        setMessage(error.message)
-      } else {
-        setMessage(String(error))
-      }
-    } finally {
-      setIsBusy(false)
-    }
-  }
 
   const elapsedMs =
     startedAt !== null &&
@@ -872,117 +606,114 @@ function App() {
       ? tickNow - startedAt
       : 0
 
+  const captureMatches = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (q === '') return results
+    return results.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        d.owner_name.toLowerCase().includes(q),
+    )
+  }, [query, results])
+
   return (
-    <main className="app">
-      <header className="app-header">
-        <h1>MuttMetrics</h1>
-        <p className="tagline">
-          {area === 'visits' ? 'Salon capture' : 'Dog & Owner Directory'}
-        </p>
-        <nav className="area-nav" aria-label="App sections">
-          <button
-            type="button"
-            className={area === 'visits' ? 'area-nav-btn active' : 'area-nav-btn'}
-            onClick={() => {
-              setArea('visits')
-              setMessage('')
-            }}
-          >
-            Visits
-          </button>
-          <button
-            type="button"
-            className={area === 'directory' ? 'area-nav-btn active' : 'area-nav-btn'}
-            onClick={() => {
-              setArea('directory')
-              setMessage('')
-            }}
-          >
-            Directory
-          </button>
-        </nav>
-      </header>
-
-      {message !== '' && <p className="status" role="status">{message}</p>}
-
-      {area === 'visits' && (
+    <main className={`app ${screen === 'home' ? 'app-home' : 'app-capture'}`}>
+      {screen === 'home' && (
         <>
+          <header className="app-header">
+            <h1>MuttMetrics</h1>
+          </header>
+          {message !== '' && (
+            <p className="status" role="status">
+              {message}
+            </p>
+          )}
+          <Directory onStartVisit={startVisitForDog} />
+          <button
+            type="button"
+            className="fab"
+            aria-label="New visit"
+            onClick={openCapture}
+          >
+            <span className="fab-plus" aria-hidden>
+              +
+            </span>
+          </button>
+        </>
+      )}
+
+      {screen === 'capture' && (
+        <>
+          <header className="app-header app-header-capture">
+            <button
+              type="button"
+              className="header-back"
+              onClick={exitCapture}
+            >
+              Close
+            </button>
+            <h1>
+              {mode === 'new'
+                ? 'New client'
+                : mode === 'visit' && selectedDog !== null
+                  ? selectedDog.dog_name
+                  : 'New visit'}
+            </h1>
+          </header>
+
+          {message !== '' && (
+            <p className="status" role="status">
+              {message}
+            </p>
+          )}
+
       {mode === 'search' && (
         <section className="panel">
-          <h2>Find a dog</h2>
-          <div className="field">
-            <label htmlFor="dog_search">Dog name</label>
+          <p className="step-meta">Who's in the chair?</p>
+          <div className="search-bar">
+            <label className="visually-hidden" htmlFor="dog_search">
+              Search dog or owner
+            </label>
             <input
               id="dog_search"
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search…"
+              placeholder="Filter dogs or owners…"
               autoComplete="off"
+              autoFocus
             />
           </div>
-          <div className="actions">
-            <button
-              type="button"
-              className="primary"
-              onClick={async () => {
-                try {
-                  setMessage('Searching…')
-                  const rows = await searchDogs(query)
-                  setResults(rows)
-                  setMessage(`Found ${rows.length}`)
-                } catch (error) {
-                  console.error(error)
-                  if (error instanceof TypeError) {
-                    setMessage("Can't reach server — check your connection")
-                  } else if (error instanceof Error) {
-                    setMessage(error.message)
-                  } else {
-                    setMessage(String(error))
-                  }
-                }
-              }}
-            >
-              Search
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode('new')
-                setMessage('')
-              }}
-            >
-              New client
-            </button>
-          </div>
-          <ul className="dog-list">
-            {results.map((dog) => (
+          <button
+            type="button"
+            className="ghost full-width"
+            onClick={() => {
+              setMode('new')
+              setMessage('')
+            }}
+          >
+            New client instead
+          </button>
+          <ul className="dir-card-list">
+            {captureMatches.map((dog) => (
               <li key={dog.dog_id}>
-                <div className="dog-meta">
-                  {dog.name}
-                  <span>{dog.owner_name}</span>
-                </div>
                 <button
                   type="button"
-                  className="primary"
+                  className="dir-card"
                   onClick={() => {
-                    setSelectedDog({
+                    startVisitForDog({
                       dog_id: dog.dog_id,
                       owner_id: dog.owner_id,
                       dog_name: dog.name,
                       owner_name: dog.owner_name,
                     })
-                    resetVisitDetails()
-                    setMode('visit')
-                    setMessage('')
-                    setVisitStep(1)
-                    setIntakeFile(null)
-                    setAfterFile(null)
-                    setVisitDate(todayISODate())
-                    resetTimer()
                   }}
                 >
-                  Use this dog
+                  <div className="dir-card-body">
+                    <span className="dir-card-title">{dog.name}</span>
+                    <span className="dir-card-meta">{dog.owner_name}</span>
+                  </div>
+                  <span className="dir-card-action">Visit</span>
                 </button>
               </li>
             ))}
@@ -992,7 +723,6 @@ function App() {
 
       {mode === 'new' && (
         <section className="panel">
-          <h2>New client</h2>
           <div className="field">
             <label htmlFor="owner_name">Owner name</label>
             <input
@@ -1036,10 +766,7 @@ function App() {
 
       {mode === 'visit' && selectedDog !== null && (
         <section className="panel">
-          <h2 className="visit-title">
-            {selectedDog.dog_name}
-            <span>{selectedDog.owner_name}</span>
-          </h2>
+          <p className="visit-owner">{selectedDog.owner_name}</p>
           <p className="step-meta">Step {visitStep} of 3</p>
 
           {visitStep === 1 && (
@@ -1250,434 +977,12 @@ function App() {
             </>
           )}
 
-          <button
-            type="button"
-            className="ghost"
-            onClick={() => {
-              clearDraft()
-              setSelectedDog(null)
-              resetVisitDetails()
-              setVisitStep(1)
-              setIntakeFile(null)
-              setAfterFile(null)
-              resetTimer()
-              setMode('search')
-              setMessage('')
-            }}
-          >
-            Cancel to search
+          <button type="button" className="ghost" onClick={exitCapture}>
+            Cancel visit
           </button>
         </section>
       )}
         </>
-      )}
-      {area === 'directory' &&
-        directoryProfile === null &&
-        directoryOwner === null && (
-        <section className="panel">
-          <h2>Directory</h2>
-          <p className="step-meta">
-            Search dogs, open a dog or owner profile to enrich fields. This
-            screen will not start a visit.
-          </p>
-          <div className="field">
-            <label htmlFor="directory_dog_search">Dog name</label>
-            <input
-              id="directory_dog_search"
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search..."
-              autoComplete="off"
-            />
-          </div>
-          <div className="actions">
-            <button
-              type="button"
-              className="primary"
-              onClick={async () => {
-                try {
-                  setMessage('Searching...')
-                  const rows = await searchDogs(query)
-                  setResults(rows)
-                  setMessage(`Found ${rows.length}`)
-                } catch (error) {
-                  console.error(error)
-                  if (error instanceof TypeError) {
-                    setMessage("Can't reach server - check your connection")
-                  } else if (error instanceof Error) {
-                    setMessage(error.message)
-                  } else {
-                    setMessage(String(error))
-                  }
-                }
-              }}
-            >
-              Search
-            </button>
-          </div>
-          <ul className="dog-list">
-            {results.map((dog) => (
-              <li key={dog.dog_id}>
-                <div className="dog-meta">
-                  {dog.name}
-                  <span>{dog.owner_name}</span>
-                </div>
-                <div className="actions">
-                  <button
-                    type="button"
-                    className="primary"
-                    disabled={isBusy}
-                    onClick={() => {
-                      void openDirectoryDog(dog.dog_id)
-                    }}
-                  >
-                    Open dog
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isBusy}
-                    onClick={() => {
-                      void openDirectoryOwner(dog.owner_id)
-                    }}
-                  >
-                    Open owner
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {area === 'directory' && directoryProfile !== null && (
-        <section className="panel">
-          <h2>{directoryProfile.name}</h2>
-          <p className="step-meta">
-            Owner:{' '}
-            <button
-              type="button"
-              className="ghost"
-              disabled={isBusy}
-              onClick={() => {
-                void openDirectoryOwner(directoryProfile.owner.owner_id)
-              }}
-            >
-              {directoryProfile.owner.name}
-              {directoryProfile.owner.phone
-                ? ` · ${directoryProfile.owner.phone}`
-                : ''}
-            </button>
-          </p>
-          <p className="step-meta">
-            Derived (read-only): size_band={directoryProfile.size_band ?? '—'}
-            {' · '}
-            visits={directoryProfile.visit_count ?? '—'}
-            {' · '}
-            last={directoryProfile.last_visit_date ?? '—'}
-          </p>
-
-          <div className="field">
-            <label htmlFor="dir_name">Name</label>
-            <input
-              id="dir_name"
-              value={dirName}
-              onChange={(e) => setDirName(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="dir_breed_id">Breed id</label>
-            <input
-              id="dir_breed_id"
-              inputMode="numeric"
-              value={dirBreedId}
-              onChange={(e) => setDirBreedId(e.target.value)}
-              placeholder="e.g. 1 — leave blank for none"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="dir_sex">Sex</label>
-            <input
-              id="dir_sex"
-              value={dirSex}
-              onChange={(e) => setDirSex(e.target.value)}
-              placeholder="optional"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="dir_weight">Weight (kg)</label>
-            <input
-              id="dir_weight"
-              inputMode="decimal"
-              value={dirWeightKg}
-              onChange={(e) => setDirWeightKg(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="dir_coat_type">Coat type</label>
-            <input
-              id="dir_coat_type"
-              value={dirCoatType}
-              onChange={(e) => setDirCoatType(e.target.value)}
-              placeholder="e.g. curly, wire"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="dir_hair_or_fur">Hair or fur</label>
-            <input
-              id="dir_hair_or_fur"
-              value={dirHairOrFur}
-              onChange={(e) => setDirHairOrFur(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="dir_coat_density">Coat density</label>
-            <input
-              id="dir_coat_density"
-              value={dirCoatDensity}
-              onChange={(e) => setDirCoatDensity(e.target.value)}
-            />
-          </div>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={dirUndercoat}
-              onChange={(e) => setDirUndercoat(e.target.checked)}
-            />
-            Undercoat
-          </label>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={dirSheds}
-              onChange={(e) => setDirSheds(e.target.checked)}
-            />
-            Sheds
-          </label>
-          <div className="field">
-            <label htmlFor="dir_handling">Handling score (1–5)</label>
-            <input
-              id="dir_handling"
-              inputMode="numeric"
-              value={dirHandlingScore}
-              onChange={(e) => setDirHandlingScore(e.target.value)}
-            />
-          </div>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={dirMuzzleRequired}
-              onChange={(e) => setDirMuzzleRequired(e.target.checked)}
-            />
-            Muzzle required
-          </label>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={dirTwoPersonJob}
-              onChange={(e) => setDirTwoPersonJob(e.target.checked)}
-            />
-            Two-person job
-          </label>
-          <div className="field">
-            <label htmlFor="dir_temp_notes">Temperament notes</label>
-            <textarea
-              id="dir_temp_notes"
-              rows={3}
-              value={dirTemperamentNotes}
-              onChange={(e) => setDirTemperamentNotes(e.target.value)}
-            />
-          </div>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={dirSeniorFlag}
-              onChange={(e) => setDirSeniorFlag(e.target.checked)}
-            />
-            Senior
-          </label>
-          <div className="field">
-            <label htmlFor="dir_mobility">Mobility notes</label>
-            <textarea
-              id="dir_mobility"
-              rows={2}
-              value={dirMobilityNotes}
-              onChange={(e) => setDirMobilityNotes(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="dir_vet">Vet notes</label>
-            <textarea
-              id="dir_vet"
-              rows={2}
-              value={dirVetNotes}
-              onChange={(e) => setDirVetNotes(e.target.value)}
-            />
-          </div>
-
-          <h3>Recent visits</h3>
-          {directoryProfile.recent_visits.length === 0 ? (
-            <p className="step-meta">No visits yet.</p>
-          ) : (
-            <ul className="dog-list">
-              {directoryProfile.recent_visits.map((v) => (
-                <li key={v.visit_id}>
-                  <div className="dog-meta">
-                    {v.visit_date} · {v.actual_minutes} min
-                    <span>
-                      condition {v.condition_score ?? '—'} · {v.status ?? '—'}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <div className="actions">
-            <button
-              type="button"
-              className="primary"
-              disabled={isBusy}
-              onClick={() => {
-                void saveDirectoryDog()
-              }}
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              className="ghost"
-              disabled={isBusy}
-              onClick={closeDirectoryDog}
-            >
-              Back to list
-            </button>
-          </div>
-        </section>
-      )}
-      {area === 'directory' && directoryOwner !== null && (
-        <section className="panel">
-          <h2>{directoryOwner.name}</h2>
-          <p className="step-meta">
-            Derived (read-only): visits={directoryOwner.visit_count ?? '—'}
-            {' · '}
-            LTV={directoryOwner.lifetime_value ?? '—'}
-          </p>
-
-          <div className="field">
-            <label htmlFor="own_name">Name</label>
-            <input
-              id="own_name"
-              value={ownName}
-              onChange={(e) => setOwnName(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="own_phone">Phone</label>
-            <input
-              id="own_phone"
-              type="tel"
-              value={ownPhone}
-              onChange={(e) => setOwnPhone(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="own_email">Email</label>
-            <input
-              id="own_email"
-              type="email"
-              value={ownEmail}
-              onChange={(e) => setOwnEmail(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="own_locale">Locale</label>
-            <input
-              id="own_locale"
-              value={ownLocale}
-              onChange={(e) => setOwnLocale(e.target.value)}
-              placeholder="de"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="own_area">Address area</label>
-            <input
-              id="own_area"
-              value={ownAddressArea}
-              onChange={(e) => setOwnAddressArea(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="own_channel">Preferred channel</label>
-            <input
-              id="own_channel"
-              value={ownPreferredChannel}
-              onChange={(e) => setOwnPreferredChannel(e.target.value)}
-              placeholder="e.g. whatsapp, phone"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="own_since">Client since</label>
-            <input
-              id="own_since"
-              type="date"
-              value={ownClientSince}
-              onChange={(e) => setOwnClientSince(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="own_notes">Notes</label>
-            <textarea
-              id="own_notes"
-              rows={3}
-              value={ownNotes}
-              onChange={(e) => setOwnNotes(e.target.value)}
-            />
-          </div>
-
-          <h3>Dogs</h3>
-          {directoryOwner.dogs.length === 0 ? (
-            <p className="step-meta">No dogs on this owner.</p>
-          ) : (
-            <ul className="dog-list">
-              {directoryOwner.dogs.map((d) => (
-                <li key={d.dog_id}>
-                  <div className="dog-meta">{d.name}</div>
-                  <button
-                    type="button"
-                    className="primary"
-                    disabled={isBusy}
-                    onClick={() => {
-                      void openDirectoryDog(d.dog_id)
-                    }}
-                  >
-                    Open dog
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <div className="actions">
-            <button
-              type="button"
-              className="primary"
-              disabled={isBusy}
-              onClick={() => {
-                void saveDirectoryOwner()
-              }}
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              className="ghost"
-              disabled={isBusy}
-              onClick={closeDirectoryOwner}
-            >
-              Back to list
-            </button>
-          </div>
-        </section>
       )}
     </main>
   )
