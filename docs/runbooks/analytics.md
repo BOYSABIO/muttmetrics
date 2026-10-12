@@ -53,9 +53,11 @@ A **cell** is one group produced by that metric’s **GROUP BY** — **not** “
 
 | Metric | Typical cell (group of visits) | What `n` counts |
 |--------|--------------------------------|-----------------|
-| €/hour (#27) | One (`condition_score`, `shaved_down`) bucket (optionally within a week) | Eligible visits in that bucket — **many dogs** can sit in the same cell |
-| Pivot / overrun / P90 miss (#28) | Overall, or one week, as the view defines | Eligible visits in that slice |
+| €/hour (#27) | One (`condition_score`, `shaved_down`) bucket **within a calendar week** | Eligible visits in that bucket — **many dogs** can sit in the same cell |
+| Pivot / overrun / P90 miss (#28) | One week (dashboard), plus an overall / all-time view for ops | Eligible visits in that slice |
 | Utilization (#29) | One `visit_date` | Visits that day |
+
+**Why week, not month, for rates:** the salon can change pricing, mix, and habit in a few days. A week matches that pulse and the “This week” dashboard (#158). A month averages those turns away. Month (or any longer rollup) is a later query on the same rows when you want a smoother trend — not the primary grain.
 
 So `MIN_N` is “enough visits **in this bucket** to show a mean/rate,” not “this dog has had 5 appointments.”
 
@@ -86,7 +88,7 @@ We publish **two** named rates so pricing power and take-home are never confused
 | **Revenue (inc tip)** | `final_price + coalesce(tip, 0)` — missing tip counts as `0`, not “unknown revenue” |
 | **€/hour ex tip** | `sum(revenue ex tip) / sum(hours)` over the cell |
 | **€/hour inc tip** | `sum(revenue inc tip) / sum(hours)` over the cell |
-| **Grouping** | `condition_score` × `shaved_down` (and optionally week — as the metric view defines) |
+| **Grouping** | Week × `condition_score` × `shaved_down` (week = Mon–Sun on `visit_date`) |
 | **Unit** | Euro per hour |
 | **`n`** | Count of eligible visits in the cell; apply `MIN_N` |
 | **NULL price / NULL minutes** | Visit **excluded** from this metric (not treated as €0 or 0 minutes) |
@@ -142,6 +144,12 @@ We publish **two** named rates so pricing power and take-home are never confused
 | `MIN_N` | `5` | Metric views, `GET /metrics/week`, “This week” UI — one definition |
 
 When code lands, this value should appear **once** (e.g. a SQL constant table, a migration-seeded setting, or a single module constant imported by API and tests). Amending the number means amending this table and that single implementation site.
+
+## Scope of M5 (what is in vs out)
+
+**In the product path (#159):** exactly the glossary entries above — €/hour (#27), pivot / overrun / P90 miss (#28), utilization (#29) — plus capture health in [`compliance.md`](./compliance.md). That is the “This week” screen.
+
+**Not in M5 (on purpose):** total revenue, tip totals, client counts, breed mixes, month rollups, P&L. Those are one `SUM` / `GROUP BY` away once visits are logged. Adding them to the dashboard before the three decision metrics ship just dilutes the screen. When something new earns a permanent definition (numerator, denominator, eligibility, `MIN_N`), amend **this** runbook first — same rule as #126.
 
 ## Learning notes
 
