@@ -48,11 +48,22 @@ Useful once inside:
 \q           -- quit
 ```
 
-One-shot from the host (PowerShell):
+One-shot from the host (PowerShell) — ASCII-only `-c` strings are fine:
 
 ```powershell
 docker compose exec -T db psql -U muttmetrics -d muttmetrics -c "SELECT COUNT(*) FROM visit;"
 ```
+
+### Encoding-safe: run a `.sql` file
+
+For any script that may contain non-ASCII (euro, dashes, German breed names), **copy the file into the container**, then `-f`. Do not `Get-Content | docker compose exec …` — Windows PowerShell re-encodes the pipe and can turn `€` into `?` with no error ([#154](https://github.com/BOYSABIO/muttmetrics/issues/154)).
+
+```powershell
+docker compose cp .\ops\sql\compliance_week.sql db:/tmp/q.sql
+docker compose exec -T db psql -U muttmetrics -d muttmetrics -f /tmp/q.sql
+```
+
+**Root cause note (M5 / #154):** during the `scripts` → `ops` relocate (#125), several recipe comments were double-encoded (UTF-8 bytes misread as CP437, then saved as UTF-8 again). Queries were intact; comments were poisoned. Files were repaired by reversing that round-trip. `tests/test_sql_encoding.py` fails if the mojibake signature returns — describe it in prose, do not embed the junk characters in docs.
 
 ## Where SQL scripts live
 

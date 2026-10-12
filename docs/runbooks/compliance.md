@@ -32,12 +32,14 @@ Do **not** paste weekly numbers into a public issue comment. Record them locally
 
 1. **Pick the week** — last completed Mon–Sun (or the week you are closing). Example: `2026-10-06` … `2026-10-12`.
 2. **Edit dates** in [`ops/sql/compliance_week.sql`](../../ops/sql/compliance_week.sql) (both queries).
-3. **Run the script** (Postgres extension, or from repo root):
+3. **Run the script** (Postgres extension, or from repo root — encoding-safe, [#154](https://github.com/BOYSABIO/muttmetrics/issues/154)):
 
    ```powershell
-   Get-Content .\ops\sql\compliance_week.sql -Raw |
-     docker compose exec -T db psql -U muttmetrics -d muttmetrics
+   docker compose cp .\ops\sql\compliance_week.sql db:/tmp/q.sql
+   docker compose exec -T db psql -U muttmetrics -d muttmetrics -f /tmp/q.sql
    ```
+
+   Do not `Get-Content | docker …` — PowerShell can corrupt non-ASCII on the way into `psql`.
 
 4. **Read the count** (`completed_visits`) and skim the list — wrong dates or doubles show up there.
 5. **Ask the groomer** — how many dogs that Mon–Sun. Do not invent the number from bookings.

@@ -90,9 +90,11 @@ Once visits store both `actual_minutes` and `predicted_min_*`, check whether the
 **Script (not a DB view):** [`ops/sql/calibration_error.sql`](../ops/sql/calibration_error.sql) — see also [`ops/README.md`](../ops/README.md). Open in the Postgres extension or:
 
 ```powershell
-Get-Content .\ops\sql\calibration_error.sql -Raw |
-  docker compose exec -T db psql -U muttmetrics -d muttmetrics
+docker compose cp .\ops\sql\calibration_error.sql db:/tmp/q.sql
+docker compose exec -T db psql -U muttmetrics -d muttmetrics -f /tmp/q.sql
 ```
+
+(Encoding-safe runner — [#154](https://github.com/BOYSABIO/muttmetrics/issues/154). Do not pipe SQL through PowerShell.)
 
 | Output | How to read it |
 |--------|----------------|
