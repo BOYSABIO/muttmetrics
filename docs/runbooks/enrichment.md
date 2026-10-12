@@ -28,7 +28,8 @@ Connect for SQL escape-hatch work: [`ops-db-peek.md`](./db-peek.md). Schema: [`s
 | **Visits (SPA)** | Mid-groom / post-groom: create the visit row |
 | **Directory (SPA)** | Browse/edit dog or owner hand-entered fields — **default enrichment** |
 | **SQL recipes (below)** | Escape hatch: bulk fixes, edge cases, visit fact corrections, or API down |
-| **Insights / analytics UI** | Later ([#130](https://github.com/BOYSABIO/muttmetrics/issues/130)) — not enrichment |
+| **This week (M5)** | Groomer weekly numbers — definitions in [`analytics.md`](./analytics.md) ([#126](https://github.com/BOYSABIO/muttmetrics/issues/126)); not enrichment |
+| **Broader insights UI** | Later icebox ([#130](https://github.com/BOYSABIO/muttmetrics/issues/130)) — not enrichment |
 
 ## Golden rules (Directory and SQL)
 
