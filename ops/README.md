@@ -10,7 +10,7 @@ Data-filling policy (thin capture vs enrichment): [`docs/prior.md`](../docs/prio
 | Kind | Where | How to run |
 |------|--------|------------|
 | **Python ops** | `ops/*.py` | `python ops/<name>.py` (venv on, from repo root) |
-| **SQL recipes** | `ops/sql/*.sql` | Postgres extension, or PowerShell pipe into `docker compose exec -T db psql` (see each file header) |
+| **SQL recipes** | `ops/sql/*.sql` | Postgres extension, or **encoding-safe** `docker compose cp` + `psql -f` (see below). Never `Get-Content \| docker …` — PowerShell can turn `€` into `?`. |
 | **Package CLIs** | `src/muttmetrics/` | `python -m muttmetrics.<module>` or console scripts from `pyproject.toml` |
 
 Personal / PII-named SQL: `*.local.sql` under `ops/` (gitignored) — never commit real client names.
@@ -27,6 +27,17 @@ Personal / PII-named SQL: `*.local.sql` under `ops/` (gitignored) — never comm
 ## SQL recipes (`ops/sql/`)
 
 Enrichment: prefer SPA **Directory**; SQL below is the escape hatch — [`docs/runbooks/enrichment.md`](../docs/runbooks/enrichment.md). Connection / peek: [`db-peek.md`](../docs/runbooks/db-peek.md).
+
+### How to run a `.sql` file (encoding-safe)
+
+Do **not** pipe file text through PowerShell into `psql`. Copy the file into the container as bytes, then let `psql` read it:
+
+```powershell
+docker compose cp .\ops\sql\compliance_week.sql db:/tmp/q.sql
+docker compose exec -T db psql -U muttmetrics -d muttmetrics -f /tmp/q.sql
+```
+
+**Why (#154):** during the `scripts` → `ops` move, UTF-8 punctuation in comments was misread as CP437 and saved again (double-encoding / mojibake — e.g. an em dash became a multi-character junk sequence). Separately, `Get-Content | docker …` re-encodes the pipe with `$OutputEncoding` and can silently replace `€` or umlauts. M5 money/metric SQL must not go through that path. Guard: `tests/test_sql_encoding.py` (it looks for the junk signature; do not paste that signature into docs as an “example”).
 
 | File | Use when | More |
 |------|----------|------|
