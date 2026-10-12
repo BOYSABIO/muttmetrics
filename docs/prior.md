@@ -117,14 +117,15 @@ Visit capture stays **thin** on purpose. Dog/owner detail is **enrichment**, not
 | Track | Who | What |
 |-------|-----|------|
 | **Visits (SPA)** | Groomer | Name → minutes → service → money → optional condition/photos. No CRM fields. |
-| **Directory (SPA)** | Maintainer (groomer offline OK) | Dog/owner profiles + safe edits (shipped) — [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) / M4.75 (not M9; not mid-groom homework) |
+| **Directory (SPA)** | Maintainer (groomer offline OK) | Dog/owner profiles + safe edits (shipped, epic [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) closed). Follow-ons: [#151](https://github.com/BOYSABIO/muttmetrics/issues/151), [#152](https://github.com/BOYSABIO/muttmetrics/issues/152). Not mid-groom homework. |
 | **Enrichment SQL** | Maintainer | Escape hatch (bulk / visit fixes) — [`enrichment.md`](runbooks/enrichment.md) |
 | **Derived recompute** | System | `visit_count`, `last_visit_date`, … — **after** there are rows worth recomputing |
 | **Coat-first predictions** | Later (M7) | Do not require breed — [#121](https://github.com/BOYSABIO/muttmetrics/issues/121) |
 
 ```text
 condition polarity (#123) → visit habit (#22)
-  → enrich via Directory (#117 / M4.75); SQL escape hatch if needed
+  → first visit: thin capture (new client OK with minimal dog/owner)
+  → enrich via Directory (offline); SQL escape hatch if needed
   → M5 analytics on sparse-but-clear data
   → recompute / fitted model later
 ```
@@ -143,4 +144,4 @@ Empty nullable columns are fine. Ambiguous scales are not. Do not turn the phone
 - [ADR-001](architecture/adr/001-derived-fields.md) — `days_since_last` and predictions are system-computed on the visit, not hand-edited
 - Breed cold-start values — `src/muttmetrics/seed/data.py` (`base_groom_minutes`, `matting_risk`, `recommended_interval_days`)
 - Coat/size/temperament-first predictions — [#121](https://github.com/BOYSABIO/muttmetrics/issues/121)
-- Thin capture vs enrichment sequencing — [#127](https://github.com/BOYSABIO/muttmetrics/issues/127), maintainer UI [#117](https://github.com/BOYSABIO/muttmetrics/issues/117)
+- Thin capture vs enrichment sequencing — [#127](https://github.com/BOYSABIO/muttmetrics/issues/127); M4.75 [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) (closed); desk/vocab [#151](https://github.com/BOYSABIO/muttmetrics/issues/151), [#152](https://github.com/BOYSABIO/muttmetrics/issues/152)
