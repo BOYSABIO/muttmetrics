@@ -6,7 +6,14 @@ How to **fix and enrich** rows after thin capture without corrupting derived fie
 
 **Use the app.** Open the SPA home (client list) → tap a dog card (or **Owner**) → edit hand-entered fields → **Save**. Breed, sex, coat, and handling use named selects from the catalog / ADR-001-safe lists (no raw ids or magic strings). Tap **+** (or **Start visit** on a dog profile) for visit capture.
 
-That path uses `GET`/`PATCH` for dogs and owners ([#131](https://github.com/BOYSABIO/muttmetrics/issues/131), [#132](https://github.com/BOYSABIO/muttmetrics/issues/132), UI [#138](https://github.com/BOYSABIO/muttmetrics/issues/138)–[#140](https://github.com/BOYSABIO/muttmetrics/issues/140); epic [#117](https://github.com/BOYSABIO/muttmetrics/issues/117)). Visits stay thin capture; Directory is profiles + safe edits (hand backfill when there was never Excel).
+That path uses `GET`/`PATCH` for dogs and owners ([#131](https://github.com/BOYSABIO/muttmetrics/issues/131), [#132](https://github.com/BOYSABIO/muttmetrics/issues/132), UI [#138](https://github.com/BOYSABIO/muttmetrics/issues/138)–[#140](https://github.com/BOYSABIO/muttmetrics/issues/140), UX [#149](https://github.com/BOYSABIO/muttmetrics/issues/149)). Epic [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) is **closed** (2026-10-12).
+
+### Adoption loop (how the shop fills data)
+
+1. **First groom:** `+` → new or existing dog → save **visit** (thin: names, timer, service, price; optional photos/condition). Dog/owner rows can stay sparse.
+2. **Later (offline OK):** home → dog or owner profile → breed, coat, contact, notes → **Save**. That is enrichment, not visit capture.
+
+Desk-friendly layout and richer breed/vocabulary UX: [#151](https://github.com/BOYSABIO/muttmetrics/issues/151), [#152](https://github.com/BOYSABIO/muttmetrics/issues/152).
 
 **OpenAPI** at `http://127.0.0.1:8000/docs` is a maintainer test console for the same endpoints — not the groomer UI. Authorize with `X-API-Key` first.
 
@@ -129,6 +136,7 @@ HTTP `PATCH` for dog/owner obeys the same safe vs forbidden columns as this play
 
 ## Related
 
-- Epic: [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) — Visits vs Directory
+- Epic (closed): [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) — M4.75 Visits vs Directory
+- Follow-ons: [#151](https://github.com/BOYSABIO/muttmetrics/issues/151) wide desk layout; [#152](https://github.com/BOYSABIO/muttmetrics/issues/152) select-or-create vocabularies
 - Synthetic junk cleanup: `ops/sql/cleanup_synthetic_clients.local.sql` *(local only, gitignored: it names real rows to protect)*
 - Peek starters: [`ops-db-peek.md`](./db-peek.md)
