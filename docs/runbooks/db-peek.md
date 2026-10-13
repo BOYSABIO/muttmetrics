@@ -63,7 +63,7 @@ docker compose cp .\ops\sql\compliance_week.sql db:/tmp/q.sql
 docker compose exec -T db psql -U muttmetrics -d muttmetrics -f /tmp/q.sql
 ```
 
-**Root cause note (M5 / #154):** during the `scripts` → `ops` relocate (#125), several recipe comments were double-encoded (UTF-8 bytes misread as CP437, then saved as UTF-8 again). Queries were intact; comments were poisoned. Files were repaired by reversing that round-trip. `tests/test_sql_encoding.py` fails if the mojibake signature returns — describe it in prose, do not embed the junk characters in docs.
+**Root cause note (M5 / #154):** during the `scripts` → `ops` relocate (#125), several recipe comments were double-encoded (UTF-8 bytes misread as CP437, then saved as UTF-8 again). Queries were intact; comments were poisoned. Files were repaired by reversing that round-trip. `tests/unit/test_sql_encoding.py` fails if the mojibake signature returns — describe it in prose, do not embed the junk characters in docs.
 
 ## Where SQL scripts live
 
@@ -134,13 +134,13 @@ Breed, phone, notes, visit fixes — Owner’s job, not the SPA. Playbook + reci
 
 [`ops-enrichment.md`](./enrichment.md) · [`ops/sql/lookup_breeds.sql`](../../ops/sql/lookup_breeds.sql) · [`enrich_dog_breed.sql`](../../ops/sql/enrich_dog_breed.sql) · [`update_visit.sql`](../../ops/sql/update_visit.sql) · …
 
-## Pytest writes to this same database
+## Pytest and this database
 
-Local `pytest` uses `TestClient` against FastAPI, which **commits** owners/dogs/visits into the compose DB (`localhost:5432/muttmetrics`). Unique UUID names avoid collisions with real clients; they do **not** auto-clean.
+Local `pytest` hits the same compose DB (`localhost:5432/muttmetrics`). As of #16, API tests share one DB session per test wrapped in a transaction that **rolls back** when the test ends (`tests/conftest.py`: `db_connection` → `db_session` → `get_db` override). New test rows should not linger.
 
-CI is different: ephemeral Postgres service container, thrown away after the job.
+**Exceptions / leftovers:** older runs before that change, or any test that still opens its own committing `session_scope()`. CI is different: ephemeral Postgres, thrown away after the job.
 
-After heavy local test runs, either run the cleanup script above or wipe (below).
+After heavy *legacy* clutter, either run the cleanup script above or wipe (below).
 
 ## Nuclear wipe (local only)
 

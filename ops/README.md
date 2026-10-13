@@ -37,7 +37,7 @@ docker compose cp .\ops\sql\compliance_week.sql db:/tmp/q.sql
 docker compose exec -T db psql -U muttmetrics -d muttmetrics -f /tmp/q.sql
 ```
 
-**Why (#154):** during the `scripts` → `ops` move, UTF-8 punctuation in comments was misread as CP437 and saved again (double-encoding / mojibake — e.g. an em dash became a multi-character junk sequence). Separately, `Get-Content | docker …` re-encodes the pipe with `$OutputEncoding` and can silently replace `€` or umlauts. M5 money/metric SQL must not go through that path. Guard: `tests/test_sql_encoding.py` (it looks for the junk signature; do not paste that signature into docs as an “example”).
+**Why (#154):** during the `scripts` → `ops` move, UTF-8 punctuation in comments was misread as CP437 and saved again (double-encoding / mojibake — e.g. an em dash became a multi-character junk sequence). Separately, `Get-Content | docker …` re-encodes the pipe with `$OutputEncoding` and can silently replace `€` or umlauts. M5 money/metric SQL must not go through that path. Guard: `tests/unit/test_sql_encoding.py` (it looks for the junk signature; do not paste that signature into docs as an “example”).
 
 | File | Use when | More |
 |------|----------|------|

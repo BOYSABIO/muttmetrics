@@ -1,8 +1,10 @@
 """GET /dogs/{id}/duration-range (#26)."""
 
-from fastapi.testclient import TestClient
+from __future__ import annotations
 
-from muttmetrics.db.session import session_scope
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
 from muttmetrics.models import Breed, Dog, Owner
 
 
@@ -15,30 +17,31 @@ def test_duration_range_unknown_dog_404(client: TestClient, auth_headers: dict[s
     assert r.status_code == 404
 
 
-def test_duration_range_with_breed(client: TestClient, auth_headers: dict[str, str]) -> None:
-    with session_scope() as session:
-        owner = Owner(name="Range Owner")
-        session.add(owner)
-        session.flush()
-        breed = Breed(
-            name_en="Range Breed",
-            name_de="Range",
-            base_groom_minutes=100,
-            matting_risk=4,
-            recommended_interval_days=60,
-        )
-        session.add(breed)
-        session.flush()
-        dog = Dog(
-            owner_id=owner.owner_id,
-            name="Range Dog",
-            breed_id=breed.breed_id,
-            size_band="l",
-            handling_score=4,
-        )
-        session.add(dog)
-        session.flush()
-        dog_id = dog.dog_id
+def test_duration_range_with_breed(
+    client: TestClient, db_session: Session, auth_headers: dict[str, str]
+) -> None:
+    owner = Owner(name="Range Owner")
+    db_session.add(owner)
+    db_session.flush()
+    breed = Breed(
+        name_en="Range Breed",
+        name_de="Range",
+        base_groom_minutes=100,
+        matting_risk=4,
+        recommended_interval_days=60,
+    )
+    db_session.add(breed)
+    db_session.flush()
+    dog = Dog(
+        owner_id=owner.owner_id,
+        name="Range Dog",
+        breed_id=breed.breed_id,
+        size_band="l",
+        handling_score=4,
+    )
+    db_session.add(dog)
+    db_session.flush()
+    dog_id = dog.dog_id
 
     r = client.get(
         f"/dogs/{dog_id}/duration-range",
@@ -53,32 +56,31 @@ def test_duration_range_with_breed(client: TestClient, auth_headers: dict[str, s
 
 
 def test_duration_range_matches_visit_create(
-    client: TestClient, auth_headers: dict[str, str]
+    client: TestClient, db_session: Session, auth_headers: dict[str, str]
 ) -> None:
     """Same dog + as_of as first visit → same P50/P90."""
-    with session_scope() as session:
-        owner = Owner(name="Sync Owner")
-        session.add(owner)
-        session.flush()
-        breed = Breed(
-            name_en="Sync Breed",
-            name_de="Sync",
-            base_groom_minutes=100,
-            matting_risk=4,
-            recommended_interval_days=60,
-        )
-        session.add(breed)
-        session.flush()
-        dog = Dog(
-            owner_id=owner.owner_id,
-            name="Sync Dog",
-            breed_id=breed.breed_id,
-            size_band="l",
-            handling_score=4,
-        )
-        session.add(dog)
-        session.flush()
-        owner_id, dog_id = owner.owner_id, dog.dog_id
+    owner = Owner(name="Sync Owner")
+    db_session.add(owner)
+    db_session.flush()
+    breed = Breed(
+        name_en="Sync Breed",
+        name_de="Sync",
+        base_groom_minutes=100,
+        matting_risk=4,
+        recommended_interval_days=60,
+    )
+    db_session.add(breed)
+    db_session.flush()
+    dog = Dog(
+        owner_id=owner.owner_id,
+        name="Sync Dog",
+        breed_id=breed.breed_id,
+        size_band="l",
+        handling_score=4,
+    )
+    db_session.add(dog)
+    db_session.flush()
+    owner_id, dog_id = owner.owner_id, dog.dog_id
 
     preview = client.get(
         f"/dogs/{dog_id}/duration-range",

@@ -81,7 +81,7 @@ Inputs: base `100`, matting `4`, size `l`, days `90`, interval `60`, handling `4
 | spread_frac | 0.40 |
 | **p90** | **263** |
 
-Locked by `tests/test_prior.py::test_walkthrough_example`.
+Locked by `tests/unit/test_prior.py::test_walkthrough_example`.
 
 ## Calibration — predicted vs actual (#25)
 

@@ -24,7 +24,16 @@ from pathlib import Path
 
 import pytest
 
-REPO = Path(__file__).resolve().parents[1]
+
+def _repo_root() -> Path:
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / "pyproject.toml").is_file():
+            return parent
+    raise RuntimeError("could not locate repo root (pyproject.toml)")
+
+
+REPO = _repo_root()
 
 # Visible leftovers of UTF-8 → CP437 → UTF-8 round-trips.
 # ΓÇ  covers —, –, “, ”, •, …

@@ -22,7 +22,16 @@ from pathlib import Path
 
 import pytest
 
-VERSIONS = Path(__file__).resolve().parents[1] / "alembic" / "versions"
+
+def _repo_root() -> Path:
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / "pyproject.toml").is_file():
+            return parent
+    raise RuntimeError("could not locate repo root (pyproject.toml)")
+
+
+VERSIONS = _repo_root() / "alembic" / "versions"
 MIGRATIONS = sorted(VERSIONS.glob("*.py"))
 
 # Operations that succeed silently on a populated table and lose data.
