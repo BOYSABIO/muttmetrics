@@ -39,7 +39,8 @@ packages = ["src/muttmetrics"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+# Repo root so ``import tests.fixtures…`` works (pytest importlib mode / CI).
+pythonpath = ["src", "."]
 
 [tool.ruff]
 target-version = "py311"

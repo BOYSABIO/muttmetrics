@@ -29,7 +29,7 @@ src/muttmetrics/    # package (api/, models/, priors/, media/, seed/, …)
 alembic/            # migration scripts (Alembic)
 frontend/           # Vite + React + TS capture SPA (#69–#72)
 ops/                # maintainer tooling — start at ops/README.md (#125)
-tests/
+tests/              # api/ (HTTP+DB), unit/, fixtures/ (synthetic metric week)
 docker-compose.yml  # local Postgres (primary dev path)
 ```
 

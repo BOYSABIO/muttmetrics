@@ -30,7 +30,7 @@ ruff format --check .       # CI uses this (fails if unformatted)
 pytest
 ```
 
-API tests share fixtures from `tests/conftest.py` (one `DATABASE_URL` / `API_KEY` default, plus `auth_headers`). Local `pytest` writes into the same Docker Compose Postgres as day-to-day work — see [`docs/runbooks/db-peek.md`](./docs/runbooks/db-peek.md) for clutter/cleanup. Prefer `127.0.0.1` over `localhost` on Windows.
+Test layout: `tests/api/` (HTTP + DB), `tests/unit/` (no Postgres), `tests/fixtures/` (synthetic metric-week data + loader). Shared fixtures live in `tests/conftest.py` (`client`, `db_session`, `auth_headers`, `metric_week`). API/`db_session` tests share one connection per test and **roll back** when the test ends — see [`docs/runbooks/db-peek.md`](./docs/runbooks/db-peek.md). Prefer `127.0.0.1` over `localhost` on Windows.
 
 After `pre-commit install`, each `git commit` runs ruff lint (with autofix) and ruff format on staged files. If something was fixed, stage again and recommit. CI still runs the same checks as the backstop.
 
@@ -124,7 +124,7 @@ alembic upgrade head
 
 Autogenerate diffs two schema *states*; it does not know what you *meant*. A rename comes out as `drop_column` + `add_column`, a type change can silently round every value, and CI catches neither because it migrates an **empty** database. [`docs/runbooks/migrations.md`](./docs/runbooks/migrations.md) has the shapes to look for, expand/migrate/contract, and `alembic stamp`.
 
-`tests/test_migration_safety.py` fails any migration whose `upgrade()` drops something without an acknowledgement line (runbook §4). CI runs ruff, `alembic upgrade head`, seed, pytest (Postgres 16 service container), and `npm run build` in `frontend/` (see `.github/workflows/ci.yml`).
+`tests/unit/test_migration_safety.py` fails any migration whose `upgrade()` drops something without an acknowledgement line (runbook §4). CI runs ruff, `alembic upgrade head`, seed, pytest (Postgres 16 service container), and `npm run build` in `frontend/` (see `.github/workflows/ci.yml`).
 
 ## Backups (#95)
 
