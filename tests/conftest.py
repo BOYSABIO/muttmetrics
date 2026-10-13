@@ -13,11 +13,11 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
-from tests.fixtures.load_metric_week import load_metric_week
 
 from muttmetrics.api.app import create_app
 from muttmetrics.api.deps import get_db
 from muttmetrics.db.session import get_engine
+from tests.fixtures.load_metric_week import load_metric_week
 
 # Default matches .env.example / compose. CI can override via env.
 _DEFAULT_DATABASE_URL = "postgresql+psycopg://muttmetrics:muttmetrics@127.0.0.1:5432/muttmetrics"

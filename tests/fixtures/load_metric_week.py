@@ -6,9 +6,9 @@ Caller owns the transaction (tests: db_session rollback; CLI: its own commit).
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
-from tests.fixtures.metric_week import DOGS, OWNERS, VISITS
 
 from muttmetrics.models import Breed, Dog, Owner, Visit
+from tests.fixtures.metric_week import DOGS, OWNERS, VISITS
 
 
 def load_metric_week(session: Session) -> dict[str, dict[str, int]]:
