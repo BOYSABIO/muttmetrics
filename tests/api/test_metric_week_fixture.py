@@ -115,6 +115,25 @@ def test_pivot_overrun_p90_hand_math() -> None:
     assert EXPECTED["p90_miss"]["rate"] == pytest.approx(misses / len(p90))
 
 
+def test_week_summary_hand_math() -> None:
+    """#155 answer key: totals from VISITS (no DB, no view yet)."""
+    eligible = [v for v in VISITS if _in_week(v) and _eligible(v)]
+    priced = [v for v in eligible if v["final_price"] is not None]
+
+    minutes = sum(v["actual_minutes"] for v in eligible)
+    rev_ex = sum(float(v["final_price"]) for v in priced)
+    rev_inc = sum(
+        float(v["final_price"]) + (0.0 if v["tip"] is None else float(v["tip"])) for v in priced
+    )
+
+    expected = EXPECTED["week_summary"][date(2026, 3, 2)]
+    assert expected["visit_count"] == 11 == len(eligible)
+    assert expected["groomed_minutes"] == 840 == minutes
+    assert expected["revenue_ex_tip"] == pytest.approx(rev_ex)
+    assert expected["revenue_inc_tip"] == pytest.approx(rev_inc)
+    assert expected["revenue_inc_tip"] == pytest.approx(633.0)
+
+
 def test_utilization_tue_over_buffer() -> None:
     tue_visits = [v for v in VISITS if v["visit_date"] == date(2026, 3, 3) and _eligible(v)]
     assert len(tue_visits) == 3

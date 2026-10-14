@@ -257,6 +257,20 @@ EXPECTED: dict[str, Any] = {
         "rate": _PIVOT_RATE,
         "show_rate": True,  # 11 >= MIN_N
     },
+    # --- week summary (#155): totals, always shown (no MIN_N) ---
+    # Eligible: V11,V12,V1,V2,V15,V3,V4,V5,V6,V7,V8 (exclude V9,V10)
+    # minutes = 840
+    # revenue ex  = 48+52+70+65+58+60+60+55+50+55 = 573  (V7 NULL price skipped)
+    # tips on priced = 5+0+15+0+10+10+0+10+10+0 = 60 → inc = 633
+    "week_summary": {
+        date(2026, 3, 2): {  # ISO week start (Monday)
+            "visit_count": 11,
+            "groomed_minutes": 840,
+            "revenue_ex_tip": 573.0,
+            "revenue_inc_tip": 633.0,
+        },
+        # empty week 2026-03-09: no row expected
+    },
     "overrun": {
         "n": 10,
         "avg_minutes": _OVERRUN_AVG,
