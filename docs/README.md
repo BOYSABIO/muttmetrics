@@ -18,6 +18,7 @@ Everything written about the project, grouped by what you're trying to do. **Tas
 | [ADR-000 — Stack](architecture/adr/000-stack.md) | Why Python/Postgres/FastAPI, and the capture UI path |
 | [ADR-001 — Derived fields](architecture/adr/001-derived-fields.md) | Hand-entered vs derived vs system-computed columns |
 | [ADR-002 — Photo storage](architecture/adr/002-photo-storage.md) | Bytes on disk, metadata in Postgres |
+| [ADR-003 — Metric views](architecture/adr/003-metric-views.md) | Metric formulas in Postgres views/functions; `MIN_N` in SQL (#155) |
 | [Rules prior (P50/P90)](prior.md) | Duration formula (#23), persist on create (#24), calibration SQL (#25), how we fill data (#127) |
 | [Ops layout](architecture/ops-layout.md) | Why maintainer tooling lives under `ops/` (#125) |
 
