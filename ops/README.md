@@ -42,7 +42,9 @@ docker compose exec -T db psql -U muttmetrics -d muttmetrics -f /tmp/q.sql
 | File | Use when | More |
 |------|----------|------|
 | [`compliance_week.sql`](./sql/compliance_week.sql) | Weekly capture numerator | [`compliance.md`](../docs/runbooks/compliance.md) |
-| [`calibration_error.sql`](./sql/calibration_error.sql) | Predicted vs actual | [`prior.md`](../docs/prior.md) |
+| [`metric_eur_per_hour.sql`](./sql/metric_eur_per_hour.sql) | €/hour by condition × shaved (#27) | [`analytics.md`](../docs/runbooks/analytics.md) |
+| [`metric_prediction_health.sql`](./sql/metric_prediction_health.sql) | Pivot / overrun / P90 miss views (#28) | [`analytics.md`](../docs/runbooks/analytics.md) |
+| [`calibration_error.sql`](./sql/calibration_error.sql) | Predicted vs actual (cites #28 views) | [`prior.md`](../docs/prior.md) |
 | [`lookup_breeds.sql`](./sql/lookup_breeds.sql) | List breed catalog | enrichment |
 | [`enrich_dog_breed.sql`](./sql/enrich_dog_breed.sql) | Set `dog.breed_id` | enrichment |
 | [`update_owner.sql`](./sql/update_owner.sql) | Enrich owner contact / notes | enrichment |
