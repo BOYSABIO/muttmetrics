@@ -139,6 +139,8 @@ We publish **two** named rates so pricing power and take-home are never confused
 | **Over buffer** | e.g. planned worst case (or chosen planned measure) **>** `buffer_minutes` — exact flag defined when the function ships; must match the fixture |
 | **Missing predictions** | Count and surface those visits; **do not** treat missing P50 as 0 planned minutes |
 
+**Executable (#29):** `SELECT * FROM metric_utilization(240)` — function, not a view. Ops: [`ops/sql/metric_utilization.sql`](../../ops/sql/metric_utilization.sql). `over_buffer` = `planned_p90 > buffer_minutes`.
+
 ## Named constants
 
 | Name | Value | Used by |
