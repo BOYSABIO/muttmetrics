@@ -125,6 +125,8 @@ We publish **two** named rates so pricing power and take-home are never confused
 | **Pivot rate** | `count(pivoted is true) / n`; `NULL`/`false` count as not pivoted for the numerator; apply `MIN_N` |
 | **Note** | Visits without a stored prediction **still count** here (unlike overrun) |
 
+**Executable views (#28):** `metric_pivot_rate`, `metric_overrun`, `metric_p90_miss` (weekly rows + `week_start IS NULL` overall). Ops peek: [`ops/sql/metric_prediction_health.sql`](../../ops/sql/metric_prediction_health.sql). Capture UI still sets booked = actual until groomer calendar booking exists ([#44](https://github.com/BOYSABIO/muttmetrics/issues/44)); multi-session jobs are [#165](https://github.com/BOYSABIO/muttmetrics/issues/165).
+
 ### Utilization per day
 
 | Piece | Definition |

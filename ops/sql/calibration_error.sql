@@ -1,9 +1,30 @@
--- Predicted vs actual duration error (#25).
--- Only completed (or legacy NULL status) visits that have a P50 stored.
+-- Predicted vs actual duration error (#25), reconciled with #28 views (ADR-003).
+--
+-- Groomer-facing totals live in metric_overrun / metric_p90_miss
+-- (docs/runbooks/analytics.md). Breed / condition slices below keep the SAME
+-- eligibility and overrun formula (actual - P50; P90 hit = actual <= P90).
+-- They are not a second definition — only a different GROUP BY.
 --
 -- Run (encoding-safe — never pipe SQL text through PowerShell):
 --   docker compose cp .\ops\sql\calibration_error.sql db:/tmp/q.sql
 --   docker compose exec -T db psql -U muttmetrics -d muttmetrics -f /tmp/q.sql
+
+-- ---------------------------------------------------------------------------
+-- 0) Single source check — overall rows from the metric views (#28)
+--    avg_overrun_minutes ≡ avg_error_p50; miss_rate ≡ 1 - p90_hit_rate
+--    (when both use the same prediction filters; views require P50 or P90 alone)
+-- ---------------------------------------------------------------------------
+SELECT
+  o.n AS overrun_n,
+  ROUND(o.avg_overrun_minutes, 1) AS avg_overrun_minutes,
+  p.n AS p90_n,
+  p.miss_count,
+  ROUND(p.miss_rate, 2) AS miss_rate,
+  ROUND(1.0 - p.miss_rate, 2) AS p90_hit_rate
+FROM metric_overrun o
+CROSS JOIN metric_p90_miss p
+WHERE o.week_start IS NULL
+  AND p.week_start IS NULL;
 
 -- ---------------------------------------------------------------------------
 -- 1) By breed — “are we systematically underestimating Doodles?”
@@ -55,7 +76,9 @@ GROUP BY v.condition_score
 ORDER BY v.condition_score NULLS LAST;
 
 -- ---------------------------------------------------------------------------
--- 3) Overall (one row) — weekly sanity check
+-- 3) Overall from visits (same filters as historical recipe)
+--     Prefer section 0 for the ADR-003 view numbers; this block is the
+--     breed-calibration twin when both P50 and P90 are required.
 -- ---------------------------------------------------------------------------
 SELECT
   COUNT(*) AS n,
