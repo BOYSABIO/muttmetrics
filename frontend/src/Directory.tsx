@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { BreedPicker } from './BreedPicker'
 import { DogAvatar } from './DogAvatar'
 
 export type VisitDogRef = {
@@ -234,13 +235,6 @@ async function uploadDogProfilePhoto(
   return (await readJson(res)) as { photo_id: number }
 }
 
-function breedLabel(b: BreedListItem): string {
-  if (b.name_de && b.name_en && b.name_de !== b.name_en) {
-    return `${b.name_de} / ${b.name_en}`
-  }
-  return b.name_de || b.name_en || `Breed ${b.breed_id}`
-}
-
 function errorMessage(error: unknown): string {
   if (error instanceof TypeError) {
     return "Can't reach server — check your connection"
@@ -294,6 +288,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
 
   const [dirName, setDirName] = useState('')
   const [dirBreedId, setDirBreedId] = useState('')
+  const [dirBreedSecondaryId, setDirBreedSecondaryId] = useState('')
   const [dirSex, setDirSex] = useState('')
   const [dirWeightKg, setDirWeightKg] = useState('')
   const [dirCoatType, setDirCoatType] = useState('')
@@ -334,6 +329,11 @@ export function Directory({ onStartVisit }: DirectoryProps) {
   function fillDirFormFromProfile(profile: DogProfile): void {
     setDirName(profile.name)
     setDirBreedId(profile.breed_id !== null ? String(profile.breed_id) : '')
+    setDirBreedSecondaryId(
+      profile.breed_secondary_id !== null
+        ? String(profile.breed_secondary_id)
+        : '',
+    )
     setDirSex(profile.sex ?? '')
     setDirWeightKg(
       profile.weight_kg !== null && profile.weight_kg !== undefined
@@ -421,6 +421,10 @@ export function Directory({ onStartVisit }: DirectoryProps) {
       const body: Record<string, unknown> = {
         name: dirName.trim(),
         breed_id: dirBreedId.trim() === '' ? null : Number(dirBreedId),
+        breed_secondary_id:
+          dirBreedSecondaryId.trim() === ''
+            ? null
+            : Number(dirBreedSecondaryId),
         sex: dirSex.trim() === '' ? null : dirSex.trim(),
         weight_kg: dirWeightKg.trim() === '' ? null : Number(dirWeightKg),
         coat_type: dirCoatType.trim() === '' ? null : dirCoatType.trim(),
@@ -567,21 +571,22 @@ export function Directory({ onStartVisit }: DirectoryProps) {
                   onChange={(e) => setDirName(e.target.value)}
                 />
               </div>
-              <div className="field">
-                <label htmlFor="dir_breed">Breed</label>
-                <select
-                  id="dir_breed"
-                  value={dirBreedId}
-                  onChange={(e) => setDirBreedId(e.target.value)}
-                >
-                  <option value="">—</option>
-                  {breeds.map((b) => (
-                    <option key={b.breed_id} value={b.breed_id}>
-                      {breedLabel(b)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <BreedPicker
+                id="dir_breed"
+                label="Breed"
+                breeds={breeds}
+                value={dirBreedId}
+                onChange={setDirBreedId}
+                disabled={isBusy}
+              />
+              <BreedPicker
+                id="dir_breed_secondary"
+                label="Secondary breed (optional)"
+                breeds={breeds}
+                value={dirBreedSecondaryId}
+                onChange={setDirBreedSecondaryId}
+                disabled={isBusy}
+              />
               <div className="field-grid field-grid-compact">
                 <div className="field">
                   <label htmlFor="dir_sex">Sex</label>

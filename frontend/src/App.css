@@ -275,6 +275,95 @@ section.panel h2 {
   color: var(--ink);
 }
 
+.breed-picker {
+  position: relative;
+  z-index: 1;
+}
+
+/* Lift the open picker (and its profile card) above the next section. */
+.breed-picker:focus-within,
+.breed-picker-open {
+  z-index: 30;
+}
+
+.profile-block:has(.breed-picker:focus-within),
+.profile-block:has(.breed-picker-open) {
+  position: relative;
+  z-index: 30;
+  overflow: visible;
+}
+
+.breed-picker-controls {
+  display: flex;
+  gap: 0.45rem;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.breed-picker-controls input {
+  flex: 1;
+  min-width: 0;
+}
+
+.breed-picker-clear {
+  flex-shrink: 0;
+  padding: 0.45rem 0.7rem;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.breed-picker-clear:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.breed-picker-list {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.25rem);
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  max-height: 14rem;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(26, 35, 50, 0.14);
+}
+
+.breed-picker-empty {
+  padding: 0.65rem 0.75rem;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+}
+
+.breed-picker-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.7rem;
+  min-height: 2.35rem;
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  font-weight: 500;
+}
+
+.breed-picker-option:hover:not(:disabled),
+.breed-picker-option-active {
+  background: var(--accent-soft);
+  color: var(--accent-press);
+  border-color: transparent;
+}
+
 .field-hint {
   font-size: 0.8rem;
   color: var(--ink-muted);
@@ -862,6 +951,11 @@ button.dog-avatar-editable:hover:not(:disabled) .dog-avatar-face {
   gap: 0.75rem;
   min-width: 0;
   max-width: 100%;
+  overflow: visible;
+}
+
+.profile-sections {
+  overflow: visible;
 }
 
 .profile-block {
@@ -875,6 +969,7 @@ button.dog-avatar-editable:hover:not(:disabled) .dog-avatar-face {
   box-shadow: var(--shadow);
   min-width: 0;
   max-width: 100%;
+  overflow: visible;
 }
 
 .profile-block .profile-section {
