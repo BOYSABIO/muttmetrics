@@ -146,6 +146,22 @@ EXPECTED: dict[str, Any] = {
         "eur_per_hour_n": 2,
         "show_eur_rate": False,
     },
+    # utilization_weeks (#178): each week has 2 days x (1 visit, p50 55, p90 75,
+    # 60 min). The first week is clipped to the month: Apr 1-5, not Mar 30-Apr 5.
+    "utilization_weeks": {
+        date(2026, 3, 30): {"range_start": date(2026, 4, 1), "range_end": date(2026, 4, 5)},
+        date(2026, 4, 6): {"range_start": date(2026, 4, 6), "range_end": date(2026, 4, 12)},
+        date(2026, 4, 13): {"range_start": date(2026, 4, 13), "range_end": date(2026, 4, 19)},
+    },
+    "utilization_week_totals": {
+        "day_count": 2,
+        "n": 2,
+        "planned_p50": 110,
+        "planned_p90": 150,
+        "actual_minutes": 120,
+        "missing_prediction": 0,
+        "over_buffer_days": 0,
+    },
     "eur_per_hour": {
         (0, True): {
             "n": 6,

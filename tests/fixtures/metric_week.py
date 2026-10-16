@@ -340,4 +340,18 @@ EXPECTED: dict[str, Any] = {
         },
         # Sat 03-07: only no_show → no utilization row
     },
+    # --- utilization_weeks (#178): the days above, summed into one ISO week ---
+    "utilization_weeks": {
+        WEEK_START: {
+            "range_start": WEEK_START,
+            "range_end": WEEK_END,
+            "day_count": 5,  # Mon–Fri; Sat only had a no_show
+            "n": 11,  # 2+3+2+2+2
+            "planned_p50": 760,  # 110+280+180+140+50
+            "planned_p90": 970,  # 150+350+220+180+70
+            "actual_minutes": 840,  # 125+300+185+130+100
+            "missing_prediction": 1,  # V8 on Fri
+            "over_buffer_days": 1,  # Tue only (350 > 240); 970 is never compared to the cap
+        },
+    },
 }

@@ -22,6 +22,7 @@ from muttmetrics.api.schemas.metrics import (
     PeriodKind,
     PivotOut,
     UtilizationDayOut,
+    UtilizationWeekOut,
     WeekSummaryOut,
 )
 
@@ -281,6 +282,24 @@ def load_period_metrics(
         for r in util_rows
     ]
 
+    week_rows = (
+        session.execute(
+            text(
+                """
+                SELECT week_start, range_start, range_end, day_count, n,
+                       planned_p50, planned_p90, actual_minutes,
+                       missing_prediction, over_buffer_days
+                FROM metric_utilization_weeks(:buffer, :p_start, :p_end)
+                ORDER BY week_start
+                """
+            ),
+            params,
+        )
+        .mappings()
+        .all()
+    )
+    utilization_weeks = [UtilizationWeekOut.model_validate(dict(r)) for r in week_rows]
+
     return MetricsPeriodBlock(
         period=kind,
         week_start=period_start,
@@ -293,6 +312,7 @@ def load_period_metrics(
         overrun=overrun,
         p90_miss=p90_miss,
         utilization=utilization,
+        utilization_weeks=utilization_weeks,
     )
 
 

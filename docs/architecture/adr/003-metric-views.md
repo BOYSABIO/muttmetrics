@@ -11,7 +11,7 @@
 **Metric formulas live in Postgres — SQL objects created by Alembic migrations — so every reader runs the same definition.**
 
 1. **Range functions are the executable definition (#170).** Each metric is `metric_*(p_start date, p_end date)` (inclusive). A week is `(monday, monday+6)`; a calendar month is `(1st, last day)`; any other range is the same call with different args. There is **no** `metric_week_*` / `metric_month_*` twin pair — averages and `MIN_N` do not compose across groupings, so the definition must take a range.
-2. **Utilization takes buffer + range:** `metric_utilization(buffer_minutes, p_start, p_end)` so a month only returns that month’s days.
+2. **Utilization takes buffer + range:** `metric_utilization(buffer_minutes, p_start, p_end)` so a month only returns that month’s days. The month view's weekly rows come from `metric_utilization_weeks`, which groups that function's output (#178), so no rollup lives in the frontend.
 3. **`MIN_N` is enforced inside those SQL objects** for averages and rates (`CASE WHEN n < (SELECT min_n FROM metric_constants) THEN NULL`). Totals and counts always show. The API/UI may label a NULL rate as “not enough grooms yet”; they must **not** re-implement the threshold.
 4. **`MIN_N = 5` stays the named product constant** from the glossary, stored in `metric_constants` and mirrored in fixture `EXPECTED` — not scattered through Python route handlers.
 5. **Changing a definition is a migration.** `CREATE OR REPLACE FUNCTION` when the signature is stable; otherwise `DROP` then `CREATE`. `downgrade()` restores the previous objects.
