@@ -32,12 +32,6 @@ type EurPerHourCell = {
   eur_per_hour_inc_tip: MetricValue
 }
 
-type PivotOut = {
-  n: number
-  pivoted_count: number
-  rate: MetricValue
-}
-
 type OverrunOut = {
   n: number
   avg_minutes: MetricValue
@@ -59,6 +53,19 @@ type UtilizationDay = {
   over_buffer: boolean
 }
 
+/** One ISO week from metric_utilization_weeks (#178), clipped to the period. */
+type UtilizationWeek = {
+  week_start: string
+  range_start: string
+  range_end: string
+  day_count: number
+  n: number
+  planned_p90: number
+  actual_minutes: number
+  missing_prediction: number
+  over_buffer_days: number
+}
+
 type MetricsPeriodBlock = {
   period: PeriodMode | 'custom'
   week_start: string
@@ -67,10 +74,10 @@ type MetricsPeriodBlock = {
   min_n: number
   summary: WeekSummary
   eur_per_hour: EurPerHourCell[]
-  pivot: PivotOut
   overrun: OverrunOut
   p90_miss: P90MissOut
   utilization: UtilizationDay[]
+  utilization_weeks: UtilizationWeek[]
 }
 
 type MetricsPeriodOut = MetricsPeriodBlock & {
@@ -82,15 +89,11 @@ type ThisWeekProps = {
   onLogVisit: () => void
 }
 
-type WeekUtilRollup = {
-  weekStart: string
-  weekEnd: string
-  n: number
-  planned_p90: number
-  actual_minutes: number
-  missing_prediction: number
-  over_buffer: boolean
-  day_count: number
+/** The answer to one request, tagged with the request it answers. */
+type LoadResult = {
+  key: string
+  data: MetricsPeriodOut | null
+  error: string
 }
 
 function apiHeaders(): HeadersInit {
@@ -351,37 +354,6 @@ async function fetchMetricsPeriod(
   return (await readJson(res)) as MetricsPeriodOut
 }
 
-/** Collapse ~20+ days into one row per ISO week for month mode. */
-function rollupUtilizationByWeek(days: UtilizationDay[]): WeekUtilRollup[] {
-  const byWeek = new Map<string, WeekUtilRollup>()
-  for (const day of days) {
-    const mon = toISODate(mondayOf(parseISODate(day.visit_date)))
-    const existing = byWeek.get(mon)
-    if (existing === undefined) {
-      byWeek.set(mon, {
-        weekStart: mon,
-        weekEnd: toISODate(addDays(parseISODate(mon), 6)),
-        n: day.n,
-        planned_p90: day.planned_p90,
-        actual_minutes: day.actual_minutes,
-        missing_prediction: day.missing_prediction,
-        over_buffer: day.over_buffer,
-        day_count: 1,
-      })
-    } else {
-      existing.n += day.n
-      existing.planned_p90 += day.planned_p90
-      existing.actual_minutes += day.actual_minutes
-      existing.missing_prediction += day.missing_prediction
-      existing.over_buffer = existing.over_buffer || day.over_buffer
-      existing.day_count += 1
-    }
-  }
-  return [...byWeek.values()].sort((a, b) =>
-    a.weekStart < b.weekStart ? -1 : 1,
-  )
-}
-
 function TimingRow({
   label,
   value,
@@ -432,52 +404,54 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
   const [monthStart, setMonthStart] = useState(() =>
     toISODate(firstOfMonth(new Date())),
   )
-  const [data, setData] = useState<MetricsPeriodOut | null>(null)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [result, setResult] = useState<LoadResult | null>(null)
 
   useEffect(() => {
     writeStoredMode(mode)
   }, [mode])
 
+  // Which period the screen is asking for right now. "Loading" is not stored:
+  // it is simply "the last answer we have is for a different request". That
+  // way the panels can never show last week's numbers under this week's title.
+  const requestKey = mode === 'week' ? `week:${weekStart}` : `month:${monthStart}`
+  const loading = result?.key !== requestKey
+  const data = loading ? null : result.data
+  const error = loading ? '' : result.error
+
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    setError('')
     void (async () => {
+      let next: LoadResult
       try {
-        const next =
+        const fetched =
           mode === 'week'
             ? await fetchMetricsWeek(weekStart)
             : await fetchMetricsPeriod(
                 monthStart,
                 toISODate(lastOfMonth(parseISODate(monthStart))),
               )
-        if (!cancelled) {
-          setData(next)
-        }
+        next = { key: requestKey, data: fetched, error: '' }
       } catch (err) {
         console.error(err)
-        if (!cancelled) {
-          setData(null)
-          setError(
+        next = {
+          key: requestKey,
+          data: null,
+          error:
             err instanceof TypeError
               ? "Can't reach server — check your connection"
               : err instanceof Error
                 ? err.message
                 : 'Could not load metrics',
-          )
         }
-      } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
+      }
+      if (!cancelled) {
+        setResult(next)
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [mode, weekStart, monthStart])
+  }, [mode, weekStart, monthStart, requestKey])
 
   const thisMonday = toISODate(mondayOf(new Date()))
   const thisMonth = toISODate(firstOfMonth(new Date()))
@@ -571,23 +545,20 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
   )
 
   const dayCapMinutes = data?.buffer_minutes ?? DEFAULT_BUFFER_MINUTES
-  const weekRollups =
-    mode === 'month' ? rollupUtilizationByWeek(data?.utilization ?? []) : []
-  const utilMax = Math.max(
-    1,
-    dayCapMinutes,
-    ...(mode === 'month'
-      ? weekRollups.flatMap((w) => [w.planned_p90, w.actual_minutes])
-      : (data?.utilization.flatMap((d) => [
-          d.planned_p90,
-          d.actual_minutes,
-        ]) ?? [1])),
-  )
-
-  const pivot =
-    data && minN !== undefined
-      ? formatPct(data.pivot.rate, data.pivot.n, minN)
-      : null
+  // Weekly rows come from the API (#178). The cap is per day, so month mode
+  // scales bars to the biggest week and draws no cap line against them.
+  const weeks = data?.utilization_weeks ?? []
+  const utilMax =
+    mode === 'month'
+      ? Math.max(1, ...weeks.flatMap((w) => [w.planned_p90, w.actual_minutes]))
+      : Math.max(
+          1,
+          dayCapMinutes,
+          ...(data?.utilization.flatMap((d) => [
+            d.planned_p90,
+            d.actual_minutes,
+          ]) ?? [1]),
+        )
   const overrun =
     data && minN !== undefined
       ? formatOverrun(data.overrun.avg_minutes, data.overrun.n, minN)
@@ -688,17 +659,13 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
       <h2 className="tw-label">Timing</h2>
       <p className="step-meta">Did jobs stay on plan, or run long?</p>
       <div className="timing-list">
+        {/* Pivot isn't recorded yet (#178): capture sets booked = actual until
+            booking exists (#44), so any rate here would be a made-up 0%. */}
         <TimingRow
           label="Plan changes"
-          value={pivot?.main ?? '—'}
-          hint={
-            pivot?.thin
-              ? `Need ${minN} for a rate`
-              : data
-                ? `${data.pivot.pivoted_count} of ${data.pivot.n} switched plan`
-                : ''
-          }
-          thin={pivot?.thin}
+          value="Not captured yet"
+          hint="The app doesn't record plan changes yet"
+          thin
         />
         <TimingRow
           label="Ran long"
@@ -816,7 +783,7 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
         </p>
       )}
 
-      {loading && data === null && (
+      {loading && (
         <p className="step-meta">
           {mode === 'week' ? 'Loading week…' : 'Loading month…'}
         </p>
@@ -886,7 +853,7 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
             <p className="step-meta">
               {mode === 'week'
                 ? `Does the day fit before closing? Cap: ${formatMinutesAsHours(dayCapMinutes)}.`
-                : `Days rolled up by week. Cap per day: ${formatMinutesAsHours(dayCapMinutes)}.`}
+                : `Totals per week. The ${formatMinutesAsHours(dayCapMinutes)} cap is per day, so each week shows how many days went over.`}
             </p>
             <div className="util-legend" aria-hidden>
               <span className="util-legend-item">
@@ -895,16 +862,18 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
               <span className="util-legend-item">
                 <span className="util-swatch util-swatch-actual" /> Actual time
               </span>
-              <span className="util-legend-item">
-                <span className="util-swatch util-swatch-cap" /> Day cap
-              </span>
+              {mode === 'week' && (
+                <span className="util-legend-item">
+                  <span className="util-swatch util-swatch-cap" /> Day cap
+                </span>
+              )}
             </div>
             {mode === 'month' ? (
-              weekRollups.length === 0 ? (
+              weeks.length === 0 ? (
                 <p className="step-meta">No days with visits.</p>
               ) : (
                 <ul className="util-list">
-                  {weekRollups.map((week) => {
+                  {weeks.map((week) => {
                     const p90Pct = Math.min(
                       100,
                       (week.planned_p90 / utilMax) * 100,
@@ -913,25 +882,22 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
                       100,
                       (week.actual_minutes / utilMax) * 100,
                     )
-                    const bufPct = Math.min(
-                      100,
-                      (dayCapMinutes / utilMax) * 100,
-                    )
+                    const over = week.over_buffer_days
                     return (
-                      <li key={week.weekStart}>
+                      <li key={week.week_start}>
                         <div className="util-row-head">
                           <span className="util-date">
-                            {formatWeekRange(week.weekStart, week.weekEnd)}
+                            {formatWeekRange(week.range_start, week.range_end)}
                           </span>
                           <span
                             className={
-                              week.over_buffer
+                              over > 0
                                 ? 'util-badge util-badge-warn'
                                 : 'util-badge'
                             }
                           >
-                            {week.over_buffer
-                              ? 'Had an over day'
+                            {over > 0
+                              ? `${over} ${over === 1 ? 'day' : 'days'} over`
                               : 'Days fit'}
                             {' · '}
                             {week.n} {week.n === 1 ? 'groom' : 'grooms'}
@@ -941,10 +907,6 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
                           </span>
                         </div>
                         <div className="util-bars" aria-hidden>
-                          <div
-                            className="util-buffer-mark"
-                            style={{ left: `${bufPct}%` }}
-                          />
                           <div
                             className="util-bar util-bar-p90"
                             style={{ width: `${p90Pct}%` }}
