@@ -249,6 +249,18 @@ function App() {
   // One in-flight guard for both write flows: a second tap while a request
   // is running creates duplicate visits / owners (#92 phone trial).
   const [isBusy, setIsBusy] = useState(false)
+
+  // Home toast (e.g. "Saved …") used to stick forever after a visit save.
+  useEffect(() => {
+    if (screen !== 'home' || message === '') {
+      return
+    }
+    const t = window.setTimeout(() => {
+      setMessage('')
+    }, 4000)
+    return () => window.clearTimeout(t)
+  }, [screen, message])
+
   useEffect(() => {
     const draft = loadDraft()
     if (draft === null) {
@@ -630,7 +642,10 @@ function App() {
               <button
                 type="button"
                 className="brand-home"
-                onClick={() => setArea('this_week')}
+                onClick={() => {
+                  setArea('this_week')
+                  setMessage('')
+                }}
                 aria-current={area === 'this_week' ? 'page' : undefined}
               >
                 {BUSINESS_NAME === '' ? (
@@ -647,7 +662,10 @@ function App() {
                   type="button"
                   className="home-link"
                   aria-current={area === 'directory' ? 'page' : undefined}
-                  onClick={() => setArea('directory')}
+                  onClick={() => {
+                    setArea('directory')
+                    setMessage('')
+                  }}
                 >
                   Clients
                 </button>
