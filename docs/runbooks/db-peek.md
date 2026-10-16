@@ -136,7 +136,7 @@ Breed, phone, notes, visit fixes — Owner’s job, not the SPA. Playbook + reci
 
 ## Pytest and this database
 
-Local `pytest` hits the same compose DB (`localhost:5432/muttmetrics`). As of #16, API tests share one DB session per test wrapped in a transaction that **rolls back** when the test ends (`tests/conftest.py`: `db_connection` → `db_session` → `get_db` override). New test rows should not linger.
+Since #177, local `pytest` uses a separate database on the same compose server (`muttmetrics_test`) and refuses to run against any database whose name lacks `test` (setup in CONTRIBUTING). Before that, it hit the dev DB itself (`localhost:5432/muttmetrics`), which is where the clutter below came from. As of #16, API tests share one DB session per test wrapped in a transaction that **rolls back** when the test ends (`tests/conftest.py`: `db_connection` → `db_session` → `get_db` override). New test rows should not linger.
 
 **Exceptions / leftovers:** older runs before that change, or any test that still opens its own committing `session_scope()`. CI is different: ephemeral Postgres, thrown away after the job.
 

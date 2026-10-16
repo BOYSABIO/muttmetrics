@@ -47,7 +47,7 @@ Month comes from **upload time**, not visit date — it is the only input always
 | `GET /visits/{visit_id}/photos` | `X-API-Key` | metadata list, oldest first |
 | `GET /photos/{photo_id}` | `X-API-Key` | the JPEG bytes |
 
-Status codes: **413** upload too large (15MB), **415** not a decodable image, **404** unknown visit or photo, **401** missing or wrong key.
+Status codes: **413** upload too large (15MB; the API reads at most 15MB + 1 byte, so an oversized file is never held in memory whole), **415** not a decodable image, **404** unknown visit or photo, **401** missing or wrong key.
 
 Smoke test with the API running:
 

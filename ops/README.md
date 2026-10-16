@@ -52,7 +52,6 @@ docker compose exec -T db psql -U muttmetrics -d muttmetrics -f /tmp/q.sql
 | [`update_owner.sql`](./sql/update_owner.sql) | Enrich owner contact / notes | enrichment |
 | [`update_dog.sql`](./sql/update_dog.sql) | Enrich dog coat / handling / weight | enrichment |
 | [`update_visit.sql`](./sql/update_visit.sql) | Fix visit event facts (`condition_score`: 0 worst … 5 best) | enrichment |
-| [`first_visit.sql`](./sql/first_visit.sql) | Skeleton insert chain (owner → dog → visit) — wipe carefully | — |
 | [`pytest_values_check.sql`](./sql/pytest_values_check.sql) | Spot synthetic pytest owners/dogs | [`db-peek.md`](../docs/runbooks/db-peek.md) |
 
 Cleanup of synthetic clients: `ops/sql/cleanup_synthetic_clients.local.sql` (local only; gitignored when matched). Preview with `ROLLBACK`, then `COMMIT` when sure — see file header. Real photo files: `photo_purge.py` before deleting rows.

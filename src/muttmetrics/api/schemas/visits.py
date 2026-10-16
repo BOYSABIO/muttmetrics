@@ -36,9 +36,9 @@ class CreateVisitRequest(BaseModel):
     booked_service_id: int | None = None
     actual_service_id: int | None = None
     what_surprised_me: str | None = None
-    quoted_price: float | None = None
-    final_price: float | None = None
-    tip: float | None = None
+    quoted_price: float | None = Field(default=None, ge=0)
+    final_price: float | None = Field(default=None, ge=0)
+    tip: float | None = Field(default=None, ge=0)
     shaved_down: bool | None = None
     status: Literal["completed", "cancelled", "no_show"] | None = None
 

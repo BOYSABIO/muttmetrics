@@ -65,7 +65,7 @@ npm run dev
 # open http://127.0.0.1:5173 (dev server — this PC only, fixed port)
 # groomer trial instead: npm run build && npm run preview → :5174 (docs/runbooks/groomer-trial.md)
 
-pytest
+pytest                   # runs against muttmetrics_test, never the dev DB (setup: CONTRIBUTING)
 ruff check .
 ruff format --check .
 ```

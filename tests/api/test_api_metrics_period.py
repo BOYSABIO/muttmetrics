@@ -93,3 +93,23 @@ def test_period_week_range_matches_week_fixture(
     exp = WEEK_EXPECTED["week_summary"][WEEK_START]
     assert data["summary"]["visit_count"] == exp["visit_count"]
     assert data["summary"]["eur_per_hour_n"] == exp["eur_per_hour_n"]
+
+
+def test_period_max_range_counts_days_inclusively(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """#177: 366 inclusive days is allowed; 367 is not."""
+    start = date(2026, 1, 1)
+    ok = client.get(
+        "/metrics/period",
+        headers=auth_headers,
+        params={"start": str(start), "end": str(start + timedelta(days=365))},
+    )
+    assert ok.status_code == 200
+
+    too_long = client.get(
+        "/metrics/period",
+        headers=auth_headers,
+        params={"start": str(start), "end": str(start + timedelta(days=366))},
+    )
+    assert too_long.status_code == 422

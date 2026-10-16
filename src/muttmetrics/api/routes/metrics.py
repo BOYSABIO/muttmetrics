@@ -105,7 +105,8 @@ def load_period_metrics(
     """SELECT from ADR-003 range functions for an inclusive date range; package only."""
     if period_end < period_start:
         raise HTTPException(status_code=422, detail="end must be on or after start")
-    if (period_end - period_start).days > MAX_RANGE_DAYS:
+    # Inclusive range: Jan 1 -> Jan 1 is 1 day, so add 1 before comparing.
+    if (period_end - period_start).days + 1 > MAX_RANGE_DAYS:
         raise HTTPException(
             status_code=422,
             detail=f"range must be at most {MAX_RANGE_DAYS} days",

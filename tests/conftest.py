@@ -1,7 +1,8 @@
 """Shared pytest fixtures for the API test suite.
 
-Local runs hit the same Docker Compose Postgres as day-to-day dev
-(see docs/runbooks/db-peek.md). Prefer 127.0.0.1 over localhost on windows.
+Tests run against a separate database, ``muttmetrics_test`` by default, never
+the one the salon uses (#177). Override with TEST_DATABASE_URL. Prefer
+127.0.0.1 over localhost on Windows.
 """
 
 from __future__ import annotations
@@ -17,12 +18,24 @@ from sqlalchemy.orm import Session
 from muttmetrics.api.app import create_app
 from muttmetrics.api.deps import get_db
 from muttmetrics.db.session import get_engine
+from tests.db_guard import DEFAULT_TEST_DATABASE_URL, require_test_database
 from tests.fixtures.load_metric_month import load_metric_month
 from tests.fixtures.load_metric_week import load_metric_week
 
-# Default matches .env.example / compose. CI can override via env.
-_DEFAULT_DATABASE_URL = "postgresql+psycopg://muttmetrics:muttmetrics@127.0.0.1:5432/muttmetrics"
 _DEFAULT_API_KEY = "test-api-key"
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Point the whole run at the test database, or stop before any test runs.
+
+    Runs once, before collection and before anything calls get_engine(), so
+    every engine the app creates during the run uses this URL.
+    """
+    url = os.environ.get("TEST_DATABASE_URL", DEFAULT_TEST_DATABASE_URL)
+    try:
+        os.environ["DATABASE_URL"] = require_test_database(url)
+    except ValueError as exc:
+        raise pytest.UsageError(str(exc)) from exc
 
 
 @pytest.fixture
@@ -36,15 +49,8 @@ def auth_headers(api_key: str) -> dict[str, str]:
 
 
 @pytest.fixture
-def db_connection(monkeypatch: pytest.MonkeyPatch) -> Generator:
+def db_connection() -> Generator:
     """One DB connection wrapped in a transaction that always rolls back."""
-    monkeypatch.setenv(
-        "DATABASE_URL",
-        os.environ.get("DATABASE_URL", _DEFAULT_DATABASE_URL),
-    )
-    # Settings may already be cached from an earlier import - clear if your
-    # project caches them. For now we only set the env before get_engine()
-
     engine: Engine = get_engine()
     connection = engine.connect()
     transaction = connection.begin()  # open scratch pad
@@ -75,10 +81,6 @@ def client(
     db_session: Session,
 ) -> Generator[TestClient]:
     """App client whose DB writes share the rollback scratchpad."""
-    monkeypatch.setenv(
-        "DATABASE_URL",
-        os.environ.get("DATABASE_URL", _DEFAULT_DATABASE_URL),
-    )
     monkeypatch.setenv("API_KEY", api_key)
 
     app = create_app()

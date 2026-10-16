@@ -32,6 +32,17 @@ pytest
 
 Test layout: `tests/api/` (HTTP + DB), `tests/unit/` (no Postgres), `tests/fixtures/` (synthetic metric-week data + loader). Shared fixtures live in `tests/conftest.py` (`client`, `db_session`, `auth_headers`, `metric_week`). API/`db_session` tests share one connection per test and **roll back** when the test ends — see [`docs/runbooks/db-peek.md`](./docs/runbooks/db-peek.md). Prefer `127.0.0.1` over `localhost` on Windows.
 
+**Tests use their own database** (#177). `pytest` points every run at `muttmetrics_test` and stops before collecting anything if the database name does not contain `test`, so a stray `DATABASE_URL` can never aim tests at the real salon data. Override with `TEST_DATABASE_URL`. One-time setup (and again after any new migration):
+
+```powershell
+docker compose exec db createdb -U muttmetrics muttmetrics_test   # once
+$env:DATABASE_URL = "postgresql+psycopg://muttmetrics:muttmetrics@127.0.0.1:5432/muttmetrics_test"
+alembic upgrade head
+python -m muttmetrics.seed
+Remove-Item Env:DATABASE_URL                                      # back to your .env
+pytest
+```
+
 After `pre-commit install`, each `git commit` runs ruff lint (with autofix) and ruff format on staged files. If something was fixed, stage again and recommit. CI still runs the same checks as the backstop.
 
 ## Local Postgres (Docker Compose)
@@ -194,7 +205,7 @@ uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --por
 | `http://127.0.0.1:8000/owners` | Onboarding | `POST` create-or-get owner by name |
 | `http://127.0.0.1:8000/dogs` | Onboarding / directory | `POST` create-or-get; `GET` list/search (`?q=`) with `owner_name` |
 | `http://127.0.0.1:8000/services` | Capture | `GET` seeded package catalog for the SPA picker ([#110](https://github.com/BOYSABIO/muttmetrics/issues/110)) |
-| `http://127.0.0.1:8000/visits` | Capture | `POST` create visit — requires existing dog/owner ids |
+| `http://127.0.0.1:8000/visits` | Capture | `POST` create visit — requires existing dog/owner ids, and the dog must belong to that owner |
 | `http://127.0.0.1:8000/visits/{id}/photos` | Capture | `POST` multipart photo upload; `GET` metadata list ([#30](https://github.com/BOYSABIO/muttmetrics/issues/30)) |
 | `http://127.0.0.1:8000/photos/{id}` | Capture | `GET` the JPEG bytes (API key required — an `<img src>` cannot fetch it) |
 | `http://127.0.0.1:8000/docs` | maintainer | OpenAPI test console — **not** the groomer’s UI |
@@ -289,6 +300,8 @@ npm run dev
 | `npm run build` | Production bundle to `frontend/dist/` (`tsc -b` type-checks first) |
 | `npm run preview` | Serves `dist/` + the same `/api` proxy — what the groomer opens |
 
+PATCH sends only the fields you change. An explicit `null` clears an optional field (e.g. `phone`), but `null` on a required column (e.g. owner `locale`) is **422** (#177). Dog `weight_kg` must be > 0 and ≤ 150, which catches grams typed into the kg field.
+
 **Auth note:** `VITE_API_KEY` is baked into `frontend/dist/` at **build** time and is readable by anyone who loads the page — a gate against strangers on a private URL, never a secret. Change it → rebuild. Harden before exposing beyond Tailscale. Always-on OptiPlex ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) and cloud ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)) are iceboxed; desktop host for now.
 
 **Phone trial (#82):** the dev server stays on `127.0.0.1`; the groomer gets `npm run build && npm run preview` on a fixed `:5174`, reachable over Tailscale only on that one port. Full procedure: [`docs/runbooks/groomer-trial.md`](./docs/runbooks/groomer-trial.md).
@@ -324,8 +337,10 @@ Creates one `visit` row after a groom. Prefer registering via `#21` endpoints ab
 |--------|---------|
 | 201 | Visit created — body includes `visit_id` |
 | 401 | Missing/wrong API key |
-| 404 | Unknown `dog_id` or `owner_id` |
-| 422 | Validation failed (e.g. `actual_minutes: 0`) |
+| 404 | Unknown `dog_id`, `owner_id`, `booked_service_id` or `actual_service_id` |
+| 422 | Validation failed (e.g. `actual_minutes: 0`, a negative price or tip, or a dog that belongs to a different owner) |
+
+The convention across routes ([#177](https://github.com/BOYSABIO/muttmetrics/issues/177)): an id that doesn't exist is **404**; ids that exist but don't fit together, or values out of range, are **422**. Nothing a client sends should reach Postgres and come back as a 500.
 
 Postgres must be up (`docker compose up -d`) and migrated. On Windows PowerShell, prefer `/docs` or `Invoke-RestMethod` over hand-escaped `curl -d "{\"...\"}"` (easy 422 from mangled JSON).
 
