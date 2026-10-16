@@ -10,7 +10,9 @@ from muttmetrics.api.schemas.dogs import (
     PatchDogRequest,
     VisitSummary,
 )
+from muttmetrics.api.services.visit_eligibility import visit_counts_clause
 from muttmetrics.models import Breed, Dog, Owner, Photo, Visit
+from muttmetrics.priors.size import size_band_from_weight
 
 
 def normalize_dog_name(name: str) -> str:
@@ -68,22 +70,40 @@ def search_dogs(
 
     Empty / blank q -> up to `limit` dogs (browse).
     Non-empty q -> dog.name ILIKE %q% (case-insensitive).
+    last_visit_date is live from visit rows (eligible statuses only), not the
+    stored dog.last_visit_date column (#171)
     """
-    stmt = select(Dog).options(joinedload(Dog.owner)).order_by(Dog.name).limit(limit)
+    last_visit_sq = (
+        select(
+            Visit.dog_id.label("dog_id"),
+            func.max(Visit.visit_date).label("last_visit_date"),
+        )
+        .where(visit_counts_clause())
+        .group_by(Visit.dog_id)
+        .subquery()
+    )
+
+    stmt = (
+        select(Dog, last_visit_sq.c.last_visit_date)
+        .options(joinedload(Dog.owner))
+        .outerjoin(last_visit_sq, Dog.dog_id == last_visit_sq.c.dog_id)
+        .order_by(Dog.name)
+        .limit(limit)
+    )
     cleaned = (q or "").strip()
     if cleaned:
         stmt = stmt.where(Dog.name.ilike(f"%{cleaned}%"))
 
-    dogs = session.scalars(stmt).unique().all()
+    rows = session.execute(stmt).unique().all()
     return [
         DogSearchItem(
             dog_id=dog.dog_id,
             name=dog.name,
             owner_id=dog.owner_id,
             owner_name=dog.owner.name,
-            last_visit_date=dog.last_visit_date,
+            last_visit_date=last_visit_date,
         )
-        for dog in dogs
+        for dog, last_visit_date in rows
     ]
 
 
@@ -113,10 +133,13 @@ def get_dog_profile(
     # Live count from visit rows — derived dog.visit_count can lag / be null
     # when recompute hasn't run (Directory should still show the truth).
     visit_count = session.scalar(
-        select(func.count()).select_from(Visit).where(Visit.dog_id == dog_id)
+        select(func.count()).select_from(Visit).where(Visit.dog_id == dog_id, visit_counts_clause())
     )
     last_visit_date = session.scalar(
-        select(func.max(Visit.visit_date)).where(Visit.dog_id == dog_id)
+        select(func.max(Visit.visit_date)).where(
+            Visit.dog_id == dog_id,
+            visit_counts_clause(),
+        )
     )
 
     avatar_photo_id = session.scalar(
@@ -141,6 +164,7 @@ def get_dog_profile(
             "avatar_photo_id": avatar_photo_id,
             "visit_count": int(visit_count or 0),
             "last_visit_date": last_visit_date,
+            "size_band": size_band_from_weight(dog.weight_kg) or dog.size_band,
         }
     )
 
@@ -177,6 +201,11 @@ def patch_dog(
 
     for key, value in updates.items():
         setattr(dog, key, value)
+
+    # Write-through: size_band is derived from weight, never from the client.
+    if "weight_kg" in updates:
+        w = dog.weight_kg
+        dog.size_band = size_band_from_weight(float(w) if w is not None else None)
 
     session.flush()
     return get_dog_profile(session, dog_id=dog_id)

@@ -2,7 +2,7 @@
 
 ## ADR-001: Derived fields as stored columns (recomputed), not views
 
-- **Status:** Accepted
+- **Status:** Accepted (amended 2026-10-16 for [#171](https://github.com/BOYSABIO/muttmetrics/issues/171))
 - **Date:** 2026-08-27
 - **Context:** Local design notes mark many `owner` and `dog` fields as DERIVED — recomputed from visit history, never hand-entered. Before SQLAlchemy models and Alembic migrations (issues #7–#8), we must choose whether those fields are real columns, SQL views, or compute-on-read only. That choice changes the schema, the capture API, and how safe our training labels stay.
 
@@ -14,6 +14,17 @@ Three entities, two kinds of “not typed by the groomer”:
 - **`visit`:** the **fact table** (one row per groom). Most fields are captured at the event. A small set is **system-computed at write/score time** and stored on that row — not a later aggregate job.
 
 `dog.size_band` is derived from `weight_kg`; store it, recompute when weight changes.
+
+### Amendment (#171) — two kinds of “derived,” handled differently
+
+A stored aggregate is a **cache**. Until #171, the recompute job from this ADR never shipped, so caches like `last_visit_date` and `size_band` stayed `NULL` while product code still read them. Fix:
+
+| Field | Depends on | Approach after #171 |
+|-------|------------|---------------------|
+| `last_visit_date`, `visit_count` (dog + owner) | Visit history | **Compute on read** from `visit` rows with the shared status rule (`completed` or `NULL`). Columns may stay for a future job; product paths must not read them. |
+| `size_band` | The dog’s own `weight_kg` | **Pure function** `size_band_from_weight` for the prior and profile display; **write-through** on dog PATCH when `weight_kg` changes; one-time backfill (`ops/backfill_size_band.py`) for dogs that already have a weight. |
+
+Other ADR-001 dog/owner aggregates (`avg_duration_min`, owner LTV, …) stay `NULL` until a real recompute job exists — nothing reads them for metrics or the prior today.
 
 ### Hand-entered vs derived
 
@@ -50,10 +61,9 @@ These are **not** filled by the owner/dog recompute job. They are written when t
 ### Consequences
 
 - Models issue (#7) includes derived columns on `owner` / `dog` as normal mapped attributes, nullable where history is missing; `visit` includes the system-computed columns above.
-- Capture, CSV import, and any later HTTP `PATCH` for dog/owner must not silently overwrite owner/dog derived columns, or visit `days_since_last` / `predicted_*`, from user input. Same safe lists as the enrichment runbook.
-- A `recompute_derived` CLI is part of the design (later issue on M2–M3), even if not built in this ADR.
-- Derived values may lag until recompute runs; at salon volume that is acceptable.
-- Analytics can still aggregate over `visit` when they need guaranteed freshness; stored derived fields are for product reads and priors.
+- Capture, CSV import, and any later HTTP `PATCH` for dog/owner must not silently overwrite owner/dog derived columns, or visit `days_since_last` / `predicted_*`, from user input. Same safe lists as the enrichment runbook. `#171`: PATCH may **write** `size_band` when `weight_kg` changes — still never accept `size_band` from the client.
+- A `recompute_derived` CLI is part of the design (later issue on M2–M3), even if not built in this ADR. Until then, visit-history fields used in product are compute-on-read (#171).
+- Analytics can still aggregate over `visit` when they need guaranteed freshness; visit-history product reads do the same. `size_band` is write-through + optional backfill, not a visit aggregate.
 
 ### Alternatives considered
 

@@ -260,3 +260,31 @@ def test_patch_dog_rejects_derived_field(
         headers=auth_headers,
     )
     assert response.status_code == 422
+
+
+def test_patch_weight_sets_size_band(
+    client: TestClient, owner_id: int, auth_headers: dict[str, str]
+) -> None:
+    created = client.post(
+        "/dogs",
+        json={"owner_id": owner_id, "name": f"Sizedog {uuid.uuid4().hex[:8]}"},
+        headers=auth_headers,
+    )
+    assert created.status_code == 201
+    dog_id = created.json()["dog_id"]
+
+    patched = client.patch(
+        f"/dogs/{dog_id}",
+        json={"weight_kg": 8},
+        headers=auth_headers,
+    )
+    assert patched.status_code == 200
+    assert patched.json()["size_band"] == "s"
+
+    # Client still cannot set size_band directly
+    forbidden = client.patch(
+        f"/dogs/{dog_id}",
+        json={"size_band": "xl"},
+        headers=auth_headers,
+    )
+    assert forbidden.status_code == 422

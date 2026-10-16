@@ -6,11 +6,13 @@ import logging
 from dataclasses import dataclass
 from datetime import date
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from muttmetrics.api.services.visit_eligibility import visit_counts_clause
 from muttmetrics.models import Breed, Dog, Service, Visit
 from muttmetrics.priors import rules_prior
+from muttmetrics.priors.size import size_band_from_weight
 
 LOGGER = logging.getLogger(__name__)
 
@@ -82,11 +84,15 @@ def compute_visit_predictions(
         )
         return days_since_last, None, None
 
+    size_band = size_band_from_weight(dog.weight_kg)
+    if size_band is None:
+        size_band = dog.size_band  # fallback when weight missing
+
     matting = breed.matting_risk if breed.matting_risk is not None else 1
     p50, p90 = rules_prior(
         base_groom_minutes=base,
         matting_risk=matting,
-        size_band=dog.size_band,
+        size_band=size_band,
         days_since_last=days_since_last,
         recommended_interval_days=breed.recommended_interval_days,
         handling_score=dog.handling_score,
@@ -105,7 +111,7 @@ def _days_since_last(
         .where(
             Visit.dog_id == dog_id,
             Visit.visit_date < visit_date,
-            or_(Visit.status.is_(None), Visit.status == "completed"),
+            visit_counts_clause(),
         )
         .order_by(Visit.visit_date.desc())
         .limit(1)
