@@ -251,6 +251,21 @@ function errorMessage(error: unknown): string {
   return String(error)
 }
 
+/** "Today", "3 days ago", "5 wk ago", then "Mar 2026". */
+function formatLastVisit(iso: string | null): string {
+  if (iso === null) return '—'
+  const [y, m, d] = iso.split('-').map(Number)
+  const then = new Date(y, m - 1, d)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const days = Math.round((today.getTime() - then.getTime()) / 86_400_000)
+  if (days <= 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days} days ago`
+  if (days < 60) return `${Math.round(days / 7)} wk ago`
+  return then.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+}
+
 type DirectoryProps = {
   onStartVisit?: (dog: VisitDogRef) => void
 }
@@ -1024,52 +1039,66 @@ export function Directory({ onStartVisit }: DirectoryProps) {
               : 'No matches.'}
           </p>
         ) : (
-          <ul className="dir-card-list">
-            {filtered.map((dog) => (
-              <li key={dog.dog_id}>
-                <div className="dir-card dir-card-row">
-                  <button
-                    type="button"
-                    className="dir-card-avatar-hit"
-                    disabled={isBusy}
-                    aria-label={`Open ${dog.name}`}
+          <>
+            <div className="client-list-head" aria-hidden>
+              <span>
+                {filtered.length} {filtered.length === 1 ? 'dog' : 'dogs'}
+              </span>
+              <span>Last visit</span>
+            </div>
+            <ul className="dir-card-list client-list">
+              {filtered.map((dog) => (
+                <li key={dog.dog_id}>
+                  {/* The whole row opens the dog. The name button keeps it
+                      reachable by keyboard; its click bubbles up to here. */}
+                  <div
+                    className="dir-card dir-card-row client-row"
                     onClick={() => {
-                      void openDirectoryDog(dog.dog_id)
+                      if (!isBusy) void openDirectoryDog(dog.dog_id)
                     }}
                   >
-                    <DogAvatar photoId={null} name={dog.name} />
-                  </button>
-                  <div className="dir-card-body">
                     <button
                       type="button"
-                      className="dir-card-title-btn"
+                      className="dir-card-avatar-hit"
                       disabled={isBusy}
-                      onClick={() => {
-                        void openDirectoryDog(dog.dog_id)
-                      }}
+                      aria-label={`Open ${dog.name}`}
+                      tabIndex={-1}
                     >
-                      {dog.name}
+                      <DogAvatar photoId={null} name={dog.name} />
                     </button>
-                    <div className="dir-card-meta">
+                    <div className="dir-card-body">
                       <button
                         type="button"
-                        className="linkish"
+                        className="dir-card-title-btn"
                         disabled={isBusy}
-                        onClick={() => {
-                          void openDirectoryOwner(dog.owner_id)
-                        }}
                       >
-                        {dog.owner_name}
+                        {dog.name}
                       </button>
-                      {dog.last_visit_date
-                        ? ` · ${dog.last_visit_date}`
-                        : ''}
+                      <div className="dir-card-meta">
+                        <button
+                          type="button"
+                          className="linkish"
+                          disabled={isBusy}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void openDirectoryOwner(dog.owner_id)
+                          }}
+                        >
+                          {dog.owner_name}
+                        </button>
+                      </div>
                     </div>
+                    <span
+                      className="client-last"
+                      title={dog.last_visit_date ?? 'No visit date recorded'}
+                    >
+                      {formatLastVisit(dog.last_visit_date)}
+                    </span>
                   </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </section>
     </>

@@ -1,4 +1,4 @@
-"""Pydantic models for GET /metrics/week (#156)."""
+"""Pydantic models for GET /metrics/week (#156 / #158)."""
 
 from __future__ import annotations
 
@@ -19,6 +19,10 @@ class WeekSummaryOut(BaseModel):
     groomed_minutes: int
     revenue_ex_tip: float
     revenue_inc_tip: float
+    # Overall week €/hour (glossary eligibility; MIN_N in SQL)
+    eur_per_hour_n: int
+    eur_per_hour_ex_tip: MetricValue
+    eur_per_hour_inc_tip: MetricValue
 
 
 class EurPerHourCellOut(BaseModel):
@@ -66,6 +70,7 @@ class MetricsWeekBlock(BaseModel):
     week_start: date
     week_end: date
     buffer_minutes: int
+    min_n: int
     summary: WeekSummaryOut
     eur_per_hour: list[EurPerHourCellOut]
     pivot: PivotOut

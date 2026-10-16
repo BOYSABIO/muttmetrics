@@ -60,19 +60,32 @@ def _empty_summary() -> WeekSummaryOut:
         groomed_minutes=0,
         revenue_ex_tip=0.0,
         revenue_inc_tip=0.0,
+        eur_per_hour_n=0,
+        eur_per_hour_ex_tip=MetricValue(value=None, reason=NOT_ENOUGH),
+        eur_per_hour_inc_tip=MetricValue(value=None, reason=NOT_ENOUGH),
     )
+
+
+def _load_min_n(session: Session) -> int:
+    """Product MIN_N from metric_constants (SQL), not a Python literal."""
+    row = session.execute(text("SELECT min_n FROM metric_constants")).mappings().first()
+    if row is None:
+        raise RuntimeError("metric_constants is empty — run migrations")
+    return int(row["min_n"])
 
 
 def load_week_metrics(session: Session, week_start: date, buffer_minutes: int) -> MetricsWeekBlock:
     """SELECT from ADR-003 objects for one Mon–Sun week; package only."""
     week_end = week_start + timedelta(days=6)
     params = {"week_start": week_start, "week_end": week_end, "buffer": buffer_minutes}
+    min_n = _load_min_n(session)
 
     summary_row = (
         session.execute(
             text(
                 """
-                SELECT visit_count, groomed_minutes, revenue_ex_tip, revenue_inc_tip
+                SELECT visit_count, groomed_minutes, revenue_ex_tip, revenue_inc_tip,
+                       eur_per_hour_n, eur_per_hour_ex_tip, eur_per_hour_inc_tip
                 FROM metric_week_summary
                 WHERE week_start = :week_start
                 """
@@ -90,6 +103,9 @@ def load_week_metrics(session: Session, week_start: date, buffer_minutes: int) -
             groomed_minutes=int(summary_row["groomed_minutes"]),
             revenue_ex_tip=float(summary_row["revenue_ex_tip"]),
             revenue_inc_tip=float(summary_row["revenue_inc_tip"]),
+            eur_per_hour_n=int(summary_row["eur_per_hour_n"]),
+            eur_per_hour_ex_tip=_metric_value(summary_row["eur_per_hour_ex_tip"]),
+            eur_per_hour_inc_tip=_metric_value(summary_row["eur_per_hour_inc_tip"]),
         )
 
     eur_rows = (
@@ -236,6 +252,7 @@ def load_week_metrics(session: Session, week_start: date, buffer_minutes: int) -
         week_start=week_start,
         week_end=week_end,
         buffer_minutes=buffer_minutes,
+        min_n=min_n,
         summary=summary,
         eur_per_hour=eur_per_hour,
         pivot=pivot,
