@@ -181,3 +181,63 @@ def test_create_visit_sets_days_since_last(
     )
     assert second.status_code == 201
     assert second.json()["days_since_last"] == 30
+
+
+# --- #177: validation at the edge -------------------------------------------
+
+
+def test_create_visit_dog_of_another_owner_returns_422(
+    client: TestClient,
+    db_session: Session,
+    demo_dog_owner: tuple[int, int],
+    auth_headers: dict[str, str],
+) -> None:
+    """Both rows exist, but the dog isn't this owner's: refuse, don't mis-file."""
+    _, dog_id = demo_dog_owner
+    other_owner = Owner(name="Someone Else")
+    db_session.add(other_owner)
+    db_session.flush()
+
+    response = client.post(
+        "/visits",
+        json={"dog_id": dog_id, "owner_id": other_owner.owner_id, **MINIMAL_BASE},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+    assert "belongs to owner" in response.json()["detail"]
+
+
+def test_create_visit_unknown_service_returns_404_not_500(
+    client: TestClient,
+    demo_dog_owner: tuple[int, int],
+    auth_headers: dict[str, str],
+) -> None:
+    owner_id, dog_id = demo_dog_owner
+    response = client.post(
+        "/visits",
+        json={
+            "dog_id": dog_id,
+            "owner_id": owner_id,
+            "actual_service_id": 999999,
+            **MINIMAL_BASE,
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 404
+    assert "Service 999999" in response.json()["detail"]
+
+
+@pytest.mark.parametrize("field", ["quoted_price", "final_price", "tip"])
+def test_create_visit_negative_money_returns_422(
+    client: TestClient,
+    demo_dog_owner: tuple[int, int],
+    auth_headers: dict[str, str],
+    field: str,
+) -> None:
+    owner_id, dog_id = demo_dog_owner
+    response = client.post(
+        "/visits",
+        json={"dog_id": dog_id, "owner_id": owner_id, field: -5, **MINIMAL_BASE},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422

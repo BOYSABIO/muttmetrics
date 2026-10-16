@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from muttmetrics.api.deps import get_db, require_api_key
 from muttmetrics.api.schemas.visits import CreateVisitRequest, VisitResponse
 from muttmetrics.api.services.visit_predictions import compute_visit_predictions
-from muttmetrics.models import Dog, Owner, Visit
+from muttmetrics.models import Dog, Owner, Service, Visit
 
 router = APIRouter(tags=["visits"])
 
@@ -28,6 +28,20 @@ def create_visit(body: CreateVisitRequest, session: DbSession) -> VisitResponse:
     dog = session.get(Dog, body.dog_id)
     if dog is None:
         raise HTTPException(status_code=404, detail=f"Dog {body.dog_id} not found")
+
+    # Both rows exist, but do they belong together? A mismatch would credit
+    # this groom to the wrong owner's history.
+    if dog.owner_id != body.owner_id:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Dog {body.dog_id} belongs to owner {dog.owner_id}, not {body.owner_id}",
+        )
+
+    # Same rule as owner/dog/breed: a referenced id that doesn't exist is a 404,
+    # caught here instead of as an IntegrityError (500) at flush time.
+    for service_id in {body.booked_service_id, body.actual_service_id} - {None}:
+        if session.get(Service, service_id) is None:
+            raise HTTPException(status_code=404, detail=f"Service {service_id} not found")
 
     days_since_last, p50, p90 = compute_visit_predictions(
         session, dog=dog, visit_date=body.visit_date
