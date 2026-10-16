@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from muttmetrics.api.app import create_app
 from muttmetrics.api.deps import get_db
 from muttmetrics.db.session import get_engine
+from tests.fixtures.load_metric_month import load_metric_month
 from tests.fixtures.load_metric_week import load_metric_week
 
 # Default matches .env.example / compose. CI can override via env.
@@ -95,3 +96,9 @@ def client(
 def metric_week(db_session: Session) -> dict[str, dict[str, int]]:
     """Synthetic metric week loaded onto the rollback pad."""
     return load_metric_week(db_session)
+
+
+@pytest.fixture
+def metric_month(db_session: Session) -> dict[str, dict[str, int]]:
+    """Synthetic metric month (weeks thin, month unlocks) for #170."""
+    return load_metric_month(db_session)

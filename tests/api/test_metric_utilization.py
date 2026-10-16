@@ -1,4 +1,4 @@
-"""metric_utilization(buffer) vs Syn* EXPECTED (#29)."""
+"""metric_utilization(buffer, start, end) vs Syn* EXPECTED (#29 / #170)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from datetime import date
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from tests.fixtures.metric_week import BUFFER_MINUTES, EXPECTED
+from tests.fixtures.metric_week import BUFFER_MINUTES, EXPECTED, WEEK_END, WEEK_START
 
 
 def test_utilization_over_under_and_missing_prediction(
@@ -14,8 +14,17 @@ def test_utilization_over_under_and_missing_prediction(
 ) -> None:
     rows = (
         db_session.execute(
-            text("SELECT * FROM metric_utilization(:buffer) ORDER BY visit_date"),
-            {"buffer": BUFFER_MINUTES},
+            text(
+                """
+                SELECT * FROM metric_utilization(:buffer, :p_start, :p_end)
+                ORDER BY visit_date
+                """
+            ),
+            {
+                "buffer": BUFFER_MINUTES,
+                "p_start": WEEK_START,
+                "p_end": WEEK_END,
+            },
         )
         .mappings()
         .all()
@@ -23,7 +32,6 @@ def test_utilization_over_under_and_missing_prediction(
 
     by_day = {r["visit_date"]: r for r in rows}
 
-    # Mon — under buffer
     mon = by_day[date(2026, 3, 2)]
     exp_mon = EXPECTED["utilization"][date(2026, 3, 2)]
     assert mon["n"] == exp_mon["n"]
@@ -33,14 +41,12 @@ def test_utilization_over_under_and_missing_prediction(
     assert mon["missing_prediction"] == exp_mon["missing_prediction"]
     assert mon["over_buffer"] is False
 
-    # Tue — over buffer (P90 sum 350 > 240)
     tue = by_day[date(2026, 3, 3)]
     exp_tue = EXPECTED["utilization"][date(2026, 3, 3)]
     assert tue["n"] == exp_tue["n"]
     assert tue["planned_p90"] == exp_tue["planned_p90"] == 350
     assert tue["over_buffer"] is True
 
-    # Fri — V8 has no P50; still counts in n / actual, not as 0 planned
     fri = by_day[date(2026, 3, 6)]
     exp_fri = EXPECTED["utilization"][date(2026, 3, 6)]
     assert fri["n"] == exp_fri["n"]
@@ -50,5 +56,4 @@ def test_utilization_over_under_and_missing_prediction(
     assert fri["missing_prediction"] == exp_fri["missing_prediction"] == 1
     assert fri["over_buffer"] is False
 
-    # Sat only no_show → no eligible row
     assert date(2026, 3, 7) not in by_day
