@@ -133,7 +133,7 @@ LIMIT 20;
 - Predictions / salon insights home ([#130](https://github.com/BOYSABIO/muttmetrics/issues/130))
 - Visit PATCH in the SPA (still SQL for now)
 
-HTTP `PATCH` for dog/owner obeys the same safe vs forbidden columns as this playbook ([ADR-001](../architecture/adr/001-derived-fields.md)).
+HTTP `PATCH` for dog/owner obeys the same safe vs forbidden columns as this playbook, and refuses `null` on required columns and impossible weights ([#177](https://github.com/BOYSABIO/muttmetrics/issues/177)); SQL has no such guard, so check values by hand ([ADR-001](../architecture/adr/001-derived-fields.md)).
 
 ## Related
 

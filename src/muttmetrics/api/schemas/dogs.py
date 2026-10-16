@@ -135,7 +135,8 @@ class PatchDogRequest(BaseModel):
     breed_secondary_id: int | None = None
     sex: str | None = None
     date_of_birth: date | None = None
-    weight_kg: Decimal | None = None
+    # > 0, and a ceiling that catches grams typed into a kg field (7500 -> 422).
+    weight_kg: Decimal | None = Field(default=None, gt=0, le=150)
 
     coat_type: str | None = None
     hair_or_fur: str | None = None

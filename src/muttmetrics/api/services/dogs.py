@@ -10,6 +10,7 @@ from muttmetrics.api.schemas.dogs import (
     PatchDogRequest,
     VisitSummary,
 )
+from muttmetrics.api.services.patching import reject_null_for_required_columns
 from muttmetrics.api.services.visit_eligibility import visit_counts_clause
 from muttmetrics.models import Breed, Dog, Owner, Photo, Visit
 from muttmetrics.priors.size import size_band_from_weight
@@ -187,6 +188,7 @@ def patch_dog(
         raise LookupError(f"Dog {dog_id} not found")
 
     updates = body.model_dump(exclude_unset=True)
+    reject_null_for_required_columns(Dog, updates)
 
     if "name" in updates:
         cleaned = normalize_dog_name(updates["name"] or "")

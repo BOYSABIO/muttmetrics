@@ -142,3 +142,37 @@ def test_patch_owner_rejects_derived_field(
         headers=auth_headers,
     )
     assert patched.status_code == 422
+
+
+def test_patch_owner_null_on_required_column_is_422_not_500(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """#177: {"locale": null} used to reach Postgres and fail NOT NULL (500)."""
+    created = client.post(
+        "/owners",
+        json={"name": f"Null Locale {uuid.uuid4().hex[:8]}"},
+        headers=auth_headers,
+    )
+    owner_id = created.json()["owner_id"]
+
+    response = client.patch(f"/owners/{owner_id}", json={"locale": None}, headers=auth_headers)
+    assert response.status_code == 422
+    assert "locale" in response.json()["detail"]
+
+
+def test_patch_owner_null_on_optional_column_clears_it(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """Explicit null is still how you clear an optional field."""
+    created = client.post(
+        "/owners",
+        json={"name": f"Clear Phone {uuid.uuid4().hex[:8]}", "phone": "+49 170 0000000"},
+        headers=auth_headers,
+    )
+    owner_id = created.json()["owner_id"]
+
+    response = client.patch(f"/owners/{owner_id}", json={"phone": None}, headers=auth_headers)
+    assert response.status_code == 200
+    assert response.json()["phone"] is None

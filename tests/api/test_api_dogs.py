@@ -288,3 +288,19 @@ def test_patch_weight_sets_size_band(
         headers=auth_headers,
     )
     assert forbidden.status_code == 422
+
+
+@pytest.mark.parametrize("weight", [-3, 0, 7500])
+def test_patch_dog_rejects_impossible_weight(
+    client: TestClient, owner_id: int, auth_headers: dict[str, str], weight: float
+) -> None:
+    """#177: negative, zero, and grams-typed-as-kg are all refused."""
+    created = client.post(
+        "/dogs",
+        json={"owner_id": owner_id, "name": f"Weight {uuid.uuid4().hex[:8]}"},
+        headers=auth_headers,
+    )
+    dog_id = created.json()["dog_id"]
+
+    response = client.patch(f"/dogs/{dog_id}", json={"weight_kg": weight}, headers=auth_headers)
+    assert response.status_code == 422

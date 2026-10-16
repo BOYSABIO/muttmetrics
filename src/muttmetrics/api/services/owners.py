@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from muttmetrics.api.schemas.owners import OwnerDogItem, OwnerProfile, PatchOwnerRequest
+from muttmetrics.api.services.patching import reject_null_for_required_columns
 from muttmetrics.api.services.visit_eligibility import visit_counts_clause
 from muttmetrics.models import Owner, Visit
 
@@ -85,6 +86,7 @@ def patch_owner(
         raise LookupError(f"Owner {owner_id} not found")
 
     updates = body.model_dump(exclude_unset=True)
+    reject_null_for_required_columns(Owner, updates)
 
     if "name" in updates:
         cleaned = normalize_owner_name(updates["name"] or "")
