@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { Directory } from './Directory'
 import { PhotoPicker } from './PhotoPicker'
+import { ThisWeek } from './ThisWeek'
 
 type TimerStatus = 'idle' | 'running' | 'stopped'
 
@@ -28,6 +29,8 @@ function todayISODate(): string {
 
 type Mode = 'search' | 'new' | 'visit'
 type Screen = 'home' | 'capture'
+/** Home shell destinations. Capture is an action (+), not a peer tab. */
+type Area = 'this_week' | 'directory'
 
 type SelectedDog = {
   dog_id: number
@@ -227,6 +230,7 @@ function App() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<DogSearchItem[]>([])
   const [screen, setScreen] = useState<Screen>('home')
+  const [area, setArea] = useState<Area>('this_week')
   const [mode, setMode] = useState<Mode>('search')
   const [selectedDog, setSelectedDog] = useState<SelectedDog | null>(null)
   const [visitStep, setVisitStep] = useState<VisitStep>(1)
@@ -620,15 +624,39 @@ function App() {
     <main className={`app ${screen === 'home' ? 'app-home' : 'app-capture'}`}>
       {screen === 'home' && (
         <>
-          <header className="app-header">
-            <h1>MuttMetrics</h1>
-          </header>
-          {message !== '' && (
-            <p className="status" role="status">
-              {message}
-            </p>
+          <div className="page page-wide home-shell">
+            <header className="app-header app-header-home">
+              <button
+                type="button"
+                className="brand-home"
+                onClick={() => setArea('this_week')}
+                aria-current={area === 'this_week' ? 'page' : undefined}
+              >
+                MuttMetrics
+              </button>
+              <nav className="home-links" aria-label="Main">
+                <button
+                  type="button"
+                  className="home-link"
+                  aria-current={area === 'directory' ? 'page' : undefined}
+                  onClick={() => setArea('directory')}
+                >
+                  Clients
+                </button>
+              </nav>
+            </header>
+            {message !== '' && (
+              <p className="status" role="status">
+                {message}
+              </p>
+            )}
+          </div>
+          {area === 'this_week' && <ThisWeek />}
+          {area === 'directory' && (
+            <div className="page page-wide">
+              <Directory onStartVisit={startVisitForDog} />
+            </div>
           )}
-          <Directory onStartVisit={startVisitForDog} />
           <button
             type="button"
             className="fab"

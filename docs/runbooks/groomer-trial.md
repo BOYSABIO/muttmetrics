@@ -90,8 +90,8 @@ npm run preview
 
 ### 1.4 Your own smoke test — before User touches it
 
-1. On the PC: open `http://localhost:5174`, search a known dog. Rows come back → the proxy and API work.
-2. On your phone over Tailscale: open `http://10.x.x.x:5174`, search the same dog. Rows come back → the network path works.
+1. On the PC: open `http://localhost:5174`. You should land on **This week** (dashboard home). Tap **+** → search a known dog → rows come back → proxy and API work. Widen past ~768px: layout uses the page; capture still stays a phone column. **Clients** is the quiet link in the header (dog/owner directory).
+2. On your phone over Tailscale: open `http://10.x.x.x:5174`, tap **+**, search the same dog. Rows come back → the network path works. Capture flow should feel unchanged.
 
 Do not skip step 2. It is the only check that proves Tailscale, the grant, and the preview binding all line up.
 
@@ -126,8 +126,8 @@ Do not skip step 2. It is the only check that proves Tailscale, the grant, and t
 
 Send this part to User; it is all they need.
 
-1. **Open** `http://10.x.x.x:5174` (Tailscale must be on). Add it to the home screen for next time.
-2. **Find the dog:** type part of the name → **Search** → tap the right row (the owner name is shown next to it).
+1. **Open** `http://10.x.x.x:5174` (Tailscale must be on). Add it to the home screen for next time. The first screen is **This week**; tap **+** to start a visit.
+2. **Find the dog:** type part of the name → tap the right row (the owner name is shown next to it).
 3. **New client** (first visit only): tap **New client** → owner name → dog name → continue. Breed and the rest get filled in later by Owner; do not worry about them.
 4. **Step 1 — before photo:** tap **Take photo** to use the camera, or **Choose photo** to pick one already on the phone. Optional, but it is the picture of how the dog arrived. Tap **Remove** to change it.
 5. **Step 2 — timer:** press **Start** when you start the groom, **Stop** when you finish. If you forget, type the minutes in by hand. Minutes is the one number that matters.

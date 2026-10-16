@@ -532,6 +532,14 @@ export function Directory({ onStartVisit }: DirectoryProps) {
             </div>
           </header>
 
+          <form
+            id="dog-profile-form"
+            className="section-grid profile-sections"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void saveDirectoryDog()
+            }}
+          >
           <div className="profile-block">
             <h3 className="profile-section">Identity</h3>
             <div className="field-stack">
@@ -759,6 +767,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
               </ul>
             )}
           </div>
+          </form>
 
           <div className="actions profile-actions">
             {onStartVisit !== undefined && (
@@ -779,12 +788,10 @@ export function Directory({ onStartVisit }: DirectoryProps) {
               </button>
             )}
             <button
-              type="button"
+              type="submit"
+              form="dog-profile-form"
               className={onStartVisit !== undefined ? undefined : 'primary'}
               disabled={isBusy}
-              onClick={() => {
-                void saveDirectoryDog()
-              }}
             >
               Save
             </button>
@@ -829,6 +836,14 @@ export function Directory({ onStartVisit }: DirectoryProps) {
             </div>
           </header>
 
+          <form
+            id="owner-profile-form"
+            className="section-grid profile-sections"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void saveDirectoryOwner()
+            }}
+          >
           <div className="profile-block">
             <h3 className="profile-section">Identity</h3>
             <div className="field-stack">
@@ -956,15 +971,14 @@ export function Directory({ onStartVisit }: DirectoryProps) {
               </ul>
             )}
           </div>
+          </form>
 
           <div className="actions profile-actions">
             <button
-              type="button"
+              type="submit"
+              form="owner-profile-form"
               className="primary"
               disabled={isBusy}
-              onClick={() => {
-                void saveDirectoryOwner()
-              }}
             >
               Save
             </button>
@@ -1013,36 +1027,45 @@ export function Directory({ onStartVisit }: DirectoryProps) {
           <ul className="dir-card-list">
             {filtered.map((dog) => (
               <li key={dog.dog_id}>
-                <div className="dir-card dir-card-split">
+                <div className="dir-card dir-card-row">
                   <button
                     type="button"
-                    className="dir-card-main"
+                    className="dir-card-avatar-hit"
                     disabled={isBusy}
+                    aria-label={`Open ${dog.name}`}
                     onClick={() => {
                       void openDirectoryDog(dog.dog_id)
                     }}
                   >
                     <DogAvatar photoId={null} name={dog.name} />
-                    <div className="dir-card-body">
-                      <span className="dir-card-title">{dog.name}</span>
-                      <span className="dir-card-meta">
+                  </button>
+                  <div className="dir-card-body">
+                    <button
+                      type="button"
+                      className="dir-card-title-btn"
+                      disabled={isBusy}
+                      onClick={() => {
+                        void openDirectoryDog(dog.dog_id)
+                      }}
+                    >
+                      {dog.name}
+                    </button>
+                    <div className="dir-card-meta">
+                      <button
+                        type="button"
+                        className="linkish"
+                        disabled={isBusy}
+                        onClick={() => {
+                          void openDirectoryOwner(dog.owner_id)
+                        }}
+                      >
                         {dog.owner_name}
-                        {dog.last_visit_date
-                          ? ` · ${dog.last_visit_date}`
-                          : ''}
-                      </span>
+                      </button>
+                      {dog.last_visit_date
+                        ? ` · ${dog.last_visit_date}`
+                        : ''}
                     </div>
-                  </button>
-                  <button
-                    type="button"
-                    className="dir-card-owner"
-                    disabled={isBusy}
-                    onClick={() => {
-                      void openDirectoryOwner(dog.owner_id)
-                    }}
-                  >
-                    Owner
-                  </button>
+                  </div>
                 </div>
               </li>
             ))}
