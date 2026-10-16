@@ -6,6 +6,9 @@ Create Date: 2026-10-16
 
 Adds overall (week) €/hour rates to metric_week_summary with MIN_N in SQL,
 and metric_constants so the API can expose min_n without a second threshold.
+
+# migration-safety: reviewed - DROP VIEW metric_week_summary only (no table data);
+# recreate with eur_per_hour_* columns for #158, see #158
 """
 
 from collections.abc import Sequence
