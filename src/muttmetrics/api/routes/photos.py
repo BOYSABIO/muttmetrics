@@ -80,7 +80,7 @@ def upload_visit_photo(
         dog_id=visit.dog_id,
         visit_id=visit.visit_id,
         kind=kind,
-        raw=file.file.read(),
+        raw=file.file.read(images.MAX_UPLOAD_BYTES + 1),
     )
     return PhotoResponse.model_validate(photo)
 
@@ -104,7 +104,7 @@ def upload_dog_profile_photo(
         dog_id=dog_id,
         visit_id=None,
         kind="profile",
-        raw=file.file.read(),
+        raw=file.file.read(images.MAX_UPLOAD_BYTES + 1),
     )
     return PhotoResponse.model_validate(photo)
 
