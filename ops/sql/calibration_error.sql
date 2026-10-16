@@ -21,10 +21,8 @@ SELECT
   p.miss_count,
   ROUND(p.miss_rate, 2) AS miss_rate,
   ROUND(1.0 - p.miss_rate, 2) AS p90_hit_rate
-FROM metric_overrun o
-CROSS JOIN metric_p90_miss p
-WHERE o.week_start IS NULL
-  AND p.week_start IS NULL;
+FROM metric_overrun(DATE '1900-01-01', DATE '9999-12-31') o
+CROSS JOIN metric_p90_miss(DATE '1900-01-01', DATE '9999-12-31') p;
 
 -- ---------------------------------------------------------------------------
 -- 1) By breed — “are we systematically underestimating Doodles?”

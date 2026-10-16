@@ -41,6 +41,7 @@ def test_metrics_week_full_fixture(
     assert r.status_code == 200
     data = r.json()
 
+    assert data["period"] == "week"
     assert data["week_start"] == str(WEEK_START)
     assert data["week_end"] == str(WEEK_START + timedelta(days=6))
     assert data["buffer_minutes"] == BUFFER_MINUTES

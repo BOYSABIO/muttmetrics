@@ -1,7 +1,8 @@
-"""GET /metrics/week — read metric views/functions; compute nothing (#156)."""
+"""GET /metrics/week and /metrics/period — range metric functions (#156 / #170)."""
 
 from __future__ import annotations
 
+from calendar import monthrange
 from datetime import date, timedelta
 from typing import Annotated, Any
 
@@ -12,11 +13,13 @@ from sqlalchemy.orm import Session
 from muttmetrics.api.deps import get_db, require_api_key
 from muttmetrics.api.schemas.metrics import (
     EurPerHourCellOut,
-    MetricsWeekBlock,
+    MetricsPeriodBlock,
+    MetricsPeriodOut,
     MetricsWeekOut,
     MetricValue,
     OverrunOut,
     P90MissOut,
+    PeriodKind,
     PivotOut,
     UtilizationDayOut,
     WeekSummaryOut,
@@ -28,6 +31,7 @@ DbSession = Annotated[Session, Depends(get_db)]
 
 DEFAULT_BUFFER_MINUTES = 240
 NOT_ENOUGH = "not_enough_data"
+MAX_RANGE_DAYS = 366
 
 
 def _monday_on_or_before(d: date) -> date:
@@ -47,8 +51,24 @@ def resolve_week_start(start: date | None) -> date:
     return start
 
 
+def _is_calendar_month(start: date, end: date) -> bool:
+    """True when start..end is exactly one calendar month."""
+    if start.day != 1 or start.year != end.year or start.month != end.month:
+        return False
+    return end.day == monthrange(start.year, start.month)[1]
+
+
+def classify_period(start: date, end: date) -> PeriodKind:
+    """Label a range as week / month / custom for the UI."""
+    if (end - start).days == 6 and start.weekday() == 0:
+        return "week"
+    if _is_calendar_month(start, end):
+        return "month"
+    return "custom"
+
+
 def _metric_value(raw: Any) -> MetricValue:
-    """Package a view rate/average: NULL from SQL → not_enough_data."""
+    """Package a SQL rate/average: NULL → not_enough_data."""
     if raw is None:
         return MetricValue(value=None, reason=NOT_ENOUGH)
     return MetricValue(value=float(raw), reason=None)
@@ -74,10 +94,29 @@ def _load_min_n(session: Session) -> int:
     return int(row["min_n"])
 
 
-def load_week_metrics(session: Session, week_start: date, buffer_minutes: int) -> MetricsWeekBlock:
-    """SELECT from ADR-003 objects for one Mon–Sun week; package only."""
-    week_end = week_start + timedelta(days=6)
-    params = {"week_start": week_start, "week_end": week_end, "buffer": buffer_minutes}
+def load_period_metrics(
+    session: Session,
+    period_start: date,
+    period_end: date,
+    buffer_minutes: int,
+    *,
+    period: PeriodKind | None = None,
+) -> MetricsPeriodBlock:
+    """SELECT from ADR-003 range functions for an inclusive date range; package only."""
+    if period_end < period_start:
+        raise HTTPException(status_code=422, detail="end must be on or after start")
+    if (period_end - period_start).days > MAX_RANGE_DAYS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"range must be at most {MAX_RANGE_DAYS} days",
+        )
+
+    kind = period if period is not None else classify_period(period_start, period_end)
+    params = {
+        "p_start": period_start,
+        "p_end": period_end,
+        "buffer": buffer_minutes,
+    }
     min_n = _load_min_n(session)
 
     summary_row = (
@@ -86,8 +125,7 @@ def load_week_metrics(session: Session, week_start: date, buffer_minutes: int) -
                 """
                 SELECT visit_count, groomed_minutes, revenue_ex_tip, revenue_inc_tip,
                        eur_per_hour_n, eur_per_hour_ex_tip, eur_per_hour_inc_tip
-                FROM metric_week_summary
-                WHERE week_start = :week_start
+                FROM metric_summary(:p_start, :p_end)
                 """
             ),
             params,
@@ -115,9 +153,7 @@ def load_week_metrics(session: Session, week_start: date, buffer_minutes: int) -
                 SELECT condition_score, shaved_down, n, groomed_minutes, hours,
                        revenue_ex_tip, revenue_inc_tip,
                        eur_per_hour_ex_tip, eur_per_hour_inc_tip
-                FROM metric_eur_per_hour
-                WHERE week_start = :week_start
-                ORDER BY condition_score, shaved_down
+                FROM metric_eur_per_hour(:p_start, :p_end)
                 """
             ),
             params,
@@ -145,8 +181,7 @@ def load_week_metrics(session: Session, week_start: date, buffer_minutes: int) -
             text(
                 """
                 SELECT n, pivoted_count, pivot_rate
-                FROM metric_pivot_rate
-                WHERE week_start = :week_start
+                FROM metric_pivot_rate(:p_start, :p_end)
                 """
             ),
             params,
@@ -172,8 +207,7 @@ def load_week_metrics(session: Session, week_start: date, buffer_minutes: int) -
             text(
                 """
                 SELECT n, avg_overrun_minutes
-                FROM metric_overrun
-                WHERE week_start = :week_start
+                FROM metric_overrun(:p_start, :p_end)
                 """
             ),
             params,
@@ -197,8 +231,7 @@ def load_week_metrics(session: Session, week_start: date, buffer_minutes: int) -
             text(
                 """
                 SELECT n, miss_count, miss_rate
-                FROM metric_p90_miss
-                WHERE week_start = :week_start
+                FROM metric_p90_miss(:p_start, :p_end)
                 """
             ),
             params,
@@ -225,8 +258,7 @@ def load_week_metrics(session: Session, week_start: date, buffer_minutes: int) -
                 """
                 SELECT visit_date, n, planned_p50, planned_p90,
                        actual_minutes, missing_prediction, over_buffer
-                FROM metric_utilization(:buffer)
-                WHERE visit_date >= :week_start AND visit_date <= :week_end
+                FROM metric_utilization(:buffer, :p_start, :p_end)
                 ORDER BY visit_date
                 """
             ),
@@ -248,9 +280,10 @@ def load_week_metrics(session: Session, week_start: date, buffer_minutes: int) -
         for r in util_rows
     ]
 
-    return MetricsWeekBlock(
-        week_start=week_start,
-        week_end=week_end,
+    return MetricsPeriodBlock(
+        period=kind,
+        week_start=period_start,
+        week_end=period_end,
         buffer_minutes=buffer_minutes,
         min_n=min_n,
         summary=summary,
@@ -259,6 +292,19 @@ def load_week_metrics(session: Session, week_start: date, buffer_minutes: int) -
         overrun=overrun,
         p90_miss=p90_miss,
         utilization=utilization,
+    )
+
+
+def load_week_metrics(
+    session: Session, week_start: date, buffer_minutes: int
+) -> MetricsPeriodBlock:
+    """Mon–Sun week as a thin wrapper over range functions (#170)."""
+    return load_period_metrics(
+        session,
+        week_start,
+        week_start + timedelta(days=6),
+        buffer_minutes,
+        period="week",
     )
 
 
@@ -279,3 +325,35 @@ def get_metrics_week(
     current = load_week_metrics(session, week_start, buffer_minutes)
     previous = load_week_metrics(session, week_start - timedelta(days=7), buffer_minutes)
     return MetricsWeekOut(**current.model_dump(), previous_week=previous)
+
+
+@router.get("/metrics/period", dependencies=[Depends(require_api_key)])
+def get_metrics_period(
+    session: DbSession,
+    start: Annotated[date, Query(description="Inclusive range start (YYYY-MM-DD)")],
+    end: Annotated[date, Query(description="Inclusive range end (YYYY-MM-DD)")],
+    buffer_minutes: Annotated[
+        int,
+        Query(ge=1, description="Closing buffer for utilization"),
+    ] = DEFAULT_BUFFER_MINUTES,
+) -> MetricsPeriodOut:
+    """Arbitrary inclusive range + previous_period (#170).
+
+    Prefer this over inventing a month-only twin: week is ``start`` Monday and
+    ``end`` = Monday+6; a calendar month is the 1st through the last day.
+    Previous for a calendar month is the prior calendar month; otherwise the
+    equal-length window ending the day before ``start``.
+    """
+    current = load_period_metrics(session, start, end, buffer_minutes)
+    if current.period == "month":
+        if start.month == 1:
+            prev_start = date(start.year - 1, 12, 1)
+        else:
+            prev_start = date(start.year, start.month - 1, 1)
+        prev_end = start - timedelta(days=1)
+    else:
+        span_days = (end - start).days
+        prev_end = start - timedelta(days=1)
+        prev_start = prev_end - timedelta(days=span_days)
+    previous = load_period_metrics(session, prev_start, prev_end, buffer_minutes)
+    return MetricsPeriodOut(**current.model_dump(), previous_period=previous)

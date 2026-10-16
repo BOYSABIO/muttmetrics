@@ -2,13 +2,22 @@
 
 Written definitions for M5 **First Real Numbers** ([#126](https://github.com/BOYSABIO/muttmetrics/issues/126); path [#159](https://github.com/BOYSABIO/muttmetrics/issues/159)).
 
-This runbook is the **contract**. Views ([#155](https://github.com/BOYSABIO/muttmetrics/issues/155)), metric recipes ([#27](https://github.com/BOYSABIO/muttmetrics/issues/27)–[#29](https://github.com/BOYSABIO/muttmetrics/issues/29)), the API ([#156](https://github.com/BOYSABIO/muttmetrics/issues/156)), and the dashboard ([#158](https://github.com/BOYSABIO/muttmetrics/issues/158)) **cite this file** — they do not restate formulas in their own words.
+This runbook is the **contract**. Range functions ([ADR-003](../architecture/adr/003-metric-views.md), [#170](https://github.com/BOYSABIO/muttmetrics/issues/170)), metric recipes ([#27](https://github.com/BOYSABIO/muttmetrics/issues/27)–[#29](https://github.com/BOYSABIO/muttmetrics/issues/29)), the API ([#156](https://github.com/BOYSABIO/muttmetrics/issues/156), [#170](https://github.com/BOYSABIO/muttmetrics/issues/170)), and the dashboard ([#158](https://github.com/BOYSABIO/muttmetrics/issues/158)) **cite this file** — they do not restate formulas in their own words.
 
-Until those views exist, “how to run” means: encoding-safe `psql` ([#154](https://github.com/BOYSABIO/muttmetrics/issues/154)) against whatever recipe/view the metric issue ships. Results that include real volume or money go to `docs/notes/` only.
+Results that include real volume or money go to `docs/notes/` only.
 
 ## How to run
 
-Prefer selecting from the metric **views** once [#155](https://github.com/BOYSABIO/muttmetrics/issues/155) lands. Until then, use the `ops/sql/` recipe named by each metric issue.
+Every metric is a **range function** with inclusive dates. Same definition for a week, a month, or a custom window — only the arguments change.
+
+| Metric | Call |
+|--------|------|
+| Summary (visits, minutes, revenue, overall €/hour) | `metric_summary(p_start, p_end)` |
+| €/hour by coat × shaved | `metric_eur_per_hour(p_start, p_end)` |
+| Pivot / overrun / P90 miss | `metric_pivot_rate` / `metric_overrun` / `metric_p90_miss` `(p_start, p_end)` |
+| Utilization per day | `metric_utilization(buffer_minutes, p_start, p_end)` |
+
+**Week** = Monday … Sunday (`p_end = p_start + 6`). **Month** = 1st … last day of that calendar month. **Overall history** ≈ a very wide range (ops recipes use `1900-01-01` … `9999-12-31`).
 
 Encoding-safe (never pipe SQL text through PowerShell):
 
@@ -18,6 +27,8 @@ docker compose exec -T db psql -U muttmetrics -d muttmetrics -f /tmp/q.sql
 ```
 
 Or open the same SQL in the Postgres extension. See [`db-peek.md`](./db-peek.md) and [`ops/README.md`](../../ops/README.md).
+
+API: `GET /metrics/week?start=YYYY-MM-DD` (Monday) or `GET /metrics/period?start=&end=` (any inclusive range, max 366 days).
 
 ## Privacy (public vs private)
 
@@ -38,10 +49,10 @@ Every M5 metric that aggregates visits uses this filter unless a glossary entry 
 |------|---------|
 | **Include** | `visit.status` is `'completed'` **or** `NULL` (legacy rows before status was filled) |
 | **Exclude** | `status` in (`'cancelled'`, `'no_show'`) — groom did not happen / should not count as a logged job |
-| **Week** | Monday–Sunday on `visit.visit_date` (salon calendar), same as compliance |
+| **Range** | Inclusive `visit.visit_date` between `p_start` and `p_end` (week = Mon–Sun; month = calendar month) |
 | **Condition polarity** | `condition_score`: **0 = worst … 5 = best** ([#123](https://github.com/BOYSABIO/muttmetrics/issues/123)) |
 
-This matches the compliance numerator so “completed visits this week” means the same thing in capture health and in analytics.
+This matches the compliance numerator so “completed visits” means the same thing in capture health and in analytics.
 
 ## Small-sample rule
 
@@ -53,11 +64,11 @@ A **cell** is one group produced by that metric’s **GROUP BY** — **not** “
 
 | Metric | Typical cell (group of visits) | What `n` counts |
 |--------|--------------------------------|-----------------|
-| €/hour (#27) | One (`condition_score`, `shaved_down`) bucket **within a calendar week** | Eligible visits in that bucket — **many dogs** can sit in the same cell |
-| Pivot / overrun / P90 miss (#28) | One week (dashboard), plus an overall / all-time view for ops | Eligible visits in that slice |
-| Utilization (#29) | One `visit_date` | Visits that day |
+| €/hour (#27) | One (`condition_score`, `shaved_down`) bucket **within the chosen range** | Eligible visits in that bucket — **many dogs** can sit in the same cell |
+| Pivot / overrun / P90 miss (#28) | The chosen range (week or month on the dashboard; wide range for ops “overall”) | Eligible visits in that slice |
+| Utilization (#29) | One `visit_date` inside the range | Visits that day |
 
-**Why week, not month, for rates:** the salon can change pricing, mix, and habit in a few days. A week matches that pulse and the “This week” dashboard (#158). A month averages those turns away. Month (or any longer rollup) is a later query on the same rows when you want a smoother trend — not the primary grain.
+**Week vs month:** a week matches the salon’s short pulse (#158). A **month** (#170) is the same formulas on a longer range — useful early on when weekly cells sit under `MIN_N`. Do **not** average weekly averages to get a month; recompute from visit rows for that range.
 
 So `MIN_N` is “enough visits **in this bucket** to show a mean/rate,” not “this dog has had 5 appointments.”
 
@@ -88,14 +99,14 @@ We publish **two** named rates so pricing power and take-home are never confused
 | **Revenue (inc tip)** | `final_price + coalesce(tip, 0)` — missing tip counts as `0`, not “unknown revenue” |
 | **€/hour ex tip** | `sum(revenue ex tip) / sum(hours)` over the cell |
 | **€/hour inc tip** | `sum(revenue inc tip) / sum(hours)` over the cell |
-| **Grouping** | Week × `condition_score` × `shaved_down` (week = Mon–Sun on `visit_date`) |
+| **Grouping** | Range × `condition_score` × `shaved_down` |
 | **Unit** | Euro per hour |
 | **`n`** | Count of eligible visits in the cell; apply `MIN_N` |
 | **NULL price / NULL minutes** | Visit **excluded** from this metric (not treated as €0 or 0 minutes) |
 
 **Dashboard default (#158):** lead with **€/hour inc tip** (what the groomer took home). Always offer or show **ex tip** beside it (or in a secondary line) so goodwill tips cannot hide weak list pricing.
 
-**Week headline (not a condition cell):** overall €/hour for the week uses the same eligibility as above (priced + minutes > 0), without slicing by condition/shaved. Lives on `metric_week_summary` (`eur_per_hour_n`, `eur_per_hour_ex_tip`, `eur_per_hour_inc_tip`) with `MIN_N` in SQL. The SPA must display those packaged fields — no frontend divide.
+**Period headline (not a condition cell):** overall €/hour for the selected range uses the same eligibility as above (priced + minutes > 0), without slicing by condition/shaved. Lives on `metric_summary(p_start, p_end)` (`eur_per_hour_n`, `eur_per_hour_ex_tip`, `eur_per_hour_inc_tip`) with `MIN_N` in SQL. The SPA must display those packaged fields — no frontend divide.
 
 **ML / analysis default:** prefer **ex tip** (and tip as its own outcome or feature) so models do not treat generosity as “this condition pays well.”
 
@@ -127,7 +138,7 @@ We publish **two** named rates so pricing power and take-home are never confused
 | **Pivot rate** | `count(pivoted is true) / n`; `NULL`/`false` count as not pivoted for the numerator; apply `MIN_N` |
 | **Note** | Visits without a stored prediction **still count** here (unlike overrun) |
 
-**Executable views (#28):** `metric_pivot_rate`, `metric_overrun`, `metric_p90_miss` (weekly rows + `week_start IS NULL` overall). Ops peek: [`ops/sql/metric_prediction_health.sql`](../../ops/sql/metric_prediction_health.sql). Capture UI still sets booked = actual until groomer calendar booking exists ([#44](https://github.com/BOYSABIO/muttmetrics/issues/44)); multi-session jobs are [#165](https://github.com/BOYSABIO/muttmetrics/issues/165).
+**Executable (#28 / #170):** `metric_pivot_rate(p_start, p_end)`, `metric_overrun(…)`, `metric_p90_miss(…)`. Ops peek: [`ops/sql/metric_prediction_health.sql`](../../ops/sql/metric_prediction_health.sql). Capture UI still sets booked = actual until groomer calendar booking exists ([#44](https://github.com/BOYSABIO/muttmetrics/issues/44)); multi-session jobs are [#165](https://github.com/BOYSABIO/muttmetrics/issues/165).
 
 ### Utilization per day
 
@@ -141,13 +152,13 @@ We publish **two** named rates so pricing power and take-home are never confused
 | **Over buffer** | e.g. planned worst case (or chosen planned measure) **>** `buffer_minutes` — exact flag defined when the function ships; must match the fixture |
 | **Missing predictions** | Count and surface those visits; **do not** treat missing P50 as 0 planned minutes |
 
-**Executable (#29):** `SELECT * FROM metric_utilization(240)` — function, not a view. Ops: [`ops/sql/metric_utilization.sql`](../../ops/sql/metric_utilization.sql). `over_buffer` = `planned_p90 > buffer_minutes`.
+**Executable (#29 / #170):** `SELECT * FROM metric_utilization(240, p_start, p_end)`. Ops: [`ops/sql/metric_utilization.sql`](../../ops/sql/metric_utilization.sql). `over_buffer` = `planned_p90 > buffer_minutes`.
 
 ## Named constants
 
 | Name | Value | Used by |
 |------|-------|---------|
-| `MIN_N` | `5` | Metric views/functions + `metric_constants.min_n`; API exposes `min_n` on `/metrics/week`; UI must not hard-code |
+| `MIN_N` | `5` | Metric functions + `metric_constants.min_n`; API exposes `min_n` on `/metrics/week` and `/metrics/period`; UI must not hard-code |
 
 When code lands, this value should appear **once** (e.g. a SQL constant table, a migration-seeded setting, or a single module constant imported by API and tests). Amending the number means amending this table and that single implementation site.
 
@@ -155,7 +166,7 @@ When code lands, this value should appear **once** (e.g. a SQL constant table, a
 
 **In the product path (#159):** exactly the glossary entries above — €/hour (#27), pivot / overrun / P90 miss (#28), utilization (#29) — plus capture health in [`compliance.md`](./compliance.md). That is the “This week” screen.
 
-**Not in M5 (on purpose):** total revenue, tip totals, client counts, breed mixes, month rollups, P&L. Those are one `SUM` / `GROUP BY` away once visits are logged. Adding them to the dashboard before the three decision metrics ship just dilutes the screen. When something new earns a permanent definition (numerator, denominator, eligibility, `MIN_N`), amend **this** runbook first — same rule as #126.
+**Not in M5 (on purpose):** tip-only totals, client counts, breed mixes, P&L, year views, custom date pickers. Calendar **month** on the same decision metrics is in via [#170](https://github.com/BOYSABIO/muttmetrics/issues/170) (same formulas, longer range). When something new earns a permanent definition (numerator, denominator, eligibility, `MIN_N`), amend **this** runbook first — same rule as #126.
 
 ## Learning notes
 
@@ -164,6 +175,8 @@ When code lands, this value should appear **once** (e.g. a SQL constant table, a
 **Operational definition.** If SQL, API, and UI disagree on revenue, none of them is “the metric.” This file is the contract.
 
 **Small `n`.** Hiding the average is a feature. Showing a precise €/hour on two visits trains the wrong trust.
+
+**Aggregates don’t compose.** Summing across weeks is fine; averaging weekly averages (or applying `MIN_N` per week then hoping the month is honest) is not. Recompute from visit rows for every range you show (#170).
 
 ## Related
 

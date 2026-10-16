@@ -1,10 +1,13 @@
-"""Pydantic models for GET /metrics/week (#156 / #158)."""
+"""Pydantic models for GET /metrics/week and /metrics/period (#156 / #170)."""
 
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel
+
+PeriodKind = Literal["week", "month", "custom"]
 
 
 class MetricValue(BaseModel):
@@ -19,7 +22,7 @@ class WeekSummaryOut(BaseModel):
     groomed_minutes: int
     revenue_ex_tip: float
     revenue_inc_tip: float
-    # Overall week €/hour (glossary eligibility; MIN_N in SQL)
+    # Overall period €/hour (glossary eligibility; MIN_N in SQL)
     eur_per_hour_n: int
     eur_per_hour_ex_tip: MetricValue
     eur_per_hour_inc_tip: MetricValue
@@ -64,9 +67,14 @@ class UtilizationDayOut(BaseModel):
     over_buffer: bool
 
 
-class MetricsWeekBlock(BaseModel):
-    """One week's packaged metrics (no nested previous)."""
+class MetricsPeriodBlock(BaseModel):
+    """One inclusive date range of packaged metrics (no nested previous).
 
+    ``week_start`` / ``week_end`` are the range bounds (kept for #158 clients);
+    for a month they are the 1st and last day of that month.
+    """
+
+    period: PeriodKind
     week_start: date
     week_end: date
     buffer_minutes: int
@@ -79,7 +87,17 @@ class MetricsWeekBlock(BaseModel):
     utilization: list[UtilizationDayOut]
 
 
-class MetricsWeekOut(MetricsWeekBlock):
+# Alias — week UI and tests still import this name.
+MetricsWeekBlock = MetricsPeriodBlock
+
+
+class MetricsWeekOut(MetricsPeriodBlock):
     """Current week plus the prior Monday–Sunday block for vs-last-week UI."""
 
-    previous_week: MetricsWeekBlock | None = None
+    previous_week: MetricsPeriodBlock | None = None
+
+
+class MetricsPeriodOut(MetricsPeriodBlock):
+    """Arbitrary range plus the immediately preceding equal-length range."""
+
+    previous_period: MetricsPeriodBlock | None = None

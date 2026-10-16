@@ -1,24 +1,25 @@
-"""Pivot / overrun / P90 views vs Syn* EXPECTED (#28)."""
+"""Pivot / overrun / P90 range functions vs Syn* EXPECTED (#28 / #170)."""
 
 from __future__ import annotations
 
 import pytest
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from tests.fixtures.metric_week import EXPECTED, WEEK_START
+from tests.fixtures.metric_week import EXPECTED, WEEK_END, WEEK_START
 
 
 def test_pivot_overrun_p90_week_matches_fixture(db_session: Session, metric_week: dict) -> None:
+    params = {"p_start": WEEK_START, "p_end": WEEK_END}
+
     pivot = (
         db_session.execute(
             text(
                 """
                 SELECT n, pivoted_count, pivot_rate
-                FROM metric_pivot_rate
-                WHERE week_start = :week_start
+                FROM metric_pivot_rate(:p_start, :p_end)
                 """
             ),
-            {"week_start": WEEK_START},
+            params,
         )
         .mappings()
         .one()
@@ -33,11 +34,10 @@ def test_pivot_overrun_p90_week_matches_fixture(db_session: Session, metric_week
             text(
                 """
                 SELECT n, avg_overrun_minutes
-                FROM metric_overrun
-                WHERE week_start = :week_start
+                FROM metric_overrun(:p_start, :p_end)
                 """
             ),
-            {"week_start": WEEK_START},
+            params,
         )
         .mappings()
         .one()
@@ -51,11 +51,10 @@ def test_pivot_overrun_p90_week_matches_fixture(db_session: Session, metric_week
             text(
                 """
                 SELECT n, miss_count, miss_rate
-                FROM metric_p90_miss
-                WHERE week_start = :week_start
+                FROM metric_p90_miss(:p_start, :p_end)
                 """
             ),
-            {"week_start": WEEK_START},
+            params,
         )
         .mappings()
         .one()
