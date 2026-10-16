@@ -23,6 +23,7 @@ Personal / PII-named SQL: `*.local.sql` under `ops/` (gitignored) — never comm
 | [`backup_check.py`](./backup_check.py) | Staleness check (non-zero if stale) | same |
 | [`photo_purge.py`](./photo_purge.py) | Delete a client's photo **files then rows** (dry run default) | [`photos.md`](../docs/runbooks/photos.md) |
 | [`photo_sweep.py`](./photo_sweep.py) | Orphan files under `PHOTO_ROOT` with no DB row | same |
+| [`backfill_size_band.py`](./backfill_size_band.py) | Set `dog.size_band` from `weight_kg` (#171) | dry-run default; `--apply` to write |
 
 ## SQL recipes (`ops/sql/`)
 

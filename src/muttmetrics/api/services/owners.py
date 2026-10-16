@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from muttmetrics.api.schemas.owners import OwnerDogItem, OwnerProfile, PatchOwnerRequest
+from muttmetrics.api.services.visit_eligibility import visit_counts_clause
 from muttmetrics.models import Owner, Visit
 
 
@@ -54,7 +55,9 @@ def get_owner_profile(session: Session, *, owner_id: int) -> OwnerProfile:
     dogs = sorted(owner.dogs, key=lambda d: d.name.lower())
     # Live total across all dogs — derived owner.visit_count can lag / be null.
     visit_count = session.scalar(
-        select(func.count()).select_from(Visit).where(Visit.owner_id == owner_id)
+        select(func.count())
+        .select_from(Visit)
+        .where(Visit.owner_id == owner_id, visit_counts_clause())
     )
     profile = OwnerProfile.model_validate(owner)
     return profile.model_copy(

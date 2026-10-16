@@ -43,7 +43,7 @@ No database, no I/O. Callers pass plain values (later: loaded from breed/dog/vis
 
 | Factor | Rule |
 |--------|------|
-| **Size** | `s→0.85`, `m→1.00`, `l→1.15`, `xl→1.30`; missing → `1.00` |
+| **Size** | `s→0.85`, `m→1.00`, `l→1.15`, `xl→1.30`; missing → `1.00`. Band comes from `size_band_from_weight(weight_kg)` ([`priors/size.py`](../src/muttmetrics/priors/size.py)); falls back to stored `dog.size_band` only if weight is missing ([#171](https://github.com/BOYSABIO/muttmetrics/issues/171)). |
 | **Matting** | `1.0 + 0.10 × (matting_risk − 1)` → `1.0 … 1.4` |
 | **Interval / neglect** | If both `days_since_last` and `recommended_interval_days` (>0) are set: `overdue = days_since_last / recommended_interval_days`, then `interval_mult = clamp(0.90 + 0.20 × overdue, 0.90, 1.50)`. Else `1.0`. |
 | **Handling** | Missing → `1.0`. Else `clamp(1.0 + 0.05 × (handling_score − 3), 0.90, 1.20)`. |
@@ -82,6 +82,21 @@ Inputs: base `100`, matting `4`, size `l`, days `90`, interval `60`, handling `4
 | **p90** | **263** |
 
 Locked by `tests/unit/test_prior.py::test_walkthrough_example`.
+
+## Size bands from weight (#171)
+
+Salon bands from the 2026-09 Sebastian pricing conversation (same floors the groomer already uses). Inclusive tops so decimal kg have no gaps:
+
+| Band | Weight rule |
+|------|-------------|
+| `s` | `kg ≤ 10` |
+| `m` | `10 < kg ≤ 26` |
+| `l` | `26 < kg ≤ 45` |
+| `xl` | `kg > 45` |
+
+`xs` is reserved for tiny breeds but not used in the prior multipliers yet. Per-band **price** floors stay out of the repo (#60 / Icebox).
+
+**Size multiplier go-live:** 2026-10-16 (#171). Before that date, `compute_visit_predictions` passed stored `dog.size_band`, which was almost always `NULL`, so every P50/P90 used size multiplier `1.0`. **Do not rewrite** old `predicted_min_p50` / `predicted_min_p90` — they are the record of what was predicted at the time. Calibration (#25) can split before/after this date when comparing.
 
 ## Calibration — predicted vs actual (#25)
 
