@@ -1,0 +1,827 @@
+/*
+ * Modern retro theme: cream paper, ink outlines, hard offset shadows,
+ * a soft 70s serif for headings and a typewriter mono for labels and numbers.
+ *
+ * This file is one layer on top of index.css + App.css. It only restyles;
+ * layout stays in App.css. Delete its import in main.tsx to go back to the
+ * plain theme.
+ */
+
+/* Fonts are bundled (assets/fonts, SIL OFL 1.1), so the app needs no
+   internet for them: it works the same over Tailscale on the phone. */
+@font-face {
+  font-family: 'Fraunces Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./assets/fonts/fraunces-latin-full-normal.woff2') format('woff2-variations');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('./assets/fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('./assets/fonts/ibm-plex-mono-latin-600-normal.woff2') format('woff2');
+}
+
+/* ------------------------------------------------------------------ */
+/* Tokens                                                               */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --ink: #231d16;
+  --ink-muted: #6e6253;
+  --ink-faint: #a29684;
+  --paper: #f3ebdc;
+  --surface: #fffaf0;
+  --line: #e3d7c3; /* quiet dividers inside cards */
+  --line-strong: #231d16; /* outlines are ink */
+
+  --accent: #1f6b50; /* pine */
+  --accent-press: #17533e;
+  --accent-soft: #dcebdf;
+  --sun: #f2b33d; /* mustard: highlights, focus, "active" */
+  --sun-soft: #f9e3b0;
+  --clay: #cf5f38; /* terracotta: over capacity, warnings */
+  --clay-soft: #f6d3c2;
+  --danger: #b3361f;
+  --warn: #b84b1c;
+
+  --radius: 14px;
+  --radius-sm: 10px;
+  --edge: 2px solid var(--ink);
+  --pop-sm: 2px 2px 0 var(--ink);
+  --pop: 4px 4px 0 var(--ink);
+  --pop-lg: 6px 6px 0 var(--ink);
+  --shadow: var(--pop);
+  --ring: 0 0 0 3px var(--sun);
+
+  --display: 'Fraunces Variable', 'Fraunces', Georgia, serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Faint dot grid, like graph paper. */
+body {
+  background:
+    radial-gradient(rgba(35, 29, 22, 0.08) 1px, transparent 1.3px) 0 0 / 18px 18px,
+    var(--paper);
+}
+
+#root,
+#root:has(.app-capture) {
+  background: transparent;
+  box-shadow: none;
+  border-inline: none;
+}
+
+/* Desk: capture stays a phone column, framed like a card. */
+@media (min-width: 768px) {
+  #root:has(.app-capture) {
+    margin: 1.5rem auto;
+    min-height: calc(100svh - 3rem);
+    background: var(--surface);
+    border: var(--edge);
+    border-radius: var(--radius);
+    box-shadow: var(--pop-lg);
+  }
+}
+
+::selection {
+  background: var(--sun);
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------------ */
+/* Type                                                                 */
+/* ------------------------------------------------------------------ */
+
+h1,
+.brand-home,
+.app-header h1,
+.profile-hero-text h2,
+.this-week-empty-title,
+.headline-value,
+.timing-value,
+section.panel h2 {
+  font-family: var(--display);
+  font-variation-settings:
+    'SOFT' 100,
+    'WONK' 1;
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
+}
+
+.brand-home {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* With a business name, the dot moves to the small product line. */
+.brand-home:has(.brand-stack)::after {
+  display: none;
+}
+
+.brand-name {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.brand-sub {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  color: var(--ink-muted);
+}
+
+.brand-sub::before {
+  content: '';
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-right: 0.35rem;
+  border-radius: 50%;
+  background: var(--sun);
+  border: 1.5px solid var(--ink);
+  vertical-align: 0;
+}
+
+.brand-home::after {
+  content: '';
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-left: 0.3rem;
+  border-radius: 50%;
+  background: var(--sun);
+  border: 2px solid var(--ink);
+  vertical-align: 0.15em;
+}
+
+.app-header h1,
+.this-week-title-row h1 {
+  font-size: clamp(1.7rem, 5vw, 2.2rem);
+  font-weight: 700;
+}
+
+/* Labels read like an instrument panel. */
+.tw-label,
+.this-week .tw-label,
+.this-week-section-title,
+.profile-section,
+.profile-block .profile-section {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.step-meta,
+.headline-hint,
+.timing-hint,
+.util-nums,
+.eur-bar-n,
+.dir-card-meta {
+  color: var(--ink-muted);
+}
+
+.week-nav-range,
+.eur-bar-main,
+.eur-bar-label,
+.util-badge,
+.util-nums,
+.timer-readout {
+  font-family: var(--mono);
+}
+
+.timer-readout {
+  font-size: 3rem;
+  letter-spacing: -0.02em;
+}
+
+/* ------------------------------------------------------------------ */
+/* Header + nav                                                         */
+/* ------------------------------------------------------------------ */
+
+.app-header-home,
+.app-header-capture {
+  border-bottom: var(--edge);
+}
+
+.home-link {
+  border-radius: 999px;
+  color: var(--ink);
+}
+
+.home-link:hover:not(:disabled) {
+  background: var(--sun-soft);
+}
+
+.home-link[aria-current='page'] {
+  background: var(--sun);
+  box-shadow: inset 0 0 0 2px var(--ink);
+  border-radius: 999px;
+}
+
+.header-back {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Week switcher                                                        */
+/* ------------------------------------------------------------------ */
+
+.week-nav-pill {
+  border: var(--edge);
+  box-shadow: var(--pop-sm);
+}
+
+.week-nav-range {
+  line-height: calc(2.3rem - 4px);
+  border-inline: var(--edge);
+  font-family: var(--mono);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.week-nav-btn {
+  transition: background-color 0.12s;
+}
+
+.week-nav-btn:hover:not(:disabled) {
+  background: var(--sun-soft);
+}
+
+.week-nav-btn:active:not(:disabled) {
+  background: var(--sun);
+}
+
+.week-nav-btn:not(:disabled):hover svg {
+  transform: translateX(var(--nudge, 0));
+}
+
+.week-nav-btn svg {
+  transition: transform 0.15s var(--ease-out);
+}
+
+.week-nav-btn:first-child {
+  --nudge: -2px;
+}
+
+.week-nav-btn:last-child {
+  --nudge: 2px;
+}
+
+.week-nav-today {
+  color: var(--ink);
+  text-decoration-color: var(--sun);
+  text-decoration-thickness: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cards                                                                */
+/* ------------------------------------------------------------------ */
+
+.headline-card,
+.this-week-panel,
+.this-week-empty,
+.profile-block,
+.dir-card,
+.photo-picker {
+  background: var(--surface);
+  border: var(--edge);
+  border-radius: var(--radius);
+  box-shadow: var(--pop);
+}
+
+.dir-card {
+  transition:
+    transform 0.15s var(--ease-out),
+    box-shadow 0.15s var(--ease-out);
+}
+
+.dir-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--pop-lg);
+}
+
+.dir-card-main:hover:not(:disabled) {
+  background: var(--sun-soft);
+}
+
+.dir-card-action {
+  color: var(--accent);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* The number this whole screen exists for. */
+.this-week-headlines > :last-child {
+  background: var(--accent);
+  color: var(--surface);
+}
+
+.this-week-headlines > :last-child .tw-label {
+  color: var(--sun);
+}
+
+.this-week-headlines > :last-child .headline-value,
+.this-week-headlines > :last-child .headline-value-thin {
+  color: var(--surface);
+}
+
+.this-week-headlines > :last-child .headline-hint {
+  color: rgba(255, 250, 240, 0.75);
+}
+
+.headline-value {
+  font-weight: 700;
+}
+
+@media (min-width: 768px) {
+  .headline-value {
+    font-size: 2.4rem;
+  }
+}
+
+.timing-row {
+  border-top-color: var(--line);
+}
+
+.timing-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.this-week-empty {
+  background: var(--sun-soft);
+}
+
+@media (min-width: 768px) {
+  .profile-actions {
+    border-top: var(--edge);
+  }
+}
+
+/* Avatars get the same ink outline as everything else. */
+.dog-avatar-face {
+  box-shadow: inset 0 0 0 2px var(--ink);
+  background: var(--sun-soft);
+}
+
+/* ------------------------------------------------------------------ */
+/* Buttons: chunky, and they press down                                 */
+/* ------------------------------------------------------------------ */
+
+button:not([class]),
+button.primary,
+.actions > button:not(.ghost),
+.timer-controls button,
+.photo-button,
+.this-week-empty button {
+  border: var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--pop-sm);
+  font-weight: 700;
+  transition:
+    transform 0.1s var(--ease-out),
+    box-shadow 0.1s var(--ease-out),
+    background-color 0.15s;
+}
+
+/* Repeated with .actions so it beats the generic chunky rule above. */
+button.primary,
+.actions > button.primary {
+  background: var(--accent);
+  color: var(--surface);
+}
+
+button:not([class]):hover:not(:disabled),
+button.primary:hover:not(:disabled),
+.actions > button:not(.ghost):hover:not(:disabled),
+.timer-controls button:hover:not(:disabled),
+.photo-button:hover,
+.this-week-empty button:hover:not(:disabled) {
+  border-color: var(--ink);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+button.primary:hover:not(:disabled),
+.actions > button.primary:hover:not(:disabled) {
+  background: var(--accent-press);
+}
+
+button:not([class]):active:not(:disabled),
+button.primary:active:not(:disabled),
+.actions > button:not(.ghost):active:not(:disabled),
+.timer-controls button:active:not(:disabled),
+.photo-button:active,
+.this-week-empty button:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+button:disabled {
+  box-shadow: none;
+}
+
+button.ghost {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+button.ghost:hover:not(:disabled) {
+  background: transparent;
+  text-decoration-color: var(--sun);
+}
+
+button.linkish {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--sun);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+/* Floating "new visit" on the phone. */
+.fab {
+  border: var(--edge);
+  box-shadow: var(--pop);
+  background: var(--accent);
+  transition:
+    transform 0.2s var(--ease-spring),
+    box-shadow 0.15s;
+}
+
+.fab:hover:not(:disabled) {
+  transform: translate(-1px, -1px) rotate(90deg);
+  box-shadow: 5px 5px 0 var(--ink);
+  border-color: var(--ink);
+}
+
+.fab:active:not(:disabled) {
+  transform: translate(3px, 3px) rotate(90deg);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+/* ------------------------------------------------------------------ */
+/* Inputs + chips                                                       */
+/* ------------------------------------------------------------------ */
+
+input[type='search'],
+input[type='text'],
+input[type='date'],
+input[type='number'],
+input[type='url'],
+input[type='tel'],
+input[type='email'],
+.profile-block input:not([type='checkbox']):not([type='radio']),
+.profile-block select,
+.profile-block textarea,
+select,
+textarea {
+  border: var(--edge);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--ink);
+  box-shadow:
+    var(--ring),
+    var(--pop-sm);
+}
+
+select,
+.profile-block select {
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink) 50%),
+    linear-gradient(135deg, var(--ink) 50%, transparent 50%);
+}
+
+.chip {
+  border: var(--edge);
+  color: var(--ink);
+  background: var(--surface);
+  transition:
+    background-color 0.15s,
+    transform 0.1s var(--ease-out);
+}
+
+.chip:active {
+  transform: scale(0.97);
+}
+
+.chip-on {
+  background: var(--sun);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.chip input,
+.checkbox-row input {
+  accent-color: var(--ink);
+}
+
+.status {
+  background: var(--sun-soft);
+  color: var(--ink);
+  border: var(--edge);
+  border-radius: var(--radius-sm);
+}
+
+/* Checkboxes: drawn by us, so they match the ink-and-paper look. */
+input[type='checkbox'] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex-shrink: 0;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0;
+  border: var(--edge);
+  border-radius: 5px;
+  background: var(--surface) no-repeat center / 85%;
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+  cursor: pointer;
+  transition:
+    background-color 0.12s,
+    box-shadow 0.12s,
+    transform 0.15s var(--ease-spring);
+}
+
+input[type='checkbox']:hover {
+  background-color: var(--sun-soft);
+}
+
+input[type='checkbox']:checked {
+  background-color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%23fffaf0' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  animation: retro-check 0.25s var(--ease-spring);
+}
+
+input[type='checkbox']:active {
+  transform: translate(1px, 1px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+input[type='checkbox']:focus-visible {
+  outline: none;
+  box-shadow:
+    var(--ring),
+    1.5px 1.5px 0 var(--ink);
+}
+
+@keyframes retro-check {
+  0% {
+    transform: scale(0.8);
+  }
+  60% {
+    transform: scale(1.12);
+  }
+}
+
+/* Clients page: one ink-outlined panel instead of a stack of cards. */
+.dir-card-list.client-list {
+  border: var(--edge);
+  box-shadow: var(--pop);
+  background: var(--surface);
+  animation: retro-rise 0.45s var(--ease-out) both;
+}
+
+.client-list > li {
+  animation: none;
+}
+
+.client-list > li + li {
+  border-top: 1.5px dashed var(--line);
+}
+
+.dir-card.client-row,
+.dir-card.client-row:hover {
+  border: none;
+  box-shadow: none;
+  transform: none;
+}
+
+.dir-card.client-row {
+  transition: background-color 0.12s;
+}
+
+.dir-card.client-row:hover {
+  background: var(--sun-soft);
+}
+
+.client-row .linkish {
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+
+.client-row .linkish:hover:not(:disabled) {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--sun);
+}
+
+.client-last,
+.client-list-head {
+  font-family: var(--mono);
+}
+
+.client-list-head {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+}
+
+.client-last {
+  font-size: 0.78rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Charts                                                               */
+/* ------------------------------------------------------------------ */
+
+.eur-bar-track,
+.util-bars {
+  background: var(--surface);
+  border: var(--edge);
+}
+
+.eur-bar-track {
+  height: 1rem;
+}
+
+.eur-bar-track-thin {
+  border-style: dashed;
+  border-color: var(--ink-faint);
+}
+
+.eur-bar-fill {
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.util-bars {
+  height: 1.35rem;
+  border-radius: 999px;
+}
+
+.util-bar {
+  border-radius: 999px;
+}
+
+.util-bar-p90,
+.util-swatch-p90 {
+  background: var(--sun);
+  opacity: 1;
+}
+
+.util-bar-actual,
+.util-swatch-actual {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.util-buffer-mark,
+.util-swatch-cap {
+  background: var(--clay);
+}
+
+.util-buffer-mark {
+  width: 3px;
+}
+
+.util-badge-warn {
+  color: var(--surface);
+  background: var(--clay);
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+}
+
+.util-swatch {
+  border: 1.5px solid var(--ink);
+}
+
+/* ------------------------------------------------------------------ */
+/* Motion                                                               */
+/* ------------------------------------------------------------------ */
+
+@keyframes retro-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes retro-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes retro-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  70% {
+    transform: scale(1.03);
+  }
+}
+
+/* Cards rise in, one after another. */
+.headline-card,
+.this-week-panel,
+.this-week-empty,
+.profile-block,
+.dir-card-list > li,
+.dog-list > li {
+  animation: retro-rise 0.45s var(--ease-out) both;
+}
+
+.this-week-headlines > :nth-child(2) {
+  animation-delay: 0.05s;
+}
+.this-week-headlines > :nth-child(3) {
+  animation-delay: 0.1s;
+}
+.this-week-headlines > :nth-child(4) {
+  animation-delay: 0.15s;
+}
+.this-week-mid > :nth-child(1) {
+  animation-delay: 0.2s;
+}
+.this-week-mid > :nth-child(2) {
+  animation-delay: 0.25s;
+}
+.this-week-body > .this-week-panel {
+  animation-delay: 0.3s;
+}
+
+.dir-card-list > li:nth-child(2),
+.dog-list > li:nth-child(2) {
+  animation-delay: 0.04s;
+}
+.dir-card-list > li:nth-child(3),
+.dog-list > li:nth-child(3) {
+  animation-delay: 0.08s;
+}
+.dir-card-list > li:nth-child(4),
+.dog-list > li:nth-child(4) {
+  animation-delay: 0.12s;
+}
+.dir-card-list > li:nth-child(n + 5),
+.dog-list > li:nth-child(n + 5) {
+  animation-delay: 0.16s;
+}
+
+/* The hero number lands with a little bounce. */
+.this-week-headlines > :last-child .headline-value {
+  animation: retro-pop 0.5s var(--ease-spring) 0.25s both;
+}
+
+/* Bars draw from the left. */
+.eur-bar-fill,
+.util-bar {
+  transform-origin: left center;
+  animation: retro-grow 0.8s var(--ease-out) 0.35s both;
+}
+
+.util-bar-actual {
+  animation-delay: 0.5s;
+}
+
+/* Respect "reduce motion" in the OS settings. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.001ms !important;
+  }
+}

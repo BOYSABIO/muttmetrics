@@ -191,6 +191,16 @@ _P90_MISS_RATE = 1 / 10
 # Pivot: eligible V1–V8, V11, V12, V15 (n=11); pivoted true = V3 only → 1/11
 _PIVOT_RATE = 1 / 11
 
+# Overall week €/hour (glossary eligibility: priced + minutes > 0)
+#   Visits: V11,V12,V1,V2,V15,V3,V4,V5,V6,V8 (exclude V7 null price) → n=10
+#   minutes = 55+70+120+100+80+95+90+85+45+60 = 800
+#   rev ex  = 573 → 573 / (800/60) = 42.975
+#   rev inc = 633 → 633 / (800/60) = 47.475
+_WEEK_EUR_N = 10
+_WEEK_EUR_HOURS = 800 / 60
+_WEEK_EUR_EX = 573 / _WEEK_EUR_HOURS
+_WEEK_EUR_INC = 633 / _WEEK_EUR_HOURS
+
 # Utilization Tue 2026-03-03: V1, V2, V15
 #   planned P50 = 90+90+100 = 280
 #   planned P90 = 110+110+130 = 350 > BUFFER 240 → over_buffer
@@ -257,8 +267,8 @@ EXPECTED: dict[str, Any] = {
         "rate": _PIVOT_RATE,
         "show_rate": True,  # 11 >= MIN_N
     },
-    # --- week summary (#155): totals, always shown (no MIN_N) ---
-    # Eligible: V11,V12,V1,V2,V15,V3,V4,V5,V6,V7,V8 (exclude V9,V10)
+    # --- week summary (#155): totals always shown; €/hour rates use MIN_N ---
+    # Eligible totals: V11,V12,V1,V2,V15,V3,V4,V5,V6,V7,V8 (exclude V9,V10)
     # minutes = 840
     # revenue ex  = 48+52+70+65+58+60+60+55+50+55 = 573  (V7 NULL price skipped)
     # tips on priced = 5+0+15+0+10+10+0+10+10+0 = 60 → inc = 633
@@ -268,6 +278,10 @@ EXPECTED: dict[str, Any] = {
             "groomed_minutes": 840,
             "revenue_ex_tip": 573.0,
             "revenue_inc_tip": 633.0,
+            "eur_per_hour_n": _WEEK_EUR_N,
+            "eur_per_hour_ex_tip": _WEEK_EUR_EX,
+            "eur_per_hour_inc_tip": _WEEK_EUR_INC,
+            "show_eur_rate": True,  # 10 >= MIN_N
         },
         # empty week 2026-03-09: no row expected
     },

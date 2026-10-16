@@ -95,6 +95,8 @@ We publish **two** named rates so pricing power and take-home are never confused
 
 **Dashboard default (#158):** lead with **€/hour inc tip** (what the groomer took home). Always offer or show **ex tip** beside it (or in a secondary line) so goodwill tips cannot hide weak list pricing.
 
+**Week headline (not a condition cell):** overall €/hour for the week uses the same eligibility as above (priced + minutes > 0), without slicing by condition/shaved. Lives on `metric_week_summary` (`eur_per_hour_n`, `eur_per_hour_ex_tip`, `eur_per_hour_inc_tip`) with `MIN_N` in SQL. The SPA must display those packaged fields — no frontend divide.
+
 **ML / analysis default:** prefer **ex tip** (and tip as its own outcome or feature) so models do not treat generosity as “this condition pays well.”
 
 ### Overrun vs P50
@@ -145,7 +147,7 @@ We publish **two** named rates so pricing power and take-home are never confused
 
 | Name | Value | Used by |
 |------|-------|---------|
-| `MIN_N` | `5` | Metric views, `GET /metrics/week`, “This week” UI — one definition |
+| `MIN_N` | `5` | Metric views/functions + `metric_constants.min_n`; API exposes `min_n` on `/metrics/week`; UI must not hard-code |
 
 When code lands, this value should appear **once** (e.g. a SQL constant table, a migration-seeded setting, or a single module constant imported by API and tests). Amending the number means amending this table and that single implementation site.
 

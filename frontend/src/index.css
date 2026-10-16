@@ -1,20 +1,24 @@
 /* Capture SPA base — phone-first; desk widens at --bp-desk. */
 
 :root {
-  --ink: #1a2332;
-  --ink-muted: #5c6b7a;
-  --paper: #f4f6f8;
+  /* Theme: warm off-white paper, white cards, one green accent. */
+  --ink: #18211d;
+  --ink-muted: #5f6b66;
+  --ink-faint: #8a948f;
+  --paper: #f6f7f5;
   --surface: #ffffff;
-  --line: #d8dee6;
-  --line-strong: #b8c2ce;
+  --line: #e4e7e4;
+  --line-strong: #c9cfcb;
   --accent: #0f6e56;
-  --accent-press: #0a5441;
-  --accent-soft: #e6f4ef;
-  --danger: #9b2c2c;
-  --warn: #92400e;
-  --radius: 10px;
-  --shadow: 0 1px 2px rgba(26, 35, 50, 0.06);
-  --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --accent-press: #0b5946;
+  --accent-soft: #e9f4ef;
+  --danger: #b42318;
+  --warn: #b45309;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 2px rgba(16, 24, 20, 0.04), 0 1px 3px rgba(16, 24, 20, 0.05);
+  --ring: 0 0 0 3px rgba(15, 110, 86, 0.18);
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
   --phone-max: 28rem;
   --page-max: 72rem;
@@ -23,6 +27,7 @@
   color: var(--ink);
   background: var(--paper);
   font: 17px/1.45 var(--font);
+  font-variant-numeric: tabular-nums;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -59,6 +64,10 @@ body {
 
 /* Desk: use the viewport. Capture stays a phone column via :has(.app-capture). */
 @media (min-width: 768px) {
+  :root {
+    font-size: 16px;
+  }
+
   #root {
     max-width: none;
     margin: 0;

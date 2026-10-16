@@ -3,6 +3,7 @@ import './App.css'
 import { Directory } from './Directory'
 import { PhotoPicker } from './PhotoPicker'
 import { ThisWeek } from './ThisWeek'
+import { APP_NAME, BUSINESS_NAME } from './brand'
 
 type TimerStatus = 'idle' | 'running' | 'stopped'
 
@@ -632,7 +633,14 @@ function App() {
                 onClick={() => setArea('this_week')}
                 aria-current={area === 'this_week' ? 'page' : undefined}
               >
-                MuttMetrics
+                {BUSINESS_NAME === '' ? (
+                  APP_NAME
+                ) : (
+                  <span className="brand-stack">
+                    <span className="brand-name">{BUSINESS_NAME}</span>
+                    <span className="brand-sub">{APP_NAME}</span>
+                  </span>
+                )}
               </button>
               <nav className="home-links" aria-label="Main">
                 <button
@@ -643,6 +651,13 @@ function App() {
                 >
                   Clients
                 </button>
+                <button
+                  type="button"
+                  className="primary header-new-visit"
+                  onClick={openCapture}
+                >
+                  New visit
+                </button>
               </nav>
             </header>
             {message !== '' && (
@@ -650,13 +665,11 @@ function App() {
                 {message}
               </p>
             )}
-          </div>
-          {area === 'this_week' && <ThisWeek />}
-          {area === 'directory' && (
-            <div className="page page-wide">
+            {area === 'this_week' && <ThisWeek onLogVisit={openCapture} />}
+            {area === 'directory' && (
               <Directory onStartVisit={startVisitForDog} />
-            </div>
-          )}
+            )}
+          </div>
           <button
             type="button"
             className="fab"

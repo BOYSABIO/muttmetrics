@@ -10,6 +10,7 @@ from tests.fixtures.metric_week import (
     BUFFER_MINUTES,
     EMPTY_WEEK_START,
     EXPECTED,
+    MIN_N,
     WEEK_START,
 )
 
@@ -44,11 +45,21 @@ def test_metrics_week_full_fixture(
     assert data["week_end"] == str(WEEK_START + timedelta(days=6))
     assert data["buffer_minutes"] == BUFFER_MINUTES
 
+    assert data["min_n"] == MIN_N
+
     exp_sum = EXPECTED["week_summary"][WEEK_START]
     assert data["summary"]["visit_count"] == exp_sum["visit_count"]
     assert data["summary"]["groomed_minutes"] == exp_sum["groomed_minutes"]
     assert data["summary"]["revenue_ex_tip"] == pytest.approx(exp_sum["revenue_ex_tip"])
     assert data["summary"]["revenue_inc_tip"] == pytest.approx(exp_sum["revenue_inc_tip"])
+    assert data["summary"]["eur_per_hour_n"] == exp_sum["eur_per_hour_n"]
+    assert data["summary"]["eur_per_hour_ex_tip"]["reason"] is None
+    assert data["summary"]["eur_per_hour_ex_tip"]["value"] == pytest.approx(
+        exp_sum["eur_per_hour_ex_tip"]
+    )
+    assert data["summary"]["eur_per_hour_inc_tip"]["value"] == pytest.approx(
+        exp_sum["eur_per_hour_inc_tip"]
+    )
 
     by_cell = {(c["condition_score"], c["shaved_down"]): c for c in data["eur_per_hour"]}
     show = by_cell[(0, True)]
@@ -101,8 +112,12 @@ def test_metrics_week_empty_week_returns_200(
     )
     assert r.status_code == 200
     data = r.json()
+    assert data["min_n"] == MIN_N
     assert data["summary"]["visit_count"] == 0
     assert data["summary"]["groomed_minutes"] == 0
+    assert data["summary"]["eur_per_hour_n"] == 0
+    assert data["summary"]["eur_per_hour_inc_tip"]["value"] is None
+    assert data["summary"]["eur_per_hour_inc_tip"]["reason"] == "not_enough_data"
     assert data["eur_per_hour"] == []
     assert data["pivot"]["n"] == 0
     assert data["pivot"]["rate"]["value"] is None

@@ -16,7 +16,8 @@ def test_metric_week_summary_matches_fixture(db_session: Session, metric_week: d
             text(
                 """
             SELECT week_start, visit_count, groomed_minutes,
-                revenue_ex_tip, revenue_inc_tip
+                revenue_ex_tip, revenue_inc_tip,
+                eur_per_hour_n, eur_per_hour_ex_tip, eur_per_hour_inc_tip
             FROM metric_week_summary
             WHERE week_start = :week_start
             """
@@ -36,3 +37,6 @@ def test_metric_week_summary_matches_fixture(db_session: Session, metric_week: d
     assert row["groomed_minutes"] == expected["groomed_minutes"]
     assert float(row["revenue_ex_tip"]) == pytest.approx(expected["revenue_ex_tip"])
     assert float(row["revenue_inc_tip"]) == pytest.approx(expected["revenue_inc_tip"])
+    assert row["eur_per_hour_n"] == expected["eur_per_hour_n"]
+    assert float(row["eur_per_hour_ex_tip"]) == pytest.approx(expected["eur_per_hour_ex_tip"])
+    assert float(row["eur_per_hour_inc_tip"]) == pytest.approx(expected["eur_per_hour_inc_tip"])
