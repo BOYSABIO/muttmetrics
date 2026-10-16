@@ -109,6 +109,13 @@ async function readJson(res: Response): Promise<unknown> {
   return data
 }
 
+/** Server's own wording when there is one (e.g. a 422 detail). */
+function errorText(error: unknown): string {
+  if (error instanceof TypeError) return "can't reach server"
+  if (error instanceof Error) return error.message
+  return 'unknown error'
+}
+
 async function searchDogs(q: string): Promise<DogSearchItem[]> {
   const params = new URLSearchParams()
   if (q.trim() !== '') {
@@ -220,32 +227,64 @@ function loadDraft(): DraftVisit | null {
   return draft
 }
 
+/** Status line after restoring a draft. Each photo is checked on its own. */
+function resumeMessage(draft: DraftVisit): string {
+  const lost: string[] = []
+  if (draft.hadIntakeFile) lost.push('before')
+  if (draft.hadAfterFile) lost.push('after')
+  if (lost.length === 0) {
+    return `Resumed timer for ${draft.selectedDog.dog_name}`
+  }
+  const many = lost.length > 1
+  return (
+    `Resumed timer for ${draft.selectedDog.dog_name} — the ${lost.join(' and ')} ` +
+    `photo${many ? 's' : ''} could not be kept, please pick ${many ? 'them' : 'it'} again`
+  )
+}
+
 function App() {
+  // Read the saved draft once, before the first render, and start from it.
+  // (Restoring it in an effect rendered an empty screen first, then the draft.)
+  const [draft] = useState<DraftVisit | null>(() => loadDraft())
+
   const [ownerName, setOwnerName] = useState('')
   const [dogName, setDogName] = useState('')
-  const [visitDate, setVisitDate] = useState(todayISODate())
-  const [actualMinutes, setActualMinutes] = useState('')
-  const [conditionScore, setConditionScore] = useState('')
-  const [surprise, setSurprise] = useState('')
-  const [message, setMessage] = useState('')
+  const [visitDate, setVisitDate] = useState(draft?.visitDate ?? todayISODate())
+  const [actualMinutes, setActualMinutes] = useState(draft?.actualMinutes ?? '')
+  const [conditionScore, setConditionScore] = useState(draft?.conditionScore ?? '')
+  const [surprise, setSurprise] = useState(draft?.surprise ?? '')
+  const [message, setMessage] = useState(() =>
+    draft === null ? '' : resumeMessage(draft),
+  )
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<DogSearchItem[]>([])
-  const [screen, setScreen] = useState<Screen>('home')
+  const [screen, setScreen] = useState<Screen>(draft === null ? 'home' : 'capture')
   const [area, setArea] = useState<Area>('this_week')
-  const [mode, setMode] = useState<Mode>('search')
-  const [selectedDog, setSelectedDog] = useState<SelectedDog | null>(null)
-  const [visitStep, setVisitStep] = useState<VisitStep>(1)
+  const [mode, setMode] = useState<Mode>(draft === null ? 'search' : 'visit')
+  const [selectedDog, setSelectedDog] = useState<SelectedDog | null>(
+    draft?.selectedDog ?? null,
+  )
+  const [visitStep, setVisitStep] = useState<VisitStep>(draft?.visitStep ?? 1)
   const [intakeFile, setIntakeFile] = useState<File | null>(null)
   const [afterFile, setAfterFile] = useState<File | null>(null)
-  const [timerStatus, setTimerStatus] = useState<TimerStatus>('idle')
-  const [startedAt, setStartedAt] = useState<number | null>(null)
+  const [timerStatus, setTimerStatus] = useState<TimerStatus>(
+    draft?.timerStatus ?? 'idle',
+  )
+  const [startedAt, setStartedAt] = useState<number | null>(draft?.startedAt ?? null)
   const [tickNow, setTickNow] = useState(() => Date.now())
   const [services, setServices] = useState<ServiceListItem[]>([])
-  const [serviceId, setServiceId] = useState('')
-  const [finalPrice, setFinalPrice] = useState('')
-  const [tip, setTip] = useState('')
-  const [quotedPrice, setQuotedPrice] = useState('')
-  const [shavedDown, setShavedDown] = useState(false)
+  const [serviceId, setServiceId] = useState(draft?.serviceId ?? '')
+  const [finalPrice, setFinalPrice] = useState(draft?.finalPrice ?? '')
+  const [tip, setTip] = useState(draft?.tip ?? '')
+  const [quotedPrice, setQuotedPrice] = useState(draft?.quotedPrice ?? '')
+  const [shavedDown, setShavedDown] = useState(draft?.shavedDown ?? false)
+  // Owner created by a "new client" attempt whose dog step failed. A retry with
+  // the same owner name reuses it instead of creating the owner again.
+  const [pendingOwner, setPendingOwner] = useState<{
+    owner_id: number
+    name: string
+    typed: string
+  } | null>(null)
   // One in-flight guard for both write flows: a second tap while a request
   // is running creates duplicate visits / owners (#92 phone trial).
   const [isBusy, setIsBusy] = useState(false)
@@ -260,45 +299,6 @@ function App() {
     }, 4000)
     return () => window.clearTimeout(t)
   }, [screen, message])
-
-  useEffect(() => {
-    const draft = loadDraft()
-    if (draft === null) {
-      return
-    }
-
-    setSelectedDog(draft.selectedDog)
-    setVisitStep(draft.visitStep)
-    setTimerStatus(draft.timerStatus)
-    setStartedAt(draft.startedAt)
-    setActualMinutes(draft.actualMinutes)
-    setVisitDate(draft.visitDate)
-    setConditionScore(draft.conditionScore)
-    setSurprise(draft.surprise)
-    setServiceId(draft.serviceId ?? '')
-    setFinalPrice(draft.finalPrice ?? '')
-    setTip(draft.tip ?? '')
-    setQuotedPrice(draft.quotedPrice ?? '')
-    setShavedDown(draft.shavedDown ?? false)
-    setScreen('capture')
-    setMode('visit')
-    setTickNow(Date.now())
-
-    const lost: string[] = []
-    if (draft.hadIntakeFile) {
-      lost.push('before')
-      if (draft.hadAfterFile) {
-        lost.push('after')
-      }
-    }
-    setMessage(
-      lost.length === 0
-        ? `Resumed timer for ${draft.selectedDog.dog_name}`
-        : `Resumed timer for ${draft.selectedDog.dog_name} — the ${lost.join(' and ')} ` +
-            `photo${lost.length > 1 ? 's' : ''} could not be kept, please pick ` +
-            `${lost.length > 1 ? 'them' : 'it'} again`,
-    )
-  }, []) // empty deps = run once after first paint
 
   useEffect(() => {
     // No dog / not in visit wizard -> nothing to persist
@@ -505,7 +505,7 @@ function App() {
         `Saved ${selectedDog.dog_name} · ${selectedDog.owner_name}${photoNote}`,
       )
     } catch (error) {
-      setMessage(`Not saved — try again`)
+      setMessage(`Not saved: ${errorText(error)}. Try again.`)
       console.error(error)
     } finally {
       // Always re-enable, or one failed save locks the screen until a reload.
@@ -550,6 +550,32 @@ function App() {
     setMessage('')
   }
 
+  /**
+   * Close / Cancel visit. Never while a save is running (the draft would be
+   * cleared under it), and ask first if the timer is still going: one stray
+   * tap would otherwise end a groom.
+   */
+  function requestExitCapture(): void {
+    if (isBusy) return
+    if (
+      timerStatus === 'running' &&
+      !window.confirm('Discard this visit? The timer is still running.')
+    ) {
+      return
+    }
+    exitCapture()
+  }
+
+  function requestResetTimer(): void {
+    if (
+      timerStatus === 'running' &&
+      !window.confirm('Reset the timer? The time so far will be lost.')
+    ) {
+      return
+    }
+    resetTimer()
+  }
+
   function startVisitForDog(dog: SelectedDog): void {
     setSelectedDog(dog)
     resetVisitDetails()
@@ -567,26 +593,36 @@ function App() {
     if (isBusy) {
       return
     }
+    const ownerTyped = ownerName.trim()
+    const dogTyped = dogName.trim()
+    if (ownerTyped === '' || dogTyped === '') {
+      setMessage('Enter both an owner name and a dog name.')
+      return
+    }
 
     setIsBusy(true)
     setMessage('Creating...')
     try {
-      const ownerRes = await fetch('/api/owners', {
-        method: 'POST',
-        headers: apiHeaders(),
-        body: JSON.stringify({ name: ownerName }),
-      })
-      const owner = (await readJson(ownerRes)) as {
-        owner_id: number
-        name: string
+      let owner: { owner_id: number; name: string }
+      if (pendingOwner !== null && pendingOwner.typed === ownerTyped) {
+        // Owner already exists from the last attempt: only the dog is left.
+        owner = pendingOwner
+      } else {
+        const ownerRes = await fetch('/api/owners', {
+          method: 'POST',
+          headers: apiHeaders(),
+          body: JSON.stringify({ name: ownerTyped }),
+        })
+        owner = (await readJson(ownerRes)) as { owner_id: number; name: string }
+        setPendingOwner({ ...owner, typed: ownerTyped })
       }
-      
+
       const dogRes = await fetch('/api/dogs', {
         method: 'POST',
         headers: apiHeaders(),
         body: JSON.stringify({
           owner_id: owner.owner_id,
-          name: dogName,
+          name: dogTyped,
         }),
       })
       const dog = (await readJson(dogRes)) as {
@@ -608,8 +644,11 @@ function App() {
       resetTimer()
       setMode('visit')
       setMessage(`Ready: ${dog.name} · ${owner.name}`)
+      setPendingOwner(null)
+      setOwnerName('')
+      setDogName('')
     } catch (error) {
-      setMessage(`Could not create client — try again`)
+      setMessage(`Could not create client: ${errorText(error)}`)
       console.error(error)
     } finally {
       setIsBusy(false)
@@ -707,7 +746,8 @@ function App() {
             <button
               type="button"
               className="header-back"
-              onClick={exitCapture}
+              onClick={requestExitCapture}
+              disabled={isBusy}
             >
               Close
             </button>
@@ -812,6 +852,7 @@ function App() {
             <button
               type="button"
               className="ghost"
+              disabled={isBusy}
               onClick={() => {
                 setMode('search')
                 setMessage('')
@@ -872,7 +913,7 @@ function App() {
                 >
                   Stop
                 </button>
-                <button type="button" onClick={resetTimer}>
+                <button type="button" onClick={requestResetTimer}>
                   Reset
                 </button>
               </div>
@@ -905,6 +946,7 @@ function App() {
                   type="button"
                   className="ghost"
                   onClick={() => setVisitStep(1)}
+                  disabled={isBusy}
                 >
                   Back
                 </button>
@@ -1029,6 +1071,7 @@ function App() {
                   type="button"
                   className="ghost"
                   onClick={() => setVisitStep(2)}
+                  disabled={isBusy}
                 >
                   Back
                 </button>
@@ -1036,7 +1079,12 @@ function App() {
             </>
           )}
 
-          <button type="button" className="ghost" onClick={exitCapture}>
+          <button
+            type="button"
+            className="ghost"
+            onClick={requestExitCapture}
+            disabled={isBusy}
+          >
             Cancel visit
           </button>
         </section>

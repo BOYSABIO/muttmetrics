@@ -69,14 +69,13 @@ export function BreedPicker({
     return () => document.removeEventListener('mousedown', onDocPointer)
   }, [open])
 
-  useEffect(() => {
-    setActiveIndex(0)
-  }, [filter, open])
-
+  // The highlighted row resets whenever the list opens or the filter changes.
+  // Done in those handlers, not in an effect, so there's no extra render.
   function openList(): void {
     if (disabled) return
     setOpen(true)
     setFilter('')
+    setActiveIndex(0)
   }
 
   function pick(breedId: number): void {
@@ -120,6 +119,7 @@ export function BreedPicker({
           value={displayValue}
           onChange={(e) => {
             setFilter(e.target.value)
+            setActiveIndex(0)
             if (!open) setOpen(true)
           }}
           onFocus={openList}
