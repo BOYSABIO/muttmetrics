@@ -16,6 +16,7 @@ Every metric is a **range function** with inclusive dates. Same definition for a
 | €/hour by coat × shaved | `metric_eur_per_hour(p_start, p_end)` |
 | Pivot / overrun / P90 miss | `metric_pivot_rate` / `metric_overrun` / `metric_p90_miss` `(p_start, p_end)` |
 | Utilization per day | `metric_utilization(buffer_minutes, p_start, p_end)` |
+| Utilization per week (month view) | `metric_utilization_weeks(buffer_minutes, p_start, p_end)`, built on the per-day function |
 
 **Week** = Monday … Sunday (`p_end = p_start + 6`). **Month** = 1st … last day of that calendar month. **Overall history** ≈ a very wide range (ops recipes use `1900-01-01` … `9999-12-31`).
 
@@ -138,6 +139,8 @@ We publish **two** named rates so pricing power and take-home are never confused
 | **Pivot rate** | `count(pivoted is true) / n`; `NULL`/`false` count as not pivoted for the numerator; apply `MIN_N` |
 | **Note** | Visits without a stored prediction **still count** here (unlike overrun) |
 
+**Not captured yet (#178).** Nothing writes `visit.pivoted` today: capture sets booked = actual service until booking exists ([#44](https://github.com/BOYSABIO/muttmetrics/issues/44)), and the API does not derive it. So the rate would always read 0%, which is a fact the app doesn't have. The dashboard shows the tile as **"Not captured yet"** and ignores the number. The SQL function stays, so nothing changes once `pivoted` is written. Options for capturing it are noted on [#28](https://github.com/BOYSABIO/muttmetrics/issues/28).
+
 **Executable (#28 / #170):** `metric_pivot_rate(p_start, p_end)`, `metric_overrun(…)`, `metric_p90_miss(…)`. Ops peek: [`ops/sql/metric_prediction_health.sql`](../../ops/sql/metric_prediction_health.sql). Capture UI still sets booked = actual until groomer calendar booking exists ([#44](https://github.com/BOYSABIO/muttmetrics/issues/44)); multi-session jobs are [#165](https://github.com/BOYSABIO/muttmetrics/issues/165).
 
 ### Utilization per day
@@ -153,6 +156,17 @@ We publish **two** named rates so pricing power and take-home are never confused
 | **Missing predictions** | Count and surface those visits; **do not** treat missing P50 as 0 planned minutes |
 
 **Executable (#29 / #170):** `SELECT * FROM metric_utilization(240, p_start, p_end)`. Ops: [`ops/sql/metric_utilization.sql`](../../ops/sql/metric_utilization.sql). `over_buffer` = `planned_p90 > buffer_minutes`.
+
+### Utilization per week (month view)
+
+| Piece | Definition |
+|-------|------------|
+| **Grain** | One row per ISO week (Monday, `week_start`) that has visits in the range |
+| **Source** | Sums the rows of `metric_utilization` for that week, so a "day" is defined once |
+| **Clipping** | `range_start` / `range_end` are the week clipped to the requested range (April's first week reads Apr 1–5, not Mar 30–Apr 5) |
+| **Over the cap** | `over_buffer_days` = number of that week's days with `over_buffer`. A weekly total is **never** compared with the daily cap |
+
+**Executable (#178):** `SELECT * FROM metric_utilization_weeks(240, p_start, p_end)`. Returned by the API as `utilization_weeks`; the month view draws it without any arithmetic of its own.
 
 ## Named constants
 

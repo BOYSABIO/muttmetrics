@@ -113,3 +113,26 @@ def test_period_max_range_counts_days_inclusively(
         params={"start": str(start), "end": str(start + timedelta(days=366))},
     )
     assert too_long.status_code == 422
+
+
+def test_period_month_returns_weekly_rollup_from_sql(
+    client: TestClient, auth_headers: dict[str, str], metric_month: dict
+) -> None:
+    """#178: month mode reads weeks from the API, edge weeks clipped to the month."""
+    res = client.get(
+        "/metrics/period",
+        headers=auth_headers,
+        params={
+            "start": str(MONTH_START),
+            "end": str(MONTH_END),
+            "buffer_minutes": BUFFER_MINUTES,
+        },
+    )
+    assert res.status_code == 200
+    weeks = res.json()["utilization_weeks"]
+    assert [w["week_start"] for w in weeks] == [str(d) for d in EXPECTED["utilization_weeks"]]
+    first = weeks[0]
+    assert first["range_start"] == str(MONTH_START)  # not Mar 30
+    assert first["range_end"] == "2026-04-05"
+    assert first["over_buffer_days"] == 0
+    assert "over_buffer" not in first  # no weekly total vs daily cap

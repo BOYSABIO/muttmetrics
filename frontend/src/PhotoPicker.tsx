@@ -15,18 +15,20 @@ export function PhotoPicker({
     onPick,
     disabled = false,
 }: PhotoPickerProps) {
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+    const [blobUrl, setBlobUrl] = useState<string | null>(null)
+    // No file → no preview, derived during render rather than set in the effect.
+    const previewUrl = file === null ? null : blobUrl
 
     useEffect(() => {
-        if (file === null) {
-            setPreviewUrl(null)
-            return
-        }
+        if (file === null) return
 
         // A blob URL is a handle into browser memory - it must be released,
         // or every re-pick leaks the prev image.
         const url = URL.createObjectURL(file)
-        setPreviewUrl(url)
+        // Creating the URL is the external side effect and the cleanup below
+        // must revoke the same one, so this setState has to live in the effect.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setBlobUrl(url)
         return () => URL.revokeObjectURL(url)
     }, [file])
 

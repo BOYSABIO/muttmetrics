@@ -246,6 +246,18 @@ function errorMessage(error: unknown): string {
 }
 
 /** "Today", "3 days ago", "5 wk ago", then "Mar 2026". */
+/**
+ * Weight field → kg for the API. A German keypad types "7,5", and
+ * Number("7,5") is NaN, which JSON turns into null and silently wipes the
+ * weight. Accept the comma; refuse anything that still isn't a number.
+ */
+function parseWeightKg(raw: string): number | null | 'invalid' {
+  const cleaned = raw.trim().replace(',', '.')
+  if (cleaned === '') return null
+  const kg = Number(cleaned)
+  return Number.isFinite(kg) && kg > 0 ? kg : 'invalid'
+}
+
 function formatLastVisit(iso: string | null): string {
   if (iso === null) return '—'
   const [y, m, d] = iso.split('-').map(Number)
@@ -270,6 +282,11 @@ export function Directory({ onStartVisit }: DirectoryProps) {
   const [results, setResults] = useState<DogSearchItem[]>([])
   const [breeds, setBreeds] = useState<BreedListItem[]>([])
   const [isBusy, setIsBusy] = useState(false)
+  // Kept apart so the list never says "No clients yet" while it is loading
+  // or after a failed load.
+  const [listStatus, setListStatus] = useState<'loading' | 'ready' | 'error'>(
+    'loading',
+  )
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -319,12 +336,25 @@ export function Directory({ onStartVisit }: DirectoryProps) {
         const [dogs, breedRows] = await Promise.all([searchDogs(''), listBreeds()])
         setResults(dogs)
         setBreeds(breedRows)
+        setListStatus('ready')
       } catch (error) {
         console.error(error)
+        setListStatus('error')
         setMessage(errorMessage(error))
       }
     })()
   }, [])
+
+  /** Reload the client list, e.g. after a rename, so Back shows fresh rows. */
+  async function refreshList(): Promise<void> {
+    try {
+      setResults(await searchDogs(''))
+      setListStatus('ready')
+    } catch (error) {
+      console.error(error)
+      setListStatus('error')
+    }
+  }
 
   function fillDirFormFromProfile(profile: DogProfile): void {
     setDirName(profile.name)
@@ -415,6 +445,11 @@ export function Directory({ onStartVisit }: DirectoryProps) {
       setMessage('Dog name cannot be empty')
       return
     }
+    const weightKg = parseWeightKg(dirWeightKg)
+    if (weightKg === 'invalid') {
+      setMessage('Weight must be a number in kg, e.g. 7,5')
+      return
+    }
     setIsBusy(true)
     setMessage('Saving…')
     try {
@@ -426,7 +461,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
             ? null
             : Number(dirBreedSecondaryId),
         sex: dirSex.trim() === '' ? null : dirSex.trim(),
-        weight_kg: dirWeightKg.trim() === '' ? null : Number(dirWeightKg),
+        weight_kg: weightKg,
         coat_type: dirCoatType.trim() === '' ? null : dirCoatType.trim(),
         hair_or_fur: dirHairOrFur.trim() === '' ? null : dirHairOrFur.trim(),
         coat_density: dirCoatDensity.trim() === '' ? null : dirCoatDensity.trim(),
@@ -447,6 +482,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
       fillDirFormFromProfile(updated)
       setDirectoryProfile(updated)
       setMessage('Saved')
+      void refreshList()
     } catch (error) {
       console.error(error)
       setMessage(errorMessage(error))
@@ -479,6 +515,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
       fillOwnerFormFromProfile(updated)
       setDirectoryOwner(updated)
       setMessage('Saved')
+      void refreshList()
     } catch (error) {
       console.error(error)
       setMessage(errorMessage(error))
@@ -1037,7 +1074,24 @@ export function Directory({ onStartVisit }: DirectoryProps) {
             autoComplete="off"
           />
         </div>
-        {filtered.length === 0 ? (
+        {listStatus === 'loading' ? (
+          <p className="step-meta empty-state">Loading clients…</p>
+        ) : listStatus === 'error' && results.length === 0 ? (
+          <div className="empty-state">
+            <p className="step-meta">Could not load clients.</p>
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => {
+                setListStatus('loading')
+                setMessage('')
+                void refreshList()
+              }}
+            >
+              Try again
+            </button>
+          </div>
+        ) : filtered.length === 0 ? (
           <p className="step-meta empty-state">
             {results.length === 0
               ? 'No clients yet — tap + to start a visit.'

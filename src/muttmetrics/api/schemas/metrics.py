@@ -67,6 +67,26 @@ class UtilizationDayOut(BaseModel):
     over_buffer: bool
 
 
+class UtilizationWeekOut(BaseModel):
+    """One ISO week of ``metric_utilization_weeks`` (#178).
+
+    ``range_start`` / ``range_end`` are clipped to the requested period. There is
+    deliberately no weekly ``over_buffer``: the cap is per day, so a week reports
+    how many of its days went over.
+    """
+
+    week_start: date
+    range_start: date
+    range_end: date
+    day_count: int
+    n: int
+    planned_p50: int
+    planned_p90: int
+    actual_minutes: int
+    missing_prediction: int
+    over_buffer_days: int
+
+
 class MetricsPeriodBlock(BaseModel):
     """One inclusive date range of packaged metrics (no nested previous).
 
@@ -85,6 +105,7 @@ class MetricsPeriodBlock(BaseModel):
     overrun: OverrunOut
     p90_miss: P90MissOut
     utilization: list[UtilizationDayOut]
+    utilization_weeks: list[UtilizationWeekOut]
 
 
 # Alias — week UI and tests still import this name.
