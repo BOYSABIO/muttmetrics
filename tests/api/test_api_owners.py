@@ -76,9 +76,9 @@ def test_get_owner_profile_includes_dogs(client: TestClient, auth_headers: dict[
     assert body["owner_id"] == owner_id
     assert body["name"] == name
     assert body["phone"] == "+49 170 1111111"
-    assert "notes" in body
-    assert "locale" in body
-    assert "visit_count" in body  # derived present (null ok)
+    assert body["notes"] is None
+    assert body["locale"] == "de"  # server default
+    assert body["visit_count"] == 0  # computed on read (#171): no visits yet
     dog_ids = {d["dog_id"] for d in body["dogs"]}
     assert dog_a.json()["dog_id"] in dog_ids
     assert dog_b.json()["dog_id"] in dog_ids

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from tests.fixtures.metric_week import EXPECTED, WEEK_END, WEEK_START
 
 
-def test_metric_week_summary_matches_fixture(db_session: Session, metric_week: dict) -> None:
+def test_metric_summary_week_matches_fixture(db_session: Session, metric_week: dict) -> None:
     rows = (
         db_session.execute(
             text(

@@ -93,7 +93,9 @@ def search_dogs(
     )
     cleaned = (q or "").strip()
     if cleaned:
-        stmt = stmt.where(Dog.name.ilike(f"%{cleaned}%"))
+        # Escape LIKE wildcards so "%" or "_" in a search match literally (#180).
+        literal = cleaned.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        stmt = stmt.where(Dog.name.ilike(f"%{literal}%", escape="\\"))
 
     rows = session.execute(stmt).unique().all()
     return [

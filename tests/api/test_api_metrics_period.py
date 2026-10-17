@@ -136,3 +136,35 @@ def test_period_month_returns_weekly_rollup_from_sql(
     assert first["range_end"] == "2026-04-05"
     assert first["over_buffer_days"] == 0
     assert "over_buffer" not in first  # no weekly total vs daily cap
+
+
+# --- #180: the comparison window ---------------------------------------------
+
+
+def test_previous_window_for_a_custom_range_is_the_same_length_before_it(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    res = client.get(
+        "/metrics/period",
+        headers=auth_headers,
+        params={"start": "2026-03-03", "end": "2026-03-05"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["period"] == "custom"
+    assert data["previous_period"]["week_start"] == "2026-02-28"
+    assert data["previous_period"]["week_end"] == "2026-03-02"
+
+
+def test_previous_window_for_january_is_last_december(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    res = client.get(
+        "/metrics/period",
+        headers=auth_headers,
+        params={"start": "2026-01-01", "end": "2026-01-31"},
+    )
+    assert res.status_code == 200
+    prev = res.json()["previous_period"]
+    assert (prev["week_start"], prev["week_end"]) == ("2025-12-01", "2025-12-31")
+    assert prev["period"] == "month"

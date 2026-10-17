@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useId, useMemo, useRef, useState } from 'react'
 
 export type BreedOption = {
   breed_id: number
@@ -47,7 +47,6 @@ export function BreedPicker({
   const [open, setOpen] = useState(false)
   const [filter, setFilter] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
-  const rootRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const matches = useMemo(() => {
@@ -55,19 +54,6 @@ export function BreedPicker({
     if (q === '') return breeds
     return breeds.filter((b) => breedLabel(b).toLowerCase().includes(q))
   }, [breeds, filter])
-
-  useEffect(() => {
-    if (!open) return
-    function onDocPointer(e: MouseEvent): void {
-      if (rootRef.current === null) return
-      if (!rootRef.current.contains(e.target as Node)) {
-        setOpen(false)
-        setFilter('')
-      }
-    }
-    document.addEventListener('mousedown', onDocPointer)
-    return () => document.removeEventListener('mousedown', onDocPointer)
-  }, [open])
 
   // The highlighted row resets whenever the list opens or the filter changes.
   // Done in those handlers, not in an effect, so there's no extra render.
@@ -101,7 +87,6 @@ export function BreedPicker({
   return (
     <div
       className={open ? 'field breed-picker breed-picker-open' : 'field breed-picker'}
-      ref={rootRef}
     >
       <label htmlFor={inputId}>{label}</label>
       <div className="breed-picker-controls">
@@ -113,6 +98,11 @@ export function BreedPicker({
           aria-expanded={open}
           aria-controls={listId}
           aria-autocomplete="list"
+          aria-activedescendant={
+            open && matches[activeIndex] !== undefined
+              ? `${listId}-${activeIndex}`
+              : undefined
+          }
           autoComplete="off"
           disabled={disabled}
           placeholder="Type to search… (optional)"
@@ -123,6 +113,13 @@ export function BreedPicker({
             if (!open) setOpen(true)
           }}
           onFocus={openList}
+          // Close as soon as focus leaves the input: a click elsewhere, or Tab
+          // (a document mousedown listener missed Tab). Options never take
+          // focus, so there is nothing inside the list to stay open for.
+          onBlur={() => {
+            setOpen(false)
+            setFilter('')
+          }}
           onClick={openList}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
@@ -172,19 +169,26 @@ export function BreedPicker({
             </li>
           ) : (
             matches.map((b, i) => (
-              <li key={b.breed_id} role="option" aria-selected={i === activeIndex}>
-                <button
-                  type="button"
-                  className={
-                    i === activeIndex
-                      ? 'breed-picker-option breed-picker-option-active'
-                      : 'breed-picker-option'
-                  }
-                  onMouseEnter={() => setActiveIndex(i)}
-                  onClick={() => pick(b.breed_id)}
-                >
-                  {breedLabel(b)}
-                </button>
+              // An option is not a button: focus stays in the input (the
+              // combobox pattern), and mousedown + preventDefault picks before
+              // the input's blur could close the list.
+              <li
+                key={b.breed_id}
+                id={`${listId}-${i}`}
+                role="option"
+                aria-selected={i === activeIndex}
+                className={
+                  i === activeIndex
+                    ? 'breed-picker-option breed-picker-option-active'
+                    : 'breed-picker-option'
+                }
+                onMouseEnter={() => setActiveIndex(i)}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  pick(b.breed_id)
+                }}
+              >
+                {breedLabel(b)}
               </li>
             ))
           )}

@@ -1,7 +1,8 @@
-"""No-DB sanity checks for the synthetic metric-week fixture (#16).
+"""Sanity checks for the synthetic metric-week fixture itself (#16).
 
-These assert that EXPECTED matches arithmetic from VISITS — not that SQL
-views are correct (that comes with #27–#29).
+These assert that EXPECTED matches arithmetic from VISITS and that the loader
+writes those rows. They say nothing about the SQL functions; the other files
+in tests/db/ check those against EXPECTED.
 """
 
 from __future__ import annotations
