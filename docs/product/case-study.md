@@ -66,8 +66,8 @@ What they wanted was something that fits into the work without friction, keeps t
 
 ## Where it stands
 
-- **Capture is running on real grooms**, and rows are accumulating.
-- **Current work:** enriching the captured rows and finishing the capture surface (photo upload, scheduled backups) **until the groomer can capture completely on their own.**
+- **Capture is running on real grooms**, with photos, backups and a timer that survives a killed tab.
+- **Current work:** M5 gave the groomer a dashboard of his own numbers (grooms, time, take-home, €/hour by coat, day load). It's the payoff for logging. The open question is whether having it actually makes him log more, so a before/after measurement is running ([#159](https://github.com/BOYSABIO/muttmetrics/issues/159)).
 - **Next:** duration ranges from the captured data, then turning those ranges into day-planning decisions. The question becomes *"can I take one more dog today?"* answered against summed P90s instead of a fixed daily cap.
 
 ## Direction

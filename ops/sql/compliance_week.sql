@@ -3,7 +3,7 @@
 -- Compliance % = 100.0 * completed_visits / grooms_reported  (skip if denom = 0).
 --
 -- Week = Mon–Sun on visit_date (salon calendar). Edit the two dates below.
--- Example first formal week: 2026-10-06 .. 2026-10-12
+-- Example first formal week: 2026-10-05 .. 2026-10-11 (Mon-Sun)
 --
 -- Run (encoding-safe — never pipe SQL text through PowerShell):
 --   docker compose cp .\ops\sql\compliance_week.sql db:/tmp/q.sql
@@ -13,8 +13,8 @@
 -- 0) Set the week (edit these)
 -- ---------------------------------------------------------------------------
 -- Tip: keep them as literals in each query below, or use a single session:
---   \set week_start '\'2026-10-06\''
---   \set week_end   '\'2026-10-12\''
+--   \set week_start '\'2026-10-05\''
+--   \set week_end   '\'2026-10-11\''
 -- psql variables are optional; plain dates are fine for the extension.
 
 -- ---------------------------------------------------------------------------
@@ -24,8 +24,8 @@
 -- Exclude cancelled / no_show — those are not "groom happened + should log".
 SELECT COUNT(*) AS completed_visits
 FROM visit
-WHERE visit_date >= DATE '2026-10-06'
-  AND visit_date <= DATE '2026-10-12'
+WHERE visit_date >= DATE '2026-10-05'
+  AND visit_date <= DATE '2026-10-11'
   AND (status IS NULL OR status = 'completed');
 
 -- ---------------------------------------------------------------------------
@@ -41,8 +41,8 @@ SELECT
 FROM visit v
 JOIN dog d ON d.dog_id = v.dog_id
 JOIN owner o ON o.owner_id = v.owner_id
-WHERE v.visit_date >= DATE '2026-10-06'
-  AND v.visit_date <= DATE '2026-10-12'
+WHERE v.visit_date >= DATE '2026-10-05'
+  AND v.visit_date <= DATE '2026-10-11'
   AND (v.status IS NULL OR v.status = 'completed')
 ORDER BY v.visit_date, v.visit_id;
 

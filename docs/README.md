@@ -18,7 +18,7 @@ Everything written about the project, grouped by what you're trying to do. **Tas
 | [ADR-000 — Stack](architecture/adr/000-stack.md) | Why Python/Postgres/FastAPI, and the capture UI path |
 | [ADR-001 — Derived fields](architecture/adr/001-derived-fields.md) | Hand-entered vs derived vs system-computed columns |
 | [ADR-002 — Photo storage](architecture/adr/002-photo-storage.md) | Bytes on disk, metadata in Postgres |
-| [ADR-003 — Metric views](architecture/adr/003-metric-views.md) | Metric formulas in Postgres views/functions; `MIN_N` in SQL (#155) |
+| [ADR-003 — Metric definitions](architecture/adr/003-metric-views.md) | Metric formulas as Postgres range functions, one definition per metric; `MIN_N` in SQL (#155, #170) |
 | [Rules prior (P50/P90)](prior.md) | Duration formula (#23), persist on create (#24), calibration SQL (#25), how we fill data (#127) |
 | [Ops layout](architecture/ops-layout.md) | Why maintainer tooling lives under `ops/` (#125) |
 
@@ -45,4 +45,4 @@ Everything written about the project, grouped by what you're trying to do. **Tas
 
 - **File names:** lowercase-kebab (`groomer-trial.md`). ADRs are numbered and never renumbered.
 - **ADRs and the vision get amended, not rewritten**: history stays visible. Runbooks get rewritten so they never teach a dead path.
-- **Maintainer's local notes** (learnings, per-issue notes, meetings) live in `docs/notes/`, which is gitignored.
+- **Maintainer's local notes** live in `docs/notes/`, which is gitignored: learnings, per-issue notes, meetings, and the private records the runbooks point to (`compliance-weeks.md`, `backup-drills.md`). Anything with real volumes, money or client names goes there, never in git or an issue comment.
