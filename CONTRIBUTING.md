@@ -4,7 +4,7 @@ This is a learning project built production-style: small issues, migrations for 
 
 ## Workflow
 
-1. Pick an open issue under the current milestone (M3 capture after schema).
+1. Pick an open issue under the current milestone (see [milestones](https://github.com/BOYSABIO/muttmetrics/milestones)).
 2. Branch from `main`: `feat/<issue-number>-short-slug` or `chore/...`.
 3. Keep PRs small enough to review in one sitting.
 4. Do not commit `.env`, real client CSVs, or DB dumps.
@@ -203,11 +203,18 @@ uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --por
 | `http://127.0.0.1:8000/health` | Ops / smoke | Liveness JSON — **public**, no API key, no Postgres |
 | `http://127.0.0.1:8000/ping` | maintainer smoke | Auth check — requires `X-API-Key` |
 | `http://127.0.0.1:8000/owners` | Onboarding | `POST` create-or-get owner by name |
+| `http://127.0.0.1:8000/owners/{id}` | Directory | `GET` owner profile; `PATCH` safe fields ([#131](https://github.com/BOYSABIO/muttmetrics/issues/131), [#132](https://github.com/BOYSABIO/muttmetrics/issues/132)) |
 | `http://127.0.0.1:8000/dogs` | Onboarding / directory | `POST` create-or-get; `GET` list/search (`?q=`) with `owner_name` |
+| `http://127.0.0.1:8000/dogs/{id}` | Directory | `GET` dog profile; `PATCH` safe fields (writes `size_band` from weight, [#171](https://github.com/BOYSABIO/muttmetrics/issues/171)) |
+| `http://127.0.0.1:8000/dogs/{id}/duration-range` | maintainer | `GET` preview of the P50/P90 estimate without creating a visit ([#26](https://github.com/BOYSABIO/muttmetrics/issues/26)); not used by the SPA yet |
+| `http://127.0.0.1:8000/dogs/{id}/photos` | Directory | `POST` profile photo upload |
+| `http://127.0.0.1:8000/breeds` | Directory | `GET` breed catalog for the breed picker ([#151](https://github.com/BOYSABIO/muttmetrics/issues/151)) |
 | `http://127.0.0.1:8000/services` | Capture | `GET` seeded package catalog for the SPA picker ([#110](https://github.com/BOYSABIO/muttmetrics/issues/110)) |
 | `http://127.0.0.1:8000/visits` | Capture | `POST` create visit — requires existing dog/owner ids, and the dog must belong to that owner |
 | `http://127.0.0.1:8000/visits/{id}/photos` | Capture | `POST` multipart photo upload; `GET` metadata list ([#30](https://github.com/BOYSABIO/muttmetrics/issues/30)) |
 | `http://127.0.0.1:8000/photos/{id}` | Capture | `GET` the JPEG bytes (API key required — an `<img src>` cannot fetch it) |
+| `http://127.0.0.1:8000/metrics/week` | Dashboard | `GET` one Mon–Sun week + `previous_week` ([#156](https://github.com/BOYSABIO/muttmetrics/issues/156)) |
+| `http://127.0.0.1:8000/metrics/period` | Dashboard | `GET` any inclusive range up to 366 days, e.g. a calendar month ([#170](https://github.com/BOYSABIO/muttmetrics/issues/170)) |
 | `http://127.0.0.1:8000/docs` | maintainer | OpenAPI test console — **not** the groomer’s UI |
 | `http://127.0.0.1:5173` (dev) / `:5174` (preview) | groomer | React capture SPA in `frontend/` — **only** salon UI ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)–[#72](https://github.com/BOYSABIO/muttmetrics/issues/72)) |
 
@@ -231,8 +238,8 @@ X-API-Key: <same value as API_KEY in .env>
 | Header `X-API-Key` | What callers send |
 | `require_api_key` in `src/muttmetrics/api/deps.py` | FastAPI dependency — 401 if missing/wrong |
 | `GET /health` | Stays **public** (no key) |
-| `GET /ping`, `GET /dogs`, `GET /services`, `POST /owners`, `POST /dogs`, `POST /visits` | Protected |
-| `POST /visits/{id}/photos`, `GET /visits/{id}/photos`, `GET /photos/{id}` | Protected — these serve client photos |
+| Every other route: `/ping`, owners, dogs, breeds, services, visits, metrics | Protected |
+| Photo routes (`/visits/{id}/photos`, `/dogs/{id}/photos`, `/photos/{id}`) | Protected — these serve client photos |
 
 All write paths require `X-API-Key`. The unauthenticated Jinja `/capture` form is gone ([#86](https://github.com/BOYSABIO/muttmetrics/issues/86)).
 
@@ -245,7 +252,7 @@ curl.exe -s -w "`nHTTP %{http_code}`n" http://127.0.0.1:8000/health
 curl.exe -s -w "`nHTTP %{http_code}`n" -H "X-API-Key: dev-change-me" http://127.0.0.1:8000/ping
 ```
 
-Never commit real `.env` values. CI/tests set `API_KEY` via monkeypatch.
+Never commit real `.env` values. CI sets `API_KEY` as an environment variable in `.github/workflows/ci.yml`; inside tests, the `client` fixture sets it with `monkeypatch`.
 
 ### React capture SPA (#69–#72)
 
@@ -298,13 +305,13 @@ npm run dev
 | `GET` / `PATCH /dogs/{id}` | Dog profile read / safe enrichment (#131, #132) |
 | `GET` / `PATCH /owners/{id}` | Owner profile read / safe enrichment (#131, #132) |
 | Visit step 2 timer | Client-only; fills `actual_minutes` (floor); editable override. In-progress visit (dog + wizard + timer) persists in `localStorage` (`muttmetrics.draftVisit`) so a phone tab kill / reload can resume ([#88](https://github.com/BOYSABIO/muttmetrics/issues/88)). Cleared on save / cancel / reset. |
-| `frontend/.env` | `VITE_API_KEY` only — gitignored; never commit |
+| `frontend/.env` | `VITE_API_KEY` (required) and `VITE_BUSINESS_NAME` (optional header name) — gitignored; never commit. Typed in `src/vite-env.d.ts` |
 | `npm run build` | Production bundle to `frontend/dist/` (`tsc -b` type-checks first) |
 | `npm run preview` | Serves `dist/` + the same `/api` proxy — what the groomer opens |
 
 PATCH sends only the fields you change. An explicit `null` clears an optional field (e.g. `phone`), but `null` on a required column (e.g. owner `locale`) is **422** (#177). Dog `weight_kg` must be > 0 and ≤ 150, which catches grams typed into the kg field. The Directory accepts a comma (`7,5` → 7.5) and refuses to save anything that still isn't a number, instead of sending `null` and wiping the weight (#178).
 
-**Auth note:** `VITE_API_KEY` is baked into `frontend/dist/` at **build** time and is readable by anyone who loads the page — a gate against strangers on a private URL, never a secret. Change it → rebuild. Harden before exposing beyond Tailscale. Always-on OptiPlex ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) and cloud ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)) are iceboxed; desktop host for now.
+**Auth note:** `VITE_API_KEY` is baked into `frontend/dist/` at **build** time and is readable by anyone who loads the page — a gate against strangers on a private URL, never a secret. Rules and the upgrade path: [`privacy.md` → API key in the browser](./docs/architecture/privacy.md#api-key-in-the-browser). Always-on OptiPlex ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) and cloud ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)) are iceboxed; desktop host for now.
 
 **Phone trial (#82):** the dev server stays on `127.0.0.1`; the groomer gets `npm run build && npm run preview` on a fixed `:5174`, reachable over Tailscale only on that one port. Full procedure: [`docs/runbooks/groomer-trial.md`](./docs/runbooks/groomer-trial.md).
 
@@ -333,7 +340,7 @@ Creates one `visit` row after a groom. Prefer registering via `#21` endpoints ab
 
 **Required JSON fields:** `dog_id`, `owner_id`, `visit_date`, `actual_minutes` (> 0).  
 **SPA also requires for completed saves:** `actual_service_id`, `final_price` ([#110](https://github.com/BOYSABIO/muttmetrics/issues/110)).  
-**Optional:** `condition_score` (0–5; **0 = worst coat … 5 = best**), `booked_service_id`, `quoted_price`, `tip`, photo URL lists (deprecated), `what_surprised_me`, `status`, `shaved_down` (when wired).
+**Optional:** `condition_score` (0–5; **0 = worst coat … 5 = best**), `booked_service_id`, `quoted_price`, `tip`, `what_surprised_me`, `status`, `shaved_down` (when wired).
 
 | Status | Meaning |
 |--------|---------|

@@ -57,7 +57,7 @@ This matches the compliance numerator so “completed visits” means the same t
 
 ## Small-sample rule
 
-**Constant:** `MIN_N = 5` (named once; views, API, and dashboard must use this name/value — no scattered literals).
+**Constant:** `MIN_N = 5` (named once in `metric_constants`; SQL functions, API, and dashboard must use this name/value — no scattered literals).
 
 ### What is a “cell”?
 
@@ -151,8 +151,8 @@ We publish **two** named rates so pricing power and take-home are never confused
 | **Planned minutes** | `sum(predicted_min_p50)` over visits that have P50 — **not** booking-system “booked” minutes (there is no booking product yet) |
 | **Planned worst case** | `sum(predicted_min_p90)` where P90 is present |
 | **Actual minutes** | `sum(actual_minutes)` where present |
-| **Closing buffer** | Parameter `buffer_minutes` (e.g. minutes available before close) — **not** a hardcoded literal in the view; exposed as a SQL function argument ([#155](https://github.com/BOYSABIO/muttmetrics/issues/155) / [#29](https://github.com/BOYSABIO/muttmetrics/issues/29)) |
-| **Over buffer** | e.g. planned worst case (or chosen planned measure) **>** `buffer_minutes` — exact flag defined when the function ships; must match the fixture |
+| **Closing buffer** | Parameter `buffer_minutes` (e.g. minutes available before close) — **not** a hardcoded literal; it is the function's first argument ([#155](https://github.com/BOYSABIO/muttmetrics/issues/155) / [#29](https://github.com/BOYSABIO/muttmetrics/issues/29)) |
+| **Over buffer** | `planned_p90 > buffer_minutes` (the planned worst case for the day exceeds the buffer); pinned by the fixture |
 | **Missing predictions** | Count and surface those visits; **do not** treat missing P50 as 0 planned minutes |
 
 **Executable (#29 / #170):** `SELECT * FROM metric_utilization(240, p_start, p_end)`. Ops: [`ops/sql/metric_utilization.sql`](../../ops/sql/metric_utilization.sql). `over_buffer` = `planned_p90 > buffer_minutes`.
@@ -195,7 +195,7 @@ When code lands, this value should appear **once** (e.g. a SQL constant table, a
 ## Related
 
 - Path / exit: [#159](https://github.com/BOYSABIO/muttmetrics/issues/159)
-- Views: [#155](https://github.com/BOYSABIO/muttmetrics/issues/155) · fixtures: [#16](https://github.com/BOYSABIO/muttmetrics/issues/16)
+- Range functions: [#155](https://github.com/BOYSABIO/muttmetrics/issues/155) · fixtures: [#16](https://github.com/BOYSABIO/muttmetrics/issues/16)
 - Metrics: [#27](https://github.com/BOYSABIO/muttmetrics/issues/27) €/hour · [#28](https://github.com/BOYSABIO/muttmetrics/issues/28) pivot/overrun · [#29](https://github.com/BOYSABIO/muttmetrics/issues/29) utilization
 - Capture health: [`compliance.md`](./compliance.md) · priors/calibration: [`prior.md`](../prior.md)
 - Encoding-safe SQL: [#154](https://github.com/BOYSABIO/muttmetrics/issues/154)

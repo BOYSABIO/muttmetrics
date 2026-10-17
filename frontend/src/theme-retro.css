@@ -179,7 +179,6 @@ section.panel h2 {
 /* Labels read like an instrument panel. */
 .tw-label,
 .this-week .tw-label,
-.this-week-section-title,
 .profile-section,
 .profile-block .profile-section {
   font-family: var(--mono);
@@ -354,10 +353,6 @@ section.panel h2 {
 .dir-card:hover {
   transform: translate(-2px, -2px);
   box-shadow: var(--pop-lg);
-}
-
-.dir-card-main:hover:not(:disabled) {
-  background: var(--sun-soft);
 }
 
 .dir-card-action {
@@ -792,8 +787,7 @@ input[type='checkbox']:focus-visible {
 .this-week-panel,
 .this-week-empty,
 .profile-block,
-.dir-card-list > li,
-.dog-list > li {
+.dir-card-list > li {
   animation: retro-rise 0.45s var(--ease-out) both;
 }
 
@@ -816,20 +810,16 @@ input[type='checkbox']:focus-visible {
   animation-delay: 0.3s;
 }
 
-.dir-card-list > li:nth-child(2),
-.dog-list > li:nth-child(2) {
+.dir-card-list > li:nth-child(2) {
   animation-delay: 0.04s;
 }
-.dir-card-list > li:nth-child(3),
-.dog-list > li:nth-child(3) {
+.dir-card-list > li:nth-child(3) {
   animation-delay: 0.08s;
 }
-.dir-card-list > li:nth-child(4),
-.dog-list > li:nth-child(4) {
+.dir-card-list > li:nth-child(4) {
   animation-delay: 0.12s;
 }
-.dir-card-list > li:nth-child(n + 5),
-.dog-list > li:nth-child(n + 5) {
+.dir-card-list > li:nth-child(n + 5) {
   animation-delay: 0.16s;
 }
 

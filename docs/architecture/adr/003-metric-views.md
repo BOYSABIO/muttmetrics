@@ -39,7 +39,7 @@ We chose **A** so the groomer’s weekly numbers, the maintainer peeking in Post
 
 - Metric issues (#27–#29) **cite the glossary** for meaning and **select from these objects** for numbers. They do not embed a second formula in Python except to call the function.
 - API: `GET /metrics/period?start=&end=` is the general reader; `GET /metrics/week` is a thin wrapper that sets the Mon–Sun range and still returns `previous_week`.
-- Ops recipes call `FROM metric_summary(…)` (etc.) with an explicit range — see [`analytics.md`](../../runbooks/analytics.md).
+- Ops recipes in `ops/sql/metric_*.sql` (and section 0 of `calibration_error.sql`) select `FROM metric_eur_per_hour(…)`, `metric_pivot_rate(…)`, `metric_overrun(…)`, `metric_p90_miss(…)` or `metric_utilization(…)` with an explicit range, so they never restate a formula. `metric_summary` is read by the API; run it the same way for an ad hoc total. See [`analytics.md`](../../runbooks/analytics.md).
 - **`DROP VIEW` / `DROP FUNCTION` in `upgrade()` will trip the migration-safety guard** ([#89](https://github.com/BOYSABIO/muttmetrics/issues/89)). That is expected when replacing read models (no table data lost). Acknowledge in the migration header — **not** weaken the guard.
 - Alembic round-trip (`downgrade -1` then `upgrade head`) must recreate the objects cleanly.
 - Privacy unchanged: definitions are public; real salon volumes stay in `docs/notes/` ([`analytics.md`](../../runbooks/analytics.md)).

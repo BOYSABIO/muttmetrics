@@ -121,6 +121,16 @@ Telling a client the deletion is instant and total would be false. What is true 
 
 Photos are served only through the API and require the shared `X-API-Key`. The key is embedded in the built SPA, so it is a gate against strangers on the network, **not** a secret from anyone who can open the app — which is why the capture UI is not exposed beyond the tailnet ([#82](https://github.com/BOYSABIO/muttmetrics/issues/82)) and why a public deployment needs a real auth decision ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)).
 
+### API key in the browser
+
+`VITE_API_KEY` is compiled into the JavaScript bundle at build time (`npm run build` → `frontend/dist/`). Anyone who can open the app can read it in the browser's dev tools. That is acceptable **only** because the app is reachable over Tailscale alone. Rules:
+
+- **Never host `dist/` publicly** (a static host, a public tunnel, a shared drive). The key and the API behind it go with it.
+- **Don't reuse the key** anywhere else. It is a door code for this API, not a password.
+- **Rotating it means a rebuild:** change `API_KEY` in `.env` and `VITE_API_KEY` in `frontend/.env`, restart the API, then `npm run build` and restart preview. Phones pick up the new bundle on reload.
+
+**Upgrade path (not done yet):** have the Vite dev/preview proxy add the `X-API-Key` header server-side, so the key never reaches the browser. Do it before anything outside the tailnet can reach the app ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)).
+
 ## Public-site follow-up
 
 If the salon’s public website or any salon-owned property references or feeds this system, the salon's Datenschutzerklärung must eventually mention:

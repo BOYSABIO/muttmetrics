@@ -1,4 +1,4 @@
--- Predicted vs actual duration error (#25), reconciled with #28 views (ADR-003).
+-- Predicted vs actual duration error (#25), reconciled with the #28 range functions (ADR-003).
 --
 -- Groomer-facing totals live in metric_overrun / metric_p90_miss
 -- (docs/runbooks/analytics.md). Breed / condition slices below keep the SAME
@@ -10,9 +10,9 @@
 --   docker compose exec -T db psql -U muttmetrics -d muttmetrics -f /tmp/q.sql
 
 -- ---------------------------------------------------------------------------
--- 0) Single source check — overall rows from the metric views (#28)
+-- 0) Single source check — overall rows from the metric functions (#28)
 --    avg_overrun_minutes ≡ avg_error_p50; miss_rate ≡ 1 - p90_hit_rate
---    (when both use the same prediction filters; views require P50 or P90 alone)
+--    (when both use the same prediction filters; the functions require P50 or P90 alone)
 -- ---------------------------------------------------------------------------
 SELECT
   o.n AS overrun_n,
@@ -75,7 +75,7 @@ ORDER BY v.condition_score NULLS LAST;
 
 -- ---------------------------------------------------------------------------
 -- 3) Overall from visits (same filters as historical recipe)
---     Prefer section 0 for the ADR-003 view numbers; this block is the
+--     Prefer section 0 for the ADR-003 function numbers; this block is the
 --     breed-calibration twin when both P50 and P90 are required.
 -- ---------------------------------------------------------------------------
 SELECT
