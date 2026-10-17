@@ -1,4 +1,4 @@
-"""Pivot / overrun / P90 range functions vs Syn* EXPECTED (#28 / #170)."""
+"""Timing checks (pivot, overrun, P90 miss) vs Syn* EXPECTED (#28 / #170)."""
 
 from __future__ import annotations
 

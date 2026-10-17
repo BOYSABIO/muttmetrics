@@ -24,6 +24,7 @@ Personal / PII-named SQL: `*.local.sql` under `ops/` (gitignored) — never comm
 | [`photo_purge.py`](./photo_purge.py) | Delete a client's photo **files then rows** (dry run default) | [`photos.md`](../docs/runbooks/photos.md) |
 | [`photo_sweep.py`](./photo_sweep.py) | Orphan files under `PHOTO_ROOT` with no DB row | same |
 | [`backfill_size_band.py`](./backfill_size_band.py) | Set `dog.size_band` from `weight_kg` (#171) | dry-run default; `--apply` to write |
+| [`demo_data.py`](./demo_data.py) | Load the synthetic test fixtures into an **empty** DB for demos/screenshots (#180) | refuses if any visit exists |
 
 ## SQL recipes (`ops/sql/`)
 
@@ -52,7 +53,6 @@ docker compose exec -T db psql -U muttmetrics -d muttmetrics -f /tmp/q.sql
 | [`update_owner.sql`](./sql/update_owner.sql) | Enrich owner contact / notes | enrichment |
 | [`update_dog.sql`](./sql/update_dog.sql) | Enrich dog coat / handling / weight | enrichment |
 | [`update_visit.sql`](./sql/update_visit.sql) | Fix visit event facts (`condition_score`: 0 worst … 5 best) | enrichment |
-| [`pytest_values_check.sql`](./sql/pytest_values_check.sql) | Spot synthetic pytest owners/dogs | [`db-peek.md`](../docs/runbooks/db-peek.md) |
 
 Cleanup of synthetic clients: `ops/sql/cleanup_synthetic_clients.local.sql` (local only; gitignored when matched). Preview with `ROLLBACK`, then `COMMIT` when sure — see file header. Real photo files: `photo_purge.py` before deleting rows.
 

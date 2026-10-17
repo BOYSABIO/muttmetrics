@@ -347,6 +347,7 @@ section.panel h2 {
 
 .breed-picker-option {
   display: block;
+  cursor: pointer;
   width: 100%;
   text-align: left;
   padding: 0.55rem 0.7rem;

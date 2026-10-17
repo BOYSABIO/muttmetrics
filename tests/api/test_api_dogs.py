@@ -97,7 +97,7 @@ def test_list_dogs_browse_includes_owner_name(
     assert match["owner_id"] == owner_id
     assert isinstance(match["owner_name"], str)
     assert match["owner_name"]  # not empty
-    assert "last_visit_date" in match
+    assert match["last_visit_date"] is None  # new dog, no visits
 
 
 def test_list_dogs_q_filters_by_name_substring(
@@ -169,10 +169,12 @@ def test_get_dog_profile_includes_owner_and_visits(
     assert body["name"] == dog_name
     assert body["owner"]["owner_id"] == owner_id
     assert body["owner"]["name"]
-    assert "coat_type" in body
-    assert "handling_score" in body
-    assert "size_band" in body  # derived present (null ok)
-    assert "avatar_photo_id" in body  # null until a profile/intake photo exists
+    assert body["coat_type"] is None
+    assert body["handling_score"] is None
+    assert body["size_band"] is None  # no weight yet (#171)
+    assert body["avatar_photo_id"] is None  # no profile/intake photo yet
+    assert body["visit_count"] == 1
+    assert body["last_visit_date"] == "2026-10-01"
     assert isinstance(body["recent_visits"], list)
     assert body["recent_visits"][0]["visit_id"] == visit_id
     assert body["recent_visits"][0]["actual_minutes"] == 90
@@ -240,7 +242,7 @@ def test_patch_dog_updates_coat_and_handling(
     assert body["coat_type"] == "curly"
     assert body["handling_score"] == 4
     assert body["temperament_notes"] == "nervous around dryers"
-    assert "owner" in body  # still a full profile
+    assert body["owner"]["owner_id"] == owner_id  # still a full profile
 
 
 def test_patch_dog_rejects_derived_field(
@@ -304,3 +306,67 @@ def test_patch_dog_rejects_impossible_weight(
 
     response = client.patch(f"/dogs/{dog_id}", json={"weight_kg": weight}, headers=auth_headers)
     assert response.status_code == 422
+
+
+# --- #180: cancelled / no-show never count as a visit --------------------------
+
+
+def test_cancelled_and_no_show_do_not_count_as_visits(
+    client: TestClient, owner_id: int, auth_headers: dict[str, str]
+) -> None:
+    """last_visit_date, visit_count (dog, owner, list) and days_since_last all
+    use the same rule: completed (or legacy NULL) only."""
+    created = client.post(
+        "/dogs",
+        json={"owner_id": owner_id, "name": f"Status {uuid.uuid4().hex[:8]}"},
+        headers=auth_headers,
+    )
+    dog_id = created.json()["dog_id"]
+
+    def visit(day: str, status: str) -> dict:
+        response = client.post(
+            "/visits",
+            json={
+                "dog_id": dog_id,
+                "owner_id": owner_id,
+                "visit_date": day,
+                "actual_minutes": 60,
+                "status": status,
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+        return response.json()
+
+    visit("2026-09-01", "completed")
+    visit("2026-09-20", "cancelled")
+    visit("2026-09-25", "no_show")
+
+    dog = client.get(f"/dogs/{dog_id}", headers=auth_headers).json()
+    assert dog["last_visit_date"] == "2026-09-01"
+    assert dog["visit_count"] == 1
+
+    owner = client.get(f"/owners/{owner_id}", headers=auth_headers).json()
+    assert owner["visit_count"] == 1
+
+    listed = client.get("/dogs", headers=auth_headers).json()
+    assert next(r for r in listed if r["dog_id"] == dog_id)["last_visit_date"] == "2026-09-01"
+
+    # Counted from the last *completed* visit, not the cancelled one on 09-20.
+    assert visit("2026-10-01", "completed")["days_since_last"] == 30
+
+
+def test_list_dogs_q_treats_wildcards_literally(
+    client: TestClient, owner_id: int, auth_headers: dict[str, str]
+) -> None:
+    """#180: "%" and "_" in a search are characters, not LIKE wildcards."""
+    tag = uuid.uuid4().hex[:6]
+    for name in (f"Rex_{tag}", f"RexA{tag}", f"100% {tag}"):
+        client.post("/dogs", json={"owner_id": owner_id, "name": name}, headers=auth_headers)
+
+    underscore = client.get("/dogs", params={"q": f"Rex_{tag}"}, headers=auth_headers).json()
+    assert [d["name"] for d in underscore] == [f"Rex_{tag}"]  # not RexA…
+
+    percent = client.get("/dogs", params={"q": f"100% {tag}"}, headers=auth_headers).json()
+    assert [d["name"] for d in percent] == [f"100% {tag}"]
+    assert client.get("/dogs", params={"q": f"%{tag}"}, headers=auth_headers).json() == []
