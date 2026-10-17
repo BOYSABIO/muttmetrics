@@ -25,7 +25,7 @@ BEGIN;
 
 UPDATE dog
 SET
-  weight_kg = 12.5,                    -- <-- triggers size_band only after a future recompute job
+  weight_kg = 12.5,                    -- <-- size_band is NOT updated by SQL: run ops/backfill_size_band.py --apply after (#171)
   sex = 'F',
   coat_type = 'curly',                 -- free text / your convention
   hair_or_fur = 'hair',

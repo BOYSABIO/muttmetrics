@@ -32,4 +32,4 @@
 
 ### Amendment — stage A retired (#86, 2026-09-24)
 
-Stage **A** (Jinja `GET`/`POST /capture`, #63 / #70) is **removed**. The React SPA (#69–#72) is the only groomer capture UI. Reasons: the HTML form had no `X-API-Key`, duplicated the visit-write path, and pulled unused `jinja2` / `python-multipart` into runtime deps. History of the A → B → C path above stays; current frontend row of truth is **B** in use, **C** still later.
+Stage **A** (Jinja `GET`/`POST /capture`, #63 / #70) is **removed**. The React SPA (#69–#72) is the only groomer capture UI. Reasons: the HTML form had no `X-API-Key`, duplicated the visit-write path, and pulled `jinja2` into runtime deps. *(Amended for #179: `python-multipart` is a runtime dependency again, because FastAPI needs it for the photo upload routes, #30 / #92.)* History of the A → B → C path above stays; current frontend row of truth is **B** in use, **C** still later.

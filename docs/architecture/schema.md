@@ -1,6 +1,6 @@
 # Data model
 
-Canonical schema for MuttMetrics. SQLAlchemy models live in `src/muttmetrics/models/`; Alembic migrations (#8) will materialize this in Postgres.
+Canonical schema for MuttMetrics. SQLAlchemy models live in `src/muttmetrics/models/`; Alembic migrations (#8 onward) materialize it in Postgres.
 
 **Design split:** [ADR-001](./adr/001-derived-fields.md) — hand-entered vs derived vs system-computed-at-write columns.
 
@@ -93,7 +93,8 @@ erDiagram
 | Group | Columns |
 |-------|---------|
 | Hand-entered | `name`, `phone`, `email`, `locale`, `address_area`, `preferred_channel`, `client_since`, `notes` |
-| Derived (recompute job) | `visit_count`, `avg_rebook_days`, `neglect_rate`, `cancellation_rate`, `no_show_count`, `avg_tip_pct`, `lifetime_value`, `reliability_score` |
+| Derived: computed on read ([#171](https://github.com/BOYSABIO/muttmetrics/issues/171)) | `visit_count`. The column exists, but product code counts `visit` rows instead |
+| Derived: no writer yet (stay `NULL`) | `avg_rebook_days`, `neglect_rate`, `cancellation_rate`, `no_show_count`, `avg_tip_pct`, `lifetime_value`, `reliability_score` |
 
 ### `dog`
 
@@ -103,7 +104,9 @@ erDiagram
 | Coat | `coat_type`, `hair_or_fur`, `coat_density`, `undercoat`, `sheds` |
 | Temperament (internal) | `handling_score`, `fear_triggers[]`, `muzzle_required`, `two_person_job`, `temperament_notes` |
 | Medical | `skin_conditions[]`, `senior_flag`, `mobility_notes`, `vet_notes` |
-| Derived (recompute job) | `size_band`, `visit_count`, `avg_duration_min`, `duration_stddev_min`, `typical_interval_days`, `last_visit_date`, `next_due_date` |
+| Derived: computed on read ([#171](https://github.com/BOYSABIO/muttmetrics/issues/171)) | `visit_count`, `last_visit_date`. The columns exist, but product code reads `visit` rows instead |
+| Derived: written through on PATCH ([#171](https://github.com/BOYSABIO/muttmetrics/issues/171)) | `size_band`, from `weight_kg` via `size_band_from_weight`; `ops/backfill_size_band.py` for SQL edits |
+| Derived: no writer yet (stay `NULL`) | `avg_duration_min`, `duration_stddev_min`, `typical_interval_days`, `next_due_date` |
 
 ### `visit`
 
@@ -134,6 +137,19 @@ Reference tables only — no FKs to other entities. See model files for full col
 Constraints: `kind` is checked; a `profile` photo must have no `visit_id` while `intake` / `after` must have one; `byte_size > 0`. Foreign keys deliberately have **no `ON DELETE CASCADE`** — Postgres cannot delete files, so a cascade would strand bytes on disk. Deletion goes through `ops/photo_purge.py` (see [`photos.md`](../runbooks/photos.md)).
 
 **History:** `visit.intake_photos` / `after_photos` (`TEXT[]` of URLs) were removed in [#98](https://github.com/BOYSABIO/muttmetrics/issues/98) once the SPA wrote only to this table.
+
+## Read models (metrics)
+
+Metrics are **SQL functions** (plus one constants view), not tables ([ADR-003](./adr/003-metric-views.md), [#170](https://github.com/BOYSABIO/muttmetrics/issues/170)). Each takes an inclusive date range, so the same definition serves a week, a month or any custom range. Definitions are in [`analytics.md`](../runbooks/analytics.md).
+
+| Object | Kind | Returns |
+|--------|------|---------|
+| `metric_constants` | one-row view | `min_n`, the small-sample threshold (5) |
+| `metric_summary(p_start, p_end)` | function | visit count, minutes, revenue, overall €/hour |
+| `metric_eur_per_hour(p_start, p_end)` | function | €/hour by `condition_score` × `shaved_down` |
+| `metric_pivot_rate` / `metric_overrun` / `metric_p90_miss` `(p_start, p_end)` | functions | timing checks against the stored prediction |
+| `metric_utilization(buffer_minutes, p_start, p_end)` | function | one row per day: planned vs actual vs buffer |
+| `metric_utilization_weeks(buffer_minutes, p_start, p_end)` | function | the per-day rows grouped by ISO week ([#178](https://github.com/BOYSABIO/muttmetrics/issues/178)) |
 
 ## Implementation notes
 

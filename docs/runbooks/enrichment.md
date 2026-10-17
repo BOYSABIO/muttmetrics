@@ -92,7 +92,7 @@ ORDER BY name_de;
 
 **Why `JOIN breed`:** Humans read names; the DB stores ids. The join is only for display — the UPDATE still writes the integer FK.
 
-**Do not set** `size_band` here. If you later set `weight_kg`, a future recompute job owns `size_band`.
+**Do not set** `size_band` here. It is derived from `weight_kg` ([#171](https://github.com/BOYSABIO/muttmetrics/issues/171)): the Directory PATCH writes it whenever weight changes. If you change `weight_kg` by SQL, run `python ops/backfill_size_band.py` (dry run) and then `--apply`.
 
 #### 3. Fix / enrich a visit — `update_visit.sql`
 
@@ -128,7 +128,7 @@ LIMIT 20;
 
 ## Out of scope (this playbook)
 
-- Recompute-derived CLI
+- A recompute job for the remaining dog/owner aggregates (`avg_duration_min`, owner LTV, …). `last_visit_date` and `visit_count` are computed on read, and `size_band` is written from weight ([#171](https://github.com/BOYSABIO/muttmetrics/issues/171))
 - Pet-owner self-serve accounts (icebox [#143](https://github.com/BOYSABIO/muttmetrics/issues/143))
 - Predictions / salon insights home ([#130](https://github.com/BOYSABIO/muttmetrics/issues/130))
 - Visit PATCH in the SPA (still SQL for now)
