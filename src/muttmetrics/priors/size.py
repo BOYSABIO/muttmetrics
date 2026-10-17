@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+# The one definition of a dog's size band; prior.py imports it from here.
 SizeBand = Literal["s", "m", "l", "xl"]
 
 

@@ -11,9 +11,9 @@ from muttmetrics.api.schemas.dogs import (
     VisitSummary,
 )
 from muttmetrics.api.services.patching import reject_null_for_required_columns
-from muttmetrics.api.services.visit_eligibility import visit_counts_clause
 from muttmetrics.models import Breed, Dog, Owner, Photo, Visit
 from muttmetrics.priors.size import size_band_from_weight
+from muttmetrics.services.visit_eligibility import visit_counts_clause
 
 
 def normalize_dog_name(name: str) -> str:

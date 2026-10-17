@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 
 from muttmetrics.api.deps import get_db, require_api_key
 from muttmetrics.api.schemas.visits import CreateVisitRequest, VisitResponse
-from muttmetrics.api.services.visit_predictions import compute_visit_predictions
 from muttmetrics.models import Dog, Owner, Service, Visit
+from muttmetrics.services.visit_predictions import compute_visit_predictions
 
 router = APIRouter(tags=["visits"])
 

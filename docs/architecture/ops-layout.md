@@ -20,7 +20,8 @@ src/muttmetrics/      # product package (see below)
 ### Package layout (`src/muttmetrics/`)
 
 ```text
-api/        # FastAPI routes, schemas, services
+api/        # HTTP layer: FastAPI routes, schemas, API-only services
+services/   # domain logic shared by the API and the CLIs (#180)
 models/     # SQLAlchemy tables
 db/         # engine / session
 seed/       # breed + service reference data
@@ -30,6 +31,8 @@ config.py
 ```
 
 Same leaf names under `api/routes/`, `api/schemas/`, and `api/services/` (e.g. `dogs.py`) are intentional — the folder is the namespace.
+
+**Layering rule (#180):** nothing outside `muttmetrics.api` imports from it. Code that both a route and a CLI need (visit predictions, the "counts as a visit" rule) lives in `muttmetrics/services/`, takes a Session, and raises `LookupError` / `ValueError` instead of HTTP errors. `tests/unit/test_layering.py` fails if the rule breaks.
 
 ## Why
 
