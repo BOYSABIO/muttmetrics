@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+import {
+  createDog,
+  createOwner,
+  createVisit,
+  errorMessage,
+  listServices,
+  searchDogs,
+  uploadVisitPhoto,
+  type CreatedOwner,
+  type DogSearchItem,
+  type ServiceListItem,
+} from './api'
+import { todayISODate } from './dates'
 import { Directory } from './Directory'
 import { PhotoPicker } from './PhotoPicker'
 import { ThisWeek } from './ThisWeek'
@@ -20,14 +33,6 @@ function floorMinutes(ms: number): number {
 
 type VisitStep = 1 | 2 | 3
 
-function todayISODate(): string {
-  const d = new Date()
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
-
 type Mode = 'search' | 'new' | 'visit'
 type Screen = 'home' | 'capture'
 /** Home shell destinations. Capture is an action (+), not a peer tab. */
@@ -38,125 +43,6 @@ type SelectedDog = {
   owner_id: number
   dog_name: string
   owner_name: string
-}
-
-type DogSearchItem = {
-  dog_id: number
-  name: string
-  owner_id: number
-  owner_name: string
-  last_visit_date: string | null
-}
-
-
-type ServiceListItem = {
-  service_id: number
-  slug: string | null
-  name_en: string | null
-  name_de: string | null
-  base_minutes: number | null
-  price_base: number | null
-}
-
-function apiHeaders(): HeadersInit {
-  return {
-    'Content-Type': 'application/json',
-    'X-API-Key': import.meta.env.VITE_API_KEY,
-  }
-}
-
-function apiKeyOnlyHeaders(): HeadersInit {
-  // No Content-Type: the browser must set multipart/form-data itself
-  // because it has to append the boundary marker that separates parts
-  return { 'X-API-Key': import.meta.env.VITE_API_KEY }
-}
-
-async function readJson(res: Response): Promise<unknown> {
-  const text = await res.text()
-  let data: unknown = null
-  if (text !== '') {
-    try {
-      data = JSON.parse(text)
-    } catch {
-      data = text // plain-text body (e.g. "Internal Server Error")
-    }
-  }
-
-  if (!res.ok) {
-    let message: string
-
-    if (res.status >= 500) {
-      message = `Server error (${res.status})`
-    } else if (
-      typeof data === 'object' &&
-      data !== null &&
-      'detail' in data
-    ) {
-      const detail = (data as { detail: unknown }).detail
-      message =
-        typeof detail === 'string'
-        ? detail
-        : `Request failed (${res.status}): ${JSON.stringify(detail)}`
-    } else if (typeof data === 'string' && data !== '') {
-      message = `Request failed (${res.status}): ${data}`
-    } else {
-      message = `Request failed (${res.status})`
-    }
-
-    throw new Error(message)
-  }
-
-  return data
-}
-
-/** Server's own wording when there is one (e.g. a 422 detail). */
-function errorText(error: unknown): string {
-  if (error instanceof TypeError) return "can't reach server"
-  if (error instanceof Error) return error.message
-  return 'unknown error'
-}
-
-async function searchDogs(q: string): Promise<DogSearchItem[]> {
-  const params = new URLSearchParams()
-  if (q.trim() !== '') {
-    params.set('q', q.trim())
-  }
-  const qs = params.toString()
-  const url = qs ? `/api/dogs?${qs}` : '/api/dogs'
-
-  const res = await fetch(url, {
-    method: 'GET',
-    headers: apiHeaders(),
-  })
-  const data = await readJson(res)
-  return data as DogSearchItem[]
-}
-
-
-async function listServices(): Promise<ServiceListItem[]> {
-  const res = await fetch('/api/services', {
-    method: 'GET',
-    headers: apiHeaders(),
-  })
-  const data = await readJson(res)
-  return data as ServiceListItem[]
-}
-
-async function uploadPhoto(
-  visitId: number,
-  file: File,
-  kind: 'intake' | 'after',
-): Promise<void> {
-  const form = new FormData()
-  form.append('file', file)
-  form.append('kind', kind)
-
-  const res = await fetch(`/api/visits/${visitId}/photos`, {
-    method: 'POST',
-    headers: apiKeyOnlyHeaders(),
-    body: form,
-  })
-  await readJson(res) // throws with the honest message
 }
 
 const DRAFT_KEY = 'muttmetrics.draftVisit'
@@ -280,11 +166,9 @@ function App() {
   const [shavedDown, setShavedDown] = useState(draft?.shavedDown ?? false)
   // Owner created by a "new client" attempt whose dog step failed. A retry with
   // the same owner name reuses it instead of creating the owner again.
-  const [pendingOwner, setPendingOwner] = useState<{
-    owner_id: number
-    name: string
-    typed: string
-  } | null>(null)
+  const [pendingOwner, setPendingOwner] = useState<
+    (CreatedOwner & { typed: string }) | null
+  >(null)
   // One in-flight guard for both write flows: a second tap while a request
   // is running creates duplicate visits / owners (#92 phone trial).
   const [isBusy, setIsBusy] = useState(false)
@@ -452,12 +336,7 @@ function App() {
         visitBody.quoted_price = Number(quotedPrice)
       }
 
-      const visitRes = await fetch('/api/visits', {
-        method: 'POST',
-        headers: apiHeaders(),
-        body: JSON.stringify(visitBody),
-      })
-      const visit = (await readJson(visitRes)) as { visit_id: number }
+      const visit = await createVisit(visitBody)
       const savedId = visit.visit_id
 
       // The visit is saved from here on. Nothing below may claim otherwise
@@ -476,7 +355,7 @@ function App() {
         let uploaded = 0
         for (const [file, kind] of photoJobs) {
           try {
-            await uploadPhoto(savedId, file, kind)
+            await uploadVisitPhoto(savedId, file, kind)
             uploaded += 1
           } catch (error) {
             // Never rethrow: the visit is already saved and the outer catch
@@ -505,7 +384,7 @@ function App() {
         `Saved ${selectedDog.dog_name} · ${selectedDog.owner_name}${photoNote}`,
       )
     } catch (error) {
-      setMessage(`Not saved: ${errorText(error)}. Try again.`)
+      setMessage(`Not saved: ${errorMessage(error)}. Try again.`)
       console.error(error)
     } finally {
       // Always re-enable, or one failed save locks the screen until a reload.
@@ -526,11 +405,7 @@ function App() {
       } catch (error) {
         console.error(error)
         setResults([])
-        if (error instanceof TypeError) {
-          setMessage("Can't reach server — check your connection")
-        } else if (error instanceof Error) {
-          setMessage(error.message)
-        }
+        setMessage(errorMessage(error))
       }
     })()
   }
@@ -603,32 +478,16 @@ function App() {
     setIsBusy(true)
     setMessage('Creating...')
     try {
-      let owner: { owner_id: number; name: string }
+      let owner: CreatedOwner
       if (pendingOwner !== null && pendingOwner.typed === ownerTyped) {
         // Owner already exists from the last attempt: only the dog is left.
         owner = pendingOwner
       } else {
-        const ownerRes = await fetch('/api/owners', {
-          method: 'POST',
-          headers: apiHeaders(),
-          body: JSON.stringify({ name: ownerTyped }),
-        })
-        owner = (await readJson(ownerRes)) as { owner_id: number; name: string }
+        owner = await createOwner(ownerTyped)
         setPendingOwner({ ...owner, typed: ownerTyped })
       }
 
-      const dogRes = await fetch('/api/dogs', {
-        method: 'POST',
-        headers: apiHeaders(),
-        body: JSON.stringify({
-          owner_id: owner.owner_id,
-          name: dogTyped,
-        }),
-      })
-      const dog = (await readJson(dogRes)) as {
-        dog_id: number
-        name: string
-      }
+      const dog = await createDog(owner.owner_id, dogTyped)
 
       setSelectedDog({
         dog_id: dog.dog_id,
@@ -648,7 +507,7 @@ function App() {
       setOwnerName('')
       setDogName('')
     } catch (error) {
-      setMessage(`Could not create client: ${errorText(error)}`)
+      setMessage(`Could not create client: ${errorMessage(error)}`)
       console.error(error)
     } finally {
       setIsBusy(false)

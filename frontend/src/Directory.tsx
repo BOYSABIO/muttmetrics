@@ -1,5 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
+import {
+  errorMessage,
+  fetchDogProfile,
+  fetchOwnerProfile,
+  listBreeds,
+  patchDog,
+  patchOwner,
+  searchDogs,
+  uploadDogProfilePhoto,
+  type BreedListItem,
+  type DogProfile,
+  type DogSearchItem,
+  type OwnerProfile,
+} from './api'
 import { BreedPicker } from './BreedPicker'
+import { formatLastVisit } from './dates'
 import { DogAvatar } from './DogAvatar'
 
 export type VisitDogRef = {
@@ -7,82 +22,6 @@ export type VisitDogRef = {
   owner_id: number
   dog_name: string
   owner_name: string
-}
-
-type DogSearchItem = {
-  dog_id: number
-  name: string
-  owner_id: number
-  owner_name: string
-  last_visit_date: string | null
-}
-
-type VisitSummary = {
-  visit_id: number
-  visit_date: string
-  actual_minutes: number
-  condition_score: number | null
-  status: string | null
-}
-
-type DogProfile = {
-  dog_id: number
-  owner_id: number
-  name: string
-  breed_id: number | null
-  breed_secondary_id: number | null
-  sex: string | null
-  date_of_birth: string | null
-  weight_kg: string | number | null
-  coat_type: string | null
-  hair_or_fur: string | null
-  coat_density: string | null
-  undercoat: boolean | null
-  sheds: boolean | null
-  handling_score: number | null
-  muzzle_required: boolean | null
-  two_person_job: boolean | null
-  temperament_notes: string | null
-  senior_flag: boolean | null
-  mobility_notes: string | null
-  vet_notes: string | null
-  size_band: string | null
-  visit_count: number | null
-  last_visit_date: string | null
-  avatar_photo_id: number | null
-  owner: {
-    owner_id: number
-    name: string
-    phone: string | null
-    email: string | null
-  }
-  recent_visits: VisitSummary[]
-}
-
-type OwnerDogItem = {
-  dog_id: number
-  name: string
-}
-
-type OwnerProfile = {
-  owner_id: number
-  name: string
-  phone: string | null
-  email: string | null
-  locale: string
-  address_area: string | null
-  preferred_channel: string | null
-  client_since: string | null
-  notes: string | null
-  visit_count: number | null
-  lifetime_value: number | null
-  dogs: OwnerDogItem[]
-}
-
-type BreedListItem = {
-  breed_id: number
-  name_de: string | null
-  name_en: string | null
 }
 
 const SEX_OPTIONS = [
@@ -122,130 +61,6 @@ const HANDLING_OPTIONS = [
   { value: '5', label: '5 — difficult' },
 ] as const
 
-function apiHeaders(): HeadersInit {
-  return {
-    'Content-Type': 'application/json',
-    'X-API-Key': import.meta.env.VITE_API_KEY,
-  }
-}
-
-async function readJson(res: Response): Promise<unknown> {
-  const text = await res.text()
-  let data: unknown = null
-  if (text !== '') {
-    try {
-      data = JSON.parse(text)
-    } catch {
-      data = text
-    }
-  }
-
-  if (!res.ok) {
-    let message: string
-    if (res.status >= 500) {
-      message = `Server error (${res.status})`
-    } else if (
-      typeof data === 'object' &&
-      data !== null &&
-      'detail' in data
-    ) {
-      const detail = (data as { detail: unknown }).detail
-      message =
-        typeof detail === 'string'
-          ? detail
-          : `Request failed (${res.status}): ${JSON.stringify(detail)}`
-    } else if (typeof data === 'string' && data !== '') {
-      message = `Request failed (${res.status}): ${data}`
-    } else {
-      message = `Request failed (${res.status})`
-    }
-    throw new Error(message)
-  }
-
-  return data
-}
-
-async function searchDogs(q: string): Promise<DogSearchItem[]> {
-  const params = new URLSearchParams()
-  if (q.trim() !== '') {
-    params.set('q', q.trim())
-  }
-  const qs = params.toString()
-  const url = qs ? `/api/dogs?${qs}` : '/api/dogs'
-  const res = await fetch(url, { method: 'GET', headers: apiHeaders() })
-  return (await readJson(res)) as DogSearchItem[]
-}
-
-async function listBreeds(): Promise<BreedListItem[]> {
-  const res = await fetch('/api/breeds', { method: 'GET', headers: apiHeaders() })
-  return (await readJson(res)) as BreedListItem[]
-}
-
-async function fetchDogProfile(dogId: number): Promise<DogProfile> {
-  const res = await fetch(`/api/dogs/${dogId}`, {
-    method: 'GET',
-    headers: apiHeaders(),
-  })
-  return (await readJson(res)) as DogProfile
-}
-
-async function patchDog(
-  dogId: number,
-  body: Record<string, unknown>,
-): Promise<DogProfile> {
-  const res = await fetch(`/api/dogs/${dogId}`, {
-    method: 'PATCH',
-    headers: apiHeaders(),
-    body: JSON.stringify(body),
-  })
-  return (await readJson(res)) as DogProfile
-}
-
-async function fetchOwnerProfile(ownerId: number): Promise<OwnerProfile> {
-  const res = await fetch(`/api/owners/${ownerId}`, {
-    method: 'GET',
-    headers: apiHeaders(),
-  })
-  return (await readJson(res)) as OwnerProfile
-}
-
-async function patchOwner(
-  ownerId: number,
-  body: Record<string, unknown>,
-): Promise<OwnerProfile> {
-  const res = await fetch(`/api/owners/${ownerId}`, {
-    method: 'PATCH',
-    headers: apiHeaders(),
-    body: JSON.stringify(body),
-  })
-  return (await readJson(res)) as OwnerProfile
-}
-
-async function uploadDogProfilePhoto(
-  dogId: number,
-  file: File,
-): Promise<{ photo_id: number }> {
-  const form = new FormData()
-  form.append('file', file)
-  const res = await fetch(`/api/dogs/${dogId}/photos`, {
-    method: 'POST',
-    headers: { 'X-API-Key': import.meta.env.VITE_API_KEY },
-    body: form,
-  })
-  return (await readJson(res)) as { photo_id: number }
-}
-
-function errorMessage(error: unknown): string {
-  if (error instanceof TypeError) {
-    return "Can't reach server — check your connection"
-  }
-  if (error instanceof Error) {
-    return error.message
-  }
-  return String(error)
-}
-
-/** "Today", "3 days ago", "5 wk ago", then "Mar 2026". */
 /**
  * Weight field → kg for the API. A German keypad types "7,5", and
  * Number("7,5") is NaN, which JSON turns into null and silently wipes the
@@ -256,20 +71,6 @@ function parseWeightKg(raw: string): number | null | 'invalid' {
   if (cleaned === '') return null
   const kg = Number(cleaned)
   return Number.isFinite(kg) && kg > 0 ? kg : 'invalid'
-}
-
-function formatLastVisit(iso: string | null): string {
-  if (iso === null) return '—'
-  const [y, m, d] = iso.split('-').map(Number)
-  const then = new Date(y, m - 1, d)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const days = Math.round((today.getTime() - then.getTime()) / 86_400_000)
-  if (days <= 0) return 'Today'
-  if (days === 1) return 'Yesterday'
-  if (days < 7) return `${days} days ago`
-  if (days < 60) return `${Math.round(days / 7)} wk ago`
-  return then.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
 }
 
 type DirectoryProps = {
