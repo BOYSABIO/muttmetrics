@@ -21,7 +21,7 @@ from muttmetrics.api.services.dogs import (
     patch_dog,
     search_dogs,
 )
-from muttmetrics.api.services.visit_predictions import score_dog_duration_range
+from muttmetrics.services.visit_predictions import score_dog_duration_range
 
 router = APIRouter(tags=["dogs"])
 

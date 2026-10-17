@@ -11,8 +11,8 @@ import argparse
 import json
 from datetime import date
 
-from muttmetrics.api.services.visit_predictions import score_dog_duration_range
 from muttmetrics.db.session import session_scope
+from muttmetrics.services.visit_predictions import score_dog_duration_range
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -83,6 +83,17 @@ To inspect capture rows without a dashboard: connect the PostgreSQL extension or
 
 To enrich dog / owner after thin capture: prefer the SPA **Directory** tab; SQL recipes are the escape hatch (visit fact fixes, bulk). Playbook: [`docs/runbooks/enrichment.md`](./docs/runbooks/enrichment.md).
 
+**Where does new code go?** ([#180](https://github.com/BOYSABIO/muttmetrics/issues/180))
+
+| It… | Put it in |
+|---|---|
+| parses a request or shapes a response | `api/routes/` + `api/schemas/` (routes stay thin) |
+| queries or writes the DB for one API feature | `api/services/` |
+| is needed by a route **and** a CLI or ops script | `muttmetrics/services/` (no FastAPI imports, raises `LookupError` / `ValueError`) |
+| is a pure rule with no DB | its domain package, e.g. `priors/` |
+
+Nothing outside `muttmetrics.api` may import from it; `tests/unit/test_layering.py` enforces that. Routes map `LookupError` → 404 and `ValueError` → 422.
+
 **Where is ops tool X?** See [`ops/README.md`](./ops/README.md) — backups/photos (Python), SQL recipes, and package CLIs (`python -m muttmetrics.priors`, seed). Layout: [`docs/architecture/ops-layout.md`](./docs/architecture/ops-layout.md).
 
 ### Alternative: Neon (hosted)

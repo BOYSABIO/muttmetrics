@@ -1,5 +1,6 @@
 """Application settings loaded from environment variables."""
 
+from functools import lru_cache
 from pathlib import Path
 
 from pydantic import Field, ValidationError
@@ -40,9 +41,15 @@ class Settings(BaseSettings):
     )
 
 
+@lru_cache
 def get_settings() -> Settings:
     """
-    Load settings from the environment. (API-Key + Postgres)
+    Load settings from the environment (API key, Postgres, paths), once.
+
+    Cached: every request calls this (require_api_key), and re-reading `.env`
+    each time was wasted work. A changed `.env` therefore needs a restart, the
+    same as the database engine already did. Tests that change env vars call
+    ``get_settings.cache_clear()`` (an autouse fixture in tests/conftest.py).
 
     Raises:
         ValidationError: if required settings such as DATABASE_URL are missing.

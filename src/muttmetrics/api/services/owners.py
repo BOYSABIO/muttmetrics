@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from muttmetrics.api.schemas.owners import OwnerDogItem, OwnerProfile, PatchOwnerRequest
 from muttmetrics.api.services.patching import reject_null_for_required_columns
-from muttmetrics.api.services.visit_eligibility import visit_counts_clause
 from muttmetrics.models import Owner, Visit
+from muttmetrics.services.visit_eligibility import visit_counts_clause
 
 
 def normalize_owner_name(name: str) -> str:

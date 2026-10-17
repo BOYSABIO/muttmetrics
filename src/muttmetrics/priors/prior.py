@@ -4,9 +4,7 @@ See docs/prior.md and issue #23."""
 
 from __future__ import annotations
 
-from typing import Literal
-
-SizeBand = Literal["s", "m", "l", "xl"]
+from muttmetrics.priors.size import SizeBand
 
 _SIZE_MULT: dict[str, float] = {
     "s": 0.85,

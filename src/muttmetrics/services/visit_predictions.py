@@ -9,10 +9,10 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from muttmetrics.api.services.visit_eligibility import visit_counts_clause
 from muttmetrics.models import Breed, Dog, Service, Visit
 from muttmetrics.priors import rules_prior
 from muttmetrics.priors.size import size_band_from_weight
+from muttmetrics.services.visit_eligibility import visit_counts_clause
 
 LOGGER = logging.getLogger(__name__)
 

@@ -108,10 +108,6 @@ class MetricsPeriodBlock(BaseModel):
     utilization_weeks: list[UtilizationWeekOut]
 
 
-# Alias — week UI and tests still import this name.
-MetricsWeekBlock = MetricsPeriodBlock
-
-
 class MetricsWeekOut(MetricsPeriodBlock):
     """Current week plus the prior Monday–Sunday block for vs-last-week UI."""
 

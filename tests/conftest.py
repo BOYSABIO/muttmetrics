@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from muttmetrics.api.app import create_app
 from muttmetrics.api.deps import get_db
+from muttmetrics.config import get_settings
 from muttmetrics.db.session import get_engine
 from tests.db_guard import DEFAULT_TEST_DATABASE_URL, require_test_database
 from tests.fixtures.load_metric_month import load_metric_month
@@ -36,6 +37,15 @@ def pytest_configure(config: pytest.Config) -> None:
         os.environ["DATABASE_URL"] = require_test_database(url)
     except ValueError as exc:
         raise pytest.UsageError(str(exc)) from exc
+
+
+@pytest.fixture(autouse=True)
+def _fresh_settings() -> Generator[None]:
+    """get_settings() is cached (#180). Tests that monkeypatch env vars
+    (API_KEY, PHOTO_ROOT, ...) need it re-read, so clear before and after each test."""
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 @pytest.fixture

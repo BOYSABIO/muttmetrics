@@ -57,6 +57,9 @@ SEED_SERVICES: list[dict] = [
 ]
 
 # matting_risk: 1 (low) .. 5 (pelted / Doodle territory)
+# typical_size_band is a catalog hint for people reading the breed list. It uses
+# xs/s/m/l/xl (toy breeds are "xs"). Nothing in the code reads it: a dog's own
+# size_band comes from its weight (priors/size.py, s/m/l/xl only, #171).
 SEED_BREEDS: list[dict] = [
     {
         "name_en": "French Bulldog",
