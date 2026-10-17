@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { fetchPhotoBlob } from './api'
 
 type DogAvatarProps = {
   photoId: number | null | undefined
@@ -7,10 +8,6 @@ type DogAvatarProps = {
   /** When set, tapping the avatar opens the device photo picker. */
   onPickFile?: (file: File) => void
   disabled?: boolean
-}
-
-function apiKeyHeaders(): HeadersInit {
-  return { 'X-API-Key': import.meta.env.VITE_API_KEY }
 }
 
 function StockDogIcon() {
@@ -63,14 +60,11 @@ export function DogAvatar({
         return
       }
       try {
-        const res = await fetch(`/api/photos/${photoId}`, {
-          headers: apiKeyHeaders(),
-        })
-        if (!res.ok) {
+        const blob = await fetchPhotoBlob(photoId)
+        if (blob === null) {
           if (!cancelled) setSrc(null)
           return
         }
-        const blob = await res.blob()
         objectUrl = URL.createObjectURL(blob)
         if (!cancelled) setSrc(objectUrl)
       } catch {

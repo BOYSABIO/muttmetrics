@@ -256,7 +256,7 @@ Never commit real `.env` values. CI sets `API_KEY` as an environment variable in
 
 ### React capture SPA (#69–#72)
 
-**Only** app UI for groomer/maintainer (not `/docs`). Vite + React + TypeScript in `frontend/`. Top areas: **Visits** | **Directory** ([#138](https://github.com/BOYSABIO/muttmetrics/issues/138)). Visits modes: **search** → **visit**, or **new** client → **visit**. Directory: dog/owner profiles + safe PATCH ([#139](https://github.com/BOYSABIO/muttmetrics/issues/139), [#140](https://github.com/BOYSABIO/muttmetrics/issues/140)). Jinja `/capture` (stage A, #63) was removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86) — no templates, no unauthenticated write path. Phone trial over Tailscale: [`docs/runbooks/groomer-trial.md`](./docs/runbooks/groomer-trial.md).
+**Only** app UI for groomer/maintainer (not `/docs`). Vite + React + TypeScript in `frontend/`. **All API calls live in `src/api.ts`** (headers, error messages, response types) and shared date helpers in `src/dates.ts` ([#180](https://github.com/BOYSABIO/muttmetrics/issues/180)); components import from there and never call `fetch` themselves. Top areas: **Visits** | **Directory** ([#138](https://github.com/BOYSABIO/muttmetrics/issues/138)). Visits modes: **search** → **visit**, or **new** client → **visit**. Directory: dog/owner profiles + safe PATCH ([#139](https://github.com/BOYSABIO/muttmetrics/issues/139), [#140](https://github.com/BOYSABIO/muttmetrics/issues/140)). Jinja `/capture` (stage A, #63) was removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86) — no templates, no unauthenticated write path. Phone trial over Tailscale: [`docs/runbooks/groomer-trial.md`](./docs/runbooks/groomer-trial.md).
 
 | Path | API calls |
 |------|-----------|
@@ -275,7 +275,7 @@ UI labels are **English** (salon business language).
 
 **Photo upload flow (#92).** The upload endpoint needs a `visit_id`, so files are held in React state and posted **after** `POST /visits` returns. Rules that are easy to break:
 
-- **`apiKeyOnlyHeaders()`, not `apiHeaders()`** for the upload — a multipart body must not carry a `Content-Type` header, because the browser has to set it with the boundary marker it generates
+- **Uploads send only the key header** (`keyOnlyHeaders()` in `src/api.ts`) — a multipart body must not carry a `Content-Type` header, because the browser has to set it with the boundary marker it generates
 - **Each upload has its own `try`/`catch`** — the visit is already saved, and `saveVisit`'s outer catch says "Not saved", which would be a lie
 - **A `File` cannot be persisted.** The #88 draft stores `hadIntakeFile` / `hadAfterFile` booleans so the resume message can say the photo was not kept
 - **`isBusy` guards both write flows.** Save and new-client Continue are disabled in flight; without it a slow phone upload invites repeat taps and duplicate rows (missed in #87, fixed in #92)

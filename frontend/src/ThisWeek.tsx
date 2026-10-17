@@ -1,89 +1,30 @@
 import { useEffect, useState } from 'react'
+import {
+  errorMessage,
+  fetchMetricsPeriod,
+  fetchMetricsWeek,
+  type MetricValue,
+  type MetricsPeriodOut,
+} from './api'
+import {
+  addDays,
+  addMonths,
+  firstOfMonth,
+  formatMonthRange,
+  formatMonthTitle,
+  formatShortDate,
+  formatWeekday,
+  formatWeekRange,
+  lastOfMonth,
+  mondayOf,
+  parseISODate,
+  toISODate,
+} from './dates'
 
 const DEFAULT_BUFFER_MINUTES = 240
 const MODE_STORAGE_KEY = 'muttmetrics.metricsMode'
 
 type PeriodMode = 'week' | 'month'
-
-type MetricValue = {
-  value: number | null
-  reason: string | null
-}
-
-type WeekSummary = {
-  visit_count: number
-  groomed_minutes: number
-  revenue_ex_tip: number
-  revenue_inc_tip: number
-  eur_per_hour_n: number
-  eur_per_hour_ex_tip: MetricValue
-  eur_per_hour_inc_tip: MetricValue
-}
-
-type EurPerHourCell = {
-  condition_score: number
-  shaved_down: boolean
-  n: number
-  groomed_minutes: number | null
-  hours: number | null
-  revenue_ex_tip: number | null
-  revenue_inc_tip: number | null
-  eur_per_hour_ex_tip: MetricValue
-  eur_per_hour_inc_tip: MetricValue
-}
-
-type OverrunOut = {
-  n: number
-  avg_minutes: MetricValue
-}
-
-type P90MissOut = {
-  n: number
-  miss_count: number
-  rate: MetricValue
-}
-
-type UtilizationDay = {
-  visit_date: string
-  n: number
-  planned_p50: number
-  planned_p90: number
-  actual_minutes: number
-  missing_prediction: number
-  over_buffer: boolean
-}
-
-/** One ISO week from metric_utilization_weeks (#178), clipped to the period. */
-type UtilizationWeek = {
-  week_start: string
-  range_start: string
-  range_end: string
-  day_count: number
-  n: number
-  planned_p90: number
-  actual_minutes: number
-  missing_prediction: number
-  over_buffer_days: number
-}
-
-type MetricsPeriodBlock = {
-  period: PeriodMode | 'custom'
-  week_start: string
-  week_end: string
-  buffer_minutes: number
-  min_n: number
-  summary: WeekSummary
-  eur_per_hour: EurPerHourCell[]
-  overrun: OverrunOut
-  p90_miss: P90MissOut
-  utilization: UtilizationDay[]
-  utilization_weeks: UtilizationWeek[]
-}
-
-type MetricsPeriodOut = MetricsPeriodBlock & {
-  previous_week?: MetricsPeriodBlock | null
-  previous_period?: MetricsPeriodBlock | null
-}
 
 type ThisWeekProps = {
   onLogVisit: () => void
@@ -94,114 +35,6 @@ type LoadResult = {
   key: string
   data: MetricsPeriodOut | null
   error: string
-}
-
-function apiHeaders(): HeadersInit {
-  return {
-    'Content-Type': 'application/json',
-    'X-API-Key': import.meta.env.VITE_API_KEY,
-  }
-}
-
-async function readJson(res: Response): Promise<unknown> {
-  const text = await res.text()
-  let data: unknown = null
-  if (text !== '') {
-    try {
-      data = JSON.parse(text)
-    } catch {
-      data = text
-    }
-  }
-  if (!res.ok) {
-    const detail =
-      typeof data === 'object' && data !== null && 'detail' in data
-        ? (data as { detail: unknown }).detail
-        : null
-    throw new Error(
-      typeof detail === 'string'
-        ? detail
-        : `Request failed (${res.status})`,
-    )
-  }
-  return data
-}
-
-function mondayOf(d: Date): Date {
-  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  const day = x.getDay()
-  const offset = day === 0 ? -6 : 1 - day
-  x.setDate(x.getDate() + offset)
-  return x
-}
-
-function firstOfMonth(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), 1)
-}
-
-function lastOfMonth(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth() + 1, 0)
-}
-
-function addDays(d: Date, days: number): Date {
-  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  x.setDate(x.getDate() + days)
-  return x
-}
-
-function addMonths(d: Date, months: number): Date {
-  return new Date(d.getFullYear(), d.getMonth() + months, 1)
-}
-
-function toISODate(d: Date): string {
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
-
-function parseISODate(s: string): Date {
-  const [y, m, d] = s.split('-').map(Number)
-  return new Date(y, m - 1, d)
-}
-
-function formatShortDate(iso: string): string {
-  const d = parseISODate(iso)
-  return d.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-/**
- * "Oct 12–18", or "Sep 28–Oct 4" across a month. Built by hand (not
- * toLocaleDateString's day/month order) so the label is never longer than
- * 13 characters: the switcher has a fixed width and must not resize.
- */
-function formatWeekRange(startIso: string, endIso: string): string {
-  const start = parseISODate(startIso)
-  const end = parseISODate(endIso)
-  const month = (d: Date) =>
-    d.toLocaleDateString(undefined, { month: 'short' }).replace(/\.$/, '')
-  if (start.getMonth() === end.getMonth()) {
-    return `${month(start)} ${start.getDate()}–${end.getDate()}`
-  }
-  return `${month(start)} ${start.getDate()}–${month(end)} ${end.getDate()}`
-}
-
-/** "Apr 1–30" — fits the same 13ch capsule as week ranges. */
-function formatMonthRange(startIso: string, endIso: string): string {
-  const start = parseISODate(startIso)
-  const end = parseISODate(endIso)
-  const month = start
-    .toLocaleDateString(undefined, { month: 'short' })
-    .replace(/\.$/, '')
-  return `${month} ${start.getDate()}–${end.getDate()}`
-}
-
-function formatMonthTitle(isoFirst: string): string {
-  const d = parseISODate(isoFirst)
-  return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 }
 
 function Chevron({ dir }: { dir: 'left' | 'right' }) {
@@ -217,11 +50,6 @@ function Chevron({ dir }: { dir: 'left' | 'right' }) {
       />
     </svg>
   )
-}
-
-function formatWeekday(iso: string): string {
-  const d = parseISODate(iso)
-  return d.toLocaleDateString(undefined, { weekday: 'short' })
 }
 
 function formatMoney(n: number): string {
@@ -326,34 +154,6 @@ function writeStoredMode(mode: PeriodMode): void {
   }
 }
 
-async function fetchMetricsWeek(start: string): Promise<MetricsPeriodOut> {
-  const params = new URLSearchParams({
-    start,
-    buffer_minutes: String(DEFAULT_BUFFER_MINUTES),
-  })
-  const res = await fetch(`/api/metrics/week?${params}`, {
-    method: 'GET',
-    headers: apiHeaders(),
-  })
-  return (await readJson(res)) as MetricsPeriodOut
-}
-
-async function fetchMetricsPeriod(
-  start: string,
-  end: string,
-): Promise<MetricsPeriodOut> {
-  const params = new URLSearchParams({
-    start,
-    end,
-    buffer_minutes: String(DEFAULT_BUFFER_MINUTES),
-  })
-  const res = await fetch(`/api/metrics/period?${params}`, {
-    method: 'GET',
-    headers: apiHeaders(),
-  })
-  return (await readJson(res)) as MetricsPeriodOut
-}
-
 function TimingRow({
   label,
   value,
@@ -425,10 +225,11 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
       try {
         const fetched =
           mode === 'week'
-            ? await fetchMetricsWeek(weekStart)
+            ? await fetchMetricsWeek(weekStart, DEFAULT_BUFFER_MINUTES)
             : await fetchMetricsPeriod(
                 monthStart,
                 toISODate(lastOfMonth(parseISODate(monthStart))),
+                DEFAULT_BUFFER_MINUTES,
               )
         next = { key: requestKey, data: fetched, error: '' }
       } catch (err) {
@@ -436,12 +237,7 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
         next = {
           key: requestKey,
           data: null,
-          error:
-            err instanceof TypeError
-              ? "Can't reach server — check your connection"
-              : err instanceof Error
-                ? err.message
-                : 'Could not load metrics',
+          error: errorMessage(err),
         }
       }
       if (!cancelled) {
