@@ -53,6 +53,8 @@ We chose **A** so the groomer’s weekly numbers, the maintainer peeking in Post
 
 ### Follow-ups
 
-- Migration + test for `metric_week_summary` ([#155](https://github.com/BOYSABIO/muttmetrics/issues/155)).
-- Metric views/functions for [#27](https://github.com/BOYSABIO/muttmetrics/issues/27)–[#29](https://github.com/BOYSABIO/muttmetrics/issues/29).
-- API [#156](https://github.com/BOYSABIO/muttmetrics/issues/156) reads views; dashboard [#158](https://github.com/BOYSABIO/muttmetrics/issues/158) displays NULL rates honestly.
+All done. Kept as a record of what this ADR committed to:
+
+- ~~Migration + test for `metric_week_summary` ([#155](https://github.com/BOYSABIO/muttmetrics/issues/155)).~~ Shipped, then replaced by `metric_summary(p_start, p_end)` in #170.
+- ~~Metric views/functions for [#27](https://github.com/BOYSABIO/muttmetrics/issues/27)–[#29](https://github.com/BOYSABIO/muttmetrics/issues/29).~~ Now range functions, plus `metric_utilization_weeks` ([#178](https://github.com/BOYSABIO/muttmetrics/issues/178)).
+- ~~API [#156](https://github.com/BOYSABIO/muttmetrics/issues/156) reads them; dashboard [#158](https://github.com/BOYSABIO/muttmetrics/issues/158) displays NULL rates honestly.~~ Done; the general reader is `/metrics/period` ([#170](https://github.com/BOYSABIO/muttmetrics/issues/170)).

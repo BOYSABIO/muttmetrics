@@ -15,7 +15,9 @@ Schema / peek: [`db-peek.md`](./db-peek.md). Numerator SQL: [`ops/sql/compliance
 | **Denominator** | How many dogs were groomed that week (ask the groomer; not booking software) |
 | **Compliance %** | `100 × numerator ÷ denominator` — skip if denominator is 0 |
 
-Formal measurement starts **2026-10-06** (see #22). Earlier rows can exist; they are not the start of this ritual.
+Formal measurement starts with the week of **Monday 2026-10-05** (see #22). Earlier rows can exist; they are not the start of this ritual.
+
+**Used by the M5 experiment ([#159](https://github.com/BOYSABIO/muttmetrics/issues/159)):** the same weekly number is the before/after measure for "does the dashboard change logging?". Which weeks count as before, transition and after is decided on #159, not here.
 
 ## Privacy (public repo)
 
@@ -30,7 +32,7 @@ Do **not** paste weekly numbers into a public issue comment. Record them locally
 
 ## Weekly procedure
 
-1. **Pick the week** — last completed Mon–Sun (or the week you are closing). Example: `2026-10-06` … `2026-10-12`.
+1. **Pick the week** — last completed Mon–Sun (or the week you are closing). Example: `2026-10-05` … `2026-10-11`.
 2. **Edit dates** in [`ops/sql/compliance_week.sql`](../../ops/sql/compliance_week.sql) (both queries).
 3. **Run the script** (Postgres extension, or from repo root — encoding-safe, [#154](https://github.com/BOYSABIO/muttmetrics/issues/154)):
 
@@ -43,6 +45,7 @@ Do **not** paste weekly numbers into a public issue comment. Record them locally
 
 4. **Read the count** (`completed_visits`) and skim the list — wrong dates or doubles show up there.
 5. **Ask the groomer** — how many dogs that Mon–Sun. Do not invent the number from bookings.
+5b. **Don't backfill first.** If a groom was missed, record the week as it is *before* adding the missing visit. A backfilled week measures your memory, not the habit. Adding the row afterwards is fine; the recorded block doesn't change.
 6. **Compute** — `compliance % = 100 * completed_visits / grooms_reported` (whole % is fine).
 7. **Record privately** — append to `docs/notes/compliance-weeks.md` (gitignored; create if missing) using the template below. Optional: on #22, note only that the week was logged (no numbers).
 
