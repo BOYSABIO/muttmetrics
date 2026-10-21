@@ -202,3 +202,23 @@ def test_upload_dog_profile_unknown_dog_is_404(
         headers=auth_headers,
     )
     assert response.status_code == 404
+
+
+def test_delete_visit_removes_photos_and_files(
+    client: TestClient,
+    visit_id: int,
+    photo_root: Path,
+    auth_headers: dict[str, str],
+) -> None:
+    _upload(client, visit_id, _png(400, 300), auth_headers)
+    assert list(photo_root.rglob("*.jpg"))
+
+    deleted = client.delete(f"/visits/{visit_id}", headers=auth_headers)
+    assert deleted.status_code == 204
+
+    assert list(photo_root.rglob("*.jpg")) == []
+    listed = client.get(f"/visits/{visit_id}/photos", headers=auth_headers)
+    # visit is gone — list may 404 or empty depending on route; either is fine
+    assert listed.status_code in (200, 404)
+    if listed.status_code == 200:
+        assert listed.json() == []

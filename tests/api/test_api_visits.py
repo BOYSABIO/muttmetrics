@@ -241,3 +241,186 @@ def test_create_visit_negative_money_returns_422(
         headers=auth_headers,
     )
     assert response.status_code == 422
+
+
+def test_get_visit_returns_row(
+    client: TestClient,
+    demo_dog_owner: tuple[int, int],
+    auth_headers: dict[str, str],
+) -> None:
+    owner_id, dog_id = demo_dog_owner
+    created = client.post(
+        "/visits",
+        json={"dog_id": dog_id, "owner_id": owner_id, **MINIMAL_BASE},
+        headers=auth_headers,
+    )
+    visit_id = created.json()["visit_id"]
+
+    got = client.get(f"/visits/{visit_id}", headers=auth_headers)
+    assert got.status_code == 200
+    assert got.json()["visit_id"] == visit_id
+    assert got.json()["actual_minutes"] == 60
+
+
+def test_get_visit_unknown_404(client: TestClient, auth_headers: dict[str, str]) -> None:
+    assert client.get("/visits/999999", headers=auth_headers).status_code == 404
+
+
+def test_patch_visit_updates_minutes(
+    client: TestClient,
+    demo_dog_owner: tuple[int, int],
+    auth_headers: dict[str, str],
+) -> None:
+    owner_id, dog_id = demo_dog_owner
+    created = client.post(
+        "/visits",
+        json={"dog_id": dog_id, "owner_id": owner_id, **MINIMAL_BASE},
+        headers=auth_headers,
+    )
+    assert created.status_code == 201
+    visit_id = created.json()["visit_id"]
+
+    patched = client.patch(
+        f"/visits/{visit_id}",
+        json={"actual_minutes": 75},
+        headers=auth_headers,
+    )
+    assert patched.status_code == 200
+    assert patched.json()["actual_minutes"] == 75
+    assert patched.json()["visit_date"] == MINIMAL_BASE["visit_date"]
+
+
+def test_patch_visit_rejects_predicted_field(
+    client: TestClient,
+    demo_dog_owner: tuple[int, int],
+    auth_headers: dict[str, str],
+) -> None:
+    owner_id, dog_id = demo_dog_owner
+    created = client.post(
+        "/visits",
+        json={"dog_id": dog_id, "owner_id": owner_id, **MINIMAL_BASE},
+        headers=auth_headers,
+    )
+    visit_id = created.json()["visit_id"]
+
+    response = client.patch(
+        f"/visits/{visit_id}",
+        json={"predicted_min_p50": 99},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
+def test_patch_visit_rejects_null_actual_minutes(
+    client: TestClient,
+    demo_dog_owner: tuple[int, int],
+    auth_headers: dict[str, str],
+) -> None:
+    owner_id, dog_id = demo_dog_owner
+    created = client.post(
+        "/visits",
+        json={"dog_id": dog_id, "owner_id": owner_id, **MINIMAL_BASE},
+        headers=auth_headers,
+    )
+    visit_id = created.json()["visit_id"]
+
+    response = client.patch(
+        f"/visits/{visit_id}",
+        json={"actual_minutes": None},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
+def test_patch_visit_date_recomputs_days_since_last_keeps_predictions(
+    client: TestClient,
+    db_session: Session,
+    auth_headers: dict[str, str],
+) -> None:
+    owner = Owner(name="Patch Date Owner")
+    db_session.add(owner)
+    db_session.flush()
+    breed = Breed(
+        name_en="Patch Date Breed",
+        name_de="Patch Date",
+        base_groom_minutes=100,
+        matting_risk=4,
+        recommended_interval_days=60,
+    )
+    db_session.add(breed)
+    db_session.flush()
+    dog = Dog(
+        owner_id=owner.owner_id,
+        name="Patch Date Dog",
+        breed_id=breed.breed_id,
+        size_band="l",
+        handling_score=4,
+    )
+    db_session.add(dog)
+    db_session.flush()
+    owner_id, dog_id = owner.owner_id, dog.dog_id
+
+    first = client.post(
+        "/visits",
+        json={
+            "dog_id": dog_id,
+            "owner_id": owner_id,
+            "visit_date": "2026-09-01",
+            "actual_minutes": 60,
+            "status": "completed",
+        },
+        headers=auth_headers,
+    )
+    assert first.status_code == 201
+
+    second = client.post(
+        "/visits",
+        json={
+            "dog_id": dog_id,
+            "owner_id": owner_id,
+            "visit_date": "2026-10-01",
+            "actual_minutes": 90,
+            "status": "completed",
+        },
+        headers=auth_headers,
+    )
+    assert second.status_code == 201
+    visit_id = second.json()["visit_id"]
+    p50 = second.json()["predicted_min_p50"]
+    p90 = second.json()["predicted_min_p90"]
+    assert second.json()["days_since_last"] == 30
+
+    patched = client.patch(
+        f"/visits/{visit_id}",
+        json={"visit_date": "2026-10-11"},
+        headers=auth_headers,
+    )
+    assert patched.status_code == 200
+    assert patched.json()["days_since_last"] == 40  # Sep 1 → Oct 11
+    assert patched.json()["predicted_min_p50"] == p50  # frozen
+    assert patched.json()["predicted_min_p90"] == p90
+
+
+def test_delete_visit_returns_204_then_404(
+    client: TestClient,
+    demo_dog_owner: tuple[int, int],
+    auth_headers: dict[str, str],
+) -> None:
+    owner_id, dog_id = demo_dog_owner
+    created = client.post(
+        "/visits",
+        json={"dog_id": dog_id, "owner_id": owner_id, **MINIMAL_BASE},
+        headers=auth_headers,
+    )
+    visit_id = created.json()["visit_id"]
+
+    deleted = client.delete(f"/visits/{visit_id}", headers=auth_headers)
+    assert deleted.status_code == 204
+    assert deleted.content == b""
+
+    again = client.delete(f"/visits/{visit_id}", headers=auth_headers)
+    assert again.status_code == 404
+
+    profile = client.get(f"/dogs/{dog_id}", headers=auth_headers)
+    assert profile.status_code == 200
+    assert all(v["visit_id"] != visit_id for v in profile.json()["recent_visits"])

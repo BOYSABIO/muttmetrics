@@ -49,7 +49,7 @@ Connect for SQL escape-hatch work: [`ops-db-peek.md`](./db-peek.md). Schema: [`s
 
 Why forbidden matters: derived values are **meant to be recomputed from visits**. If you type `last_visit_date` by hand, it can disagree with the real `visit` table. Later analytics will trust the wrong number.
 
-Directory does **not** PATCH visits yet — use SQL recipe `update_visit.sql` (or a later visit editor) for visit fact fixes.
+**Default path for visit fixes (#193):** Directory → dog profile → tap a recent visit → edit or delete in the app (`PATCH` / `DELETE /visits/{id}`). Hard delete removes visit photos (files then rows). SQL recipe `update_visit.sql` stays the escape hatch for bulk/offline work.
 
 ## SQL escape hatch
 
@@ -98,9 +98,11 @@ ORDER BY name_de;
 
 **What it does:** Corrects event facts already saved (wrong minutes, date, condition, notes, status, money/service).
 
-**Why:** Timer mistakes and “forgot to type surprise” should not require a second fake visit row. Not available in Directory UI yet.
+**Why:** Timer mistakes and “forgot to type surprise” should not require a second fake visit row. **Prefer the Directory visit editor (#193)** for one-off fixes; this SQL is the escape hatch (bulk / offline).
 
-**Photos:** do not patch URLs on `visit`. Use the photo API / [`photos.md`](./photos.md) / `photo_purge.py`.
+**Do not set** `days_since_last` or `predicted_min_*` in SQL either — same ADR-001 rule as the API. Date changes in the app recompute `days_since_last` only.
+
+**Photos:** do not patch URLs on `visit`. Deleting a visit in the app removes its photos; otherwise use the photo API / [`photos.md`](./photos.md) / `photo_purge.py`.
 
 #### 4. Enrich an owner — `update_owner.sql`
 

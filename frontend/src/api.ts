@@ -99,6 +99,27 @@ export type CreatedOwner = { owner_id: number; name: string }
 export type CreatedDog = { dog_id: number; name: string }
 export type CreatedVisit = { visit_id: number }
 
+/** Full visit row after create/get/patch (#193). */
+export type VisitDetail = {
+  visit_id: number
+  dog_id: number
+  owner_id: number
+  visit_date: string
+  actual_minutes: number
+  condition_score: number | null
+  booked_service_id: number | null
+  actual_service_id: number | null
+  what_surprised_me: string | null
+  quoted_price: number | null
+  final_price: number | null
+  tip: number | null
+  shaved_down: boolean | null
+  status: 'completed' | 'cancelled' | 'no_show' | null
+  days_since_last: number | null
+  predicted_min_p50: number | null
+  predicted_min_p90: number | null
+}
+
 // --- metrics (#156 / #170 / #178) ---
 
 /** A rate or average: `value` is null when n < MIN_N (decided in SQL). */
@@ -263,6 +284,14 @@ async function sendJson<T>(method: 'POST' | 'PATCH', path: string, body: unknown
   return (await readJson(res)) as T
 }
 
+async function sendDelete(path: string): Promise<void> {
+  const res = await fetch(`/api${path}`, {
+    method: 'DELETE',
+    headers: jsonHeaders(),
+  })
+  await readJson(res)
+}
+
 async function uploadFile<T>(path: string, form: FormData): Promise<T> {
   const res = await fetch(`/api${path}`, {
     method: 'POST',
@@ -324,6 +353,21 @@ export function createDog(ownerId: number, name: string): Promise<CreatedDog> {
 
 export function createVisit(body: Record<string, unknown>): Promise<CreatedVisit> {
   return sendJson('POST', '/visits', body)
+}
+
+export function fetchVisit(visitId: number): Promise<VisitDetail> {
+  return getJson(`/visits/${visitId}`)
+}
+
+export function patchVisit(
+  visitId: number,
+  body: Record<string, unknown>,
+): Promise<VisitDetail> {
+  return sendJson('PATCH', `/visits/${visitId}`, body)
+}
+
+export function deleteVisit(visitId: number): Promise<void> {
+  return sendDelete(`/visits/${visitId}`)
 }
 
 export async function uploadVisitPhoto(

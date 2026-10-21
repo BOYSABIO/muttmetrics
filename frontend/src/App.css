@@ -506,6 +506,18 @@ button.ghost:hover:not(:disabled) {
   background: var(--paper);
 }
 
+button.danger {
+  background: var(--clay-soft, #f6d3c2);
+  border-color: var(--danger, #b3361f);
+  color: var(--danger, #b3361f);
+}
+
+button.danger:hover:not(:disabled) {
+  background: var(--clay, #cf5f38);
+  border-color: var(--clay, #cf5f38);
+  color: #fff;
+}
+
 .timer-readout {
   font-size: 2.25rem;
   font-family: var(--mono);
@@ -1012,24 +1024,94 @@ button.linkish:hover:not(:disabled) {
 
 .dir-visit-list {
   list-style: none;
-  margin: 0;
+  margin: 0.35rem 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
 }
 
 .dir-visit-list li {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.55rem 0;
+  padding: 0;
   border-bottom: 1px solid var(--line);
-  font-size: 0.95rem;
 }
 
 .dir-visit-list li:last-child {
   border-bottom: none;
+}
+
+.dir-visit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.7rem 0.15rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dir-visit-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.dir-visit-date {
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.dir-visit-duration {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.dir-visit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.35rem;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.dir-visit-dot {
+  opacity: 0.55;
+}
+
+.dir-visit-edit {
+  margin-left: auto;
+  font-weight: 650;
+  color: var(--accent-press);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dir-visit-row:hover:not(:disabled) .dir-visit-date,
+.dir-visit-row:hover:not(:disabled) .dir-visit-duration {
+  color: var(--accent-press);
+}
+
+.dir-visit-row:hover:not(:disabled) .dir-visit-edit {
+  color: var(--accent);
+}
+
+.dir-visit-row:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.visit-edit-meta {
+  margin: 0.35rem 0 0;
 }
 
 .profile-actions {

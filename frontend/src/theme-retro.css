@@ -422,6 +422,7 @@ section.panel h2 {
 
 button:not([class]),
 button.primary,
+button.danger,
 .actions > button:not(.ghost),
 .timer-controls button,
 .photo-button,
@@ -445,8 +446,16 @@ button.primary,
   color: var(--surface);
 }
 
+button.danger,
+.actions > button.danger {
+  background: var(--clay-soft);
+  color: var(--danger);
+  border-color: var(--ink);
+}
+
 button:not([class]):hover:not(:disabled),
 button.primary:hover:not(:disabled),
+button.danger:hover:not(:disabled),
 .actions > button:not(.ghost):hover:not(:disabled),
 .timer-controls button:hover:not(:disabled),
 .photo-button:hover,
@@ -461,8 +470,15 @@ button.primary:hover:not(:disabled),
   background: var(--accent-press);
 }
 
+button.danger:hover:not(:disabled),
+.actions > button.danger:hover:not(:disabled) {
+  background: var(--clay);
+  color: var(--surface);
+}
+
 button:not([class]):active:not(:disabled),
 button.primary:active:not(:disabled),
+button.danger:active:not(:disabled),
 .actions > button:not(.ghost):active:not(:disabled),
 .timer-controls button:active:not(:disabled),
 .photo-button:active,
