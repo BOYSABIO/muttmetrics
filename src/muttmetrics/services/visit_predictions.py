@@ -105,8 +105,9 @@ def _days_since_last(
     *,
     dog_id: int,
     visit_date: date,
+    exclude_visit_id: int | None = None,
 ) -> int | None:
-    prev = session.scalar(
+    stmt = (
         select(Visit.visit_date)
         .where(
             Visit.dog_id == dog_id,
@@ -116,6 +117,10 @@ def _days_since_last(
         .order_by(Visit.visit_date.desc())
         .limit(1)
     )
+    if exclude_visit_id is not None:
+        stmt = stmt.where(Visit.visit_id != exclude_visit_id)
+
+    prev = session.scalar(stmt)
     if prev is None:
         return None
     return (visit_date - prev).days

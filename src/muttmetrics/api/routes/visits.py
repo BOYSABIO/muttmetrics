@@ -2,11 +2,16 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from muttmetrics.api.deps import get_db, require_api_key
-from muttmetrics.api.schemas.visits import CreateVisitRequest, VisitResponse
+from muttmetrics.api.schemas.visits import (
+    CreateVisitRequest,
+    PatchVisitRequest,
+    VisitResponse,
+)
+from muttmetrics.api.services.visits import delete_visit, patch_visit
 from muttmetrics.models import Dog, Owner, Service, Visit
 from muttmetrics.services.visit_predictions import compute_visit_predictions
 
@@ -68,3 +73,49 @@ def create_visit(body: CreateVisitRequest, session: DbSession) -> VisitResponse:
     session.add(visit)
     session.flush()
     return VisitResponse.model_validate(visit)
+
+
+@router.get(
+    "/visits/{visit_id}",
+    dependencies=[Depends(require_api_key)],
+)
+def read_visit(visit_id: int, session: DbSession) -> VisitResponse:
+    """Load one visit for Directory edit (#193)."""
+    visit = session.get(Visit, visit_id)
+    if visit is None:
+        raise HTTPException(status_code=404, detail=f"Visit {visit_id} not found")
+    return VisitResponse.model_validate(visit)
+
+
+@router.patch(
+    "/visits/{visit_id}",
+    dependencies=[Depends(require_api_key)],
+)
+def update_visit(
+    visit_id: int,
+    body: PatchVisitRequest,
+    session: DbSession,
+) -> VisitResponse:
+    """Partial update of event facts; system-computed columns stay server-owned."""
+    try:
+        return patch_visit(session, visit_id=visit_id, body=body)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.delete(
+    "/visits/{visit_id}",
+    status_code=204,
+    dependencies=[Depends(require_api_key)],
+)
+def remove_visit(visit_id: int, session: DbSession) -> Response:
+    """Hard-delete a visit + its photos. Mistakes are recovered from backups."""
+    try:
+        delete_visit(session, visit_id=visit_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return Response(status_code=204)

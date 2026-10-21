@@ -10,6 +10,7 @@ import {
 import { BreedPicker } from './BreedPicker'
 import { DogAvatar } from './DogAvatar'
 import type { SelectedDog } from './draft'
+import { VisitEditView } from './VisitEditView'
 
 const SEX_OPTIONS = [
   { value: '', label: '—' },
@@ -113,6 +114,28 @@ function numberOrNull(s: string): number | null {
   return s.trim() === '' ? null : Number(s)
 }
 
+/** "16 Oct 2026" — readable on the profile list (ISO stays in the API). */
+function formatVisitDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  return date.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function formatVisitStatus(status: string | null): string {
+  if (status === null || status === '') return 'No status'
+  if (status === 'no_show') return 'No-show'
+  return status.charAt(0).toUpperCase() + status.slice(1)
+}
+
+function formatCoatCondition(score: number | null): string {
+  if (score === null) return 'Coat —'
+  return `Coat ${score}`
+}
+
 type DogProfileViewProps = {
   profile: DogProfile
   breeds: BreedListItem[]
@@ -136,6 +159,7 @@ export function DogProfileView({
   const [form, setForm] = useState(() => formFromProfile(initial))
   const [isBusy, setIsBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [editingVisitId, setEditingVisitId] = useState<number | null>(null)
 
   function set<K extends keyof DogForm>(key: K, value: DogForm[K]): void {
     setForm((f) => ({ ...f, [key]: value }))
@@ -144,6 +168,30 @@ export function DogProfileView({
   function show(updated: DogProfile): void {
     setProfile(updated)
     setForm(formFromProfile(updated))
+  }
+
+  async function reloadAfterVisitChange(): Promise<void> {
+    setEditingVisitId(null)
+    try {
+      const updated = await fetchDogProfile(profile.dog_id)
+      show(updated)
+      onSaved()
+    } catch (err) {
+      setMessage(errorMessage(err))
+    }
+  }
+
+  if (editingVisitId !== null) {
+    return (
+      <VisitEditView
+        visitId={editingVisitId}
+        dogName={profile.name}
+        onBack={() => setEditingVisitId(null)}
+        onDone={() => {
+          void reloadAfterVisitChange()
+        }}
+      />
+    )
   }
 
   async function save(): Promise<void> {
@@ -477,12 +525,30 @@ export function DogProfileView({
             <ul className="dir-visit-list">
               {profile.recent_visits.map((v) => (
                 <li key={v.visit_id}>
-                  <span>
-                    {v.visit_date} · {v.actual_minutes} min
-                  </span>
-                  <span className="step-meta">
-                    condition {v.condition_score ?? '—'} · {v.status ?? '—'}
-                  </span>
+                  <button
+                    type="button"
+                    className="dir-visit-row"
+                    disabled={isBusy}
+                    onClick={() => setEditingVisitId(v.visit_id)}
+                    aria-label={`Edit visit on ${formatVisitDate(v.visit_date)}, ${v.actual_minutes} minutes`}
+                  >
+                    <span className="dir-visit-main">
+                      <span className="dir-visit-date">
+                        {formatVisitDate(v.visit_date)}
+                      </span>
+                      <span className="dir-visit-duration">
+                        {v.actual_minutes} min
+                      </span>
+                    </span>
+                    <span className="dir-visit-meta">
+                      <span>{formatCoatCondition(v.condition_score)}</span>
+                      <span className="dir-visit-dot" aria-hidden>
+                        ·
+                      </span>
+                      <span>{formatVisitStatus(v.status)}</span>
+                      <span className="dir-visit-edit">Edit</span>
+                    </span>
+                  </button>
                 </li>
               ))}
             </ul>

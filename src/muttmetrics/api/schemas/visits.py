@@ -54,8 +54,37 @@ class VisitResponse(BaseModel):
     visit_date: date
     actual_minutes: int
     condition_score: int | None = None
+    booked_service_id: int | None = None
+    actual_service_id: int | None = None
     what_surprised_me: str | None = None
+    quoted_price: float | None = Field(default=None, ge=0)
+    final_price: float | None = Field(default=None, ge=0)
+    tip: float | None = Field(default=None, ge=0)
+    shaved_down: bool | None = None
     status: Literal["completed", "cancelled", "no_show"] | None = None
     days_since_last: int | None = None
     predicted_min_p50: int | None = None
     predicted_min_p90: int | None = None
+
+
+class PatchVisitRequest(BaseModel):
+    """Partial update - event facts only (ADR-001)
+
+    System-computed columns (days_since_last, predicted_min_*) are omitted
+    on purpose; extra=\"forbid\" rejects them if a client sends them.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    visit_date: date | None = None
+    actual_minutes: int | None = Field(default=None, gt=0)
+
+    condition_score: int | None = Field(default=None, ge=0, le=5)
+    booked_service_id: int | None = None
+    actual_service_id: int | None = None
+    what_surprised_me: str | None = None
+    quoted_price: float | None = Field(default=None, ge=0)
+    final_price: float | None = Field(default=None, ge=0)
+    tip: float | None = Field(default=None, ge=0)
+    shaved_down: bool | None = None
+    status: Literal["completed", "cancelled", "no_show"] | None = None
