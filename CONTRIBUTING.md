@@ -16,6 +16,8 @@ This is a learning project built production-style: small issues, migrations for 
 | `ruff` | lint + format |
 | `pre-commit` | runs ruff on `git commit` before the commit is created |
 | `pytest` | tests |
+| Playwright | end-to-end smoke in `frontend/e2e/` (#196) |
+| `pip-audit` / `npm audit` | dependency vulns in CI (#196) |
 | SQLAlchemy + Alembic | models + migrations (M1+) |
 | FastAPI | thin capture/predict API (M3+) |
 | `.gitattributes` | LF in repo — stops Windows CRLF whole-file diff noise |
@@ -44,6 +46,34 @@ pytest
 ```
 
 After `pre-commit install`, each `git commit` runs ruff lint (with autofix) and ruff format on staged files. If something was fixed, stage again and recommit. CI still runs the same checks as the backstop.
+
+## End-to-end smoke (#196)
+
+CI runs Playwright against a **real** API + Postgres (`e2e` job in [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)): capture save, dashboard fixture week, Directory edit. Unit/API tests stay in `pytest`; these three flows only check that the pieces still fit together.
+
+**Locally** (throwaway DB only — never the salon database):
+
+```powershell
+docker compose exec db createdb -U muttmetrics muttmetrics_e2e   # once
+$env:DATABASE_URL = "postgresql+psycopg://muttmetrics:muttmetrics@127.0.0.1:5432/muttmetrics_e2e"
+$env:API_KEY = "dev-change-me"   # must match frontend/.env VITE_API_KEY
+alembic upgrade head
+python -m muttmetrics.seed
+python ops/demo_data.py          # first time only (refuses if visits exist)
+muttmetrics-api                  # terminal 1 — leave running
+```
+
+```powershell
+cd frontend
+npm run build
+npm run e2e                      # starts preview on :5174 if needed
+```
+
+Synthetic Syn* rows only (`ops/demo_data.py`) — never a dump. First-time browsers: `npx playwright install chromium` in `frontend/`.
+
+## Dependabot (#196)
+
+Weekly grouped PRs for pip, npm (`/frontend`), and github-actions (see [`.github/dependabot.yml`](./.github/dependabot.yml)). **CI green → merge.** Major bumps: read the changelog first. Every PR also runs `pip-audit` and `npm audit --audit-level=high`.
 
 ## Local Postgres (Docker Compose)
 
@@ -146,7 +176,7 @@ alembic upgrade head
 
 Autogenerate diffs two schema *states*; it does not know what you *meant*. A rename comes out as `drop_column` + `add_column`, a type change can silently round every value, and CI catches neither because it migrates an **empty** database. [`docs/runbooks/migrations.md`](./docs/runbooks/migrations.md) has the shapes to look for, expand/migrate/contract, and `alembic stamp`.
 
-`tests/unit/test_migration_safety.py` fails any migration whose `upgrade()` drops something without an acknowledgement line (runbook §4). CI runs ruff, `alembic upgrade head`, seed, pytest (Postgres 16 service container), and `npm run build` in `frontend/` (see `.github/workflows/ci.yml`).
+`tests/unit/test_migration_safety.py` fails any migration whose `upgrade()` drops something without an acknowledgement line (runbook §4). CI (`.github/workflows/ci.yml`) runs ruff, migrations, seed, pytest, frontend lint/build, `pip-audit` / `npm audit`, and the Playwright `e2e` job (#196).
 
 ## Backups (#95)
 
@@ -319,6 +349,7 @@ npm run dev
 | `frontend/.env` | `VITE_API_KEY` (required) and `VITE_BUSINESS_NAME` (optional header name) — gitignored; never commit. Typed in `src/vite-env.d.ts` |
 | `npm run build` | Production bundle to `frontend/dist/` (`tsc -b` type-checks first) |
 | `npm run preview` | Serves `dist/` + the same `/api` proxy — what the groomer opens |
+| `npm run e2e` | Playwright smoke against preview + a running API (#196) — see **End-to-end smoke** above |
 
 PATCH sends only the fields you change. An explicit `null` clears an optional field (e.g. `phone`), but `null` on a required column (e.g. owner `locale`) is **422** (#177). Dog `weight_kg` must be > 0 and ≤ 150, which catches grams typed into the kg field. The Directory accepts a comma (`7,5` → 7.5) and refuses to save anything that still isn't a number, instead of sending `null` and wiping the weight (#178).
 
