@@ -1,4 +1,4 @@
-"""POST /owners create-or-get."""
+"""POST /owners create-or-get + GET /owners search (#187 / #191)."""
 
 import uuid
 
@@ -10,22 +10,69 @@ def test_upsert_owner_requires_api_key(client: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_upsert_owner_creates_then_gets(client: TestClient, auth_headers: dict[str, str]) -> None:
-    # Unique per run — "Test Owner" already exists from visit fixtures
+def test_upsert_owner_same_name_without_phone_is_409(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """#187: name-only retry must not silently merge two people."""
     name = f"Lesson Two Owner {uuid.uuid4().hex[:8]}"
 
     created = client.post("/owners", json={"name": name}, headers=auth_headers)
     assert created.status_code == 201
     owner_id = created.json()["owner_id"]
-    assert created.json()["name"] == name
 
     again = client.post(
         "/owners",
         json={"name": name.upper()},
         headers=auth_headers,
     )
+    assert again.status_code == 409
+    detail = again.json()["detail"]
+    assert detail["code"] == "owner_name_conflict"
+    assert any(c["owner_id"] == owner_id for c in detail["candidates"])
+
+
+def test_upsert_owner_same_name_same_phone_reuses(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    name = f"Phone Match Owner {uuid.uuid4().hex[:8]}"
+    created = client.post(
+        "/owners",
+        json={"name": name, "phone": "+49 170 1111111"},
+        headers=auth_headers,
+    )
+    assert created.status_code == 201
+    owner_id = created.json()["owner_id"]
+
+    again = client.post(
+        "/owners",
+        json={"name": name.upper(), "phone": "+491701111111"},
+        headers=auth_headers,
+    )
     assert again.status_code == 200
     assert again.json()["owner_id"] == owner_id
+
+
+def test_upsert_owner_same_name_different_phone_creates_second(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    name = f"Two Marias {uuid.uuid4().hex[:8]}"
+    first = client.post(
+        "/owners",
+        json={"name": name, "phone": "+49 170 1111111"},
+        headers=auth_headers,
+    )
+    assert first.status_code == 201
+
+    second = client.post(
+        "/owners",
+        json={"name": name, "phone": "+49 170 2222222"},
+        headers=auth_headers,
+    )
+    assert second.status_code == 201
+    assert second.json()["owner_id"] != first.json()["owner_id"]
 
 
 def test_upsert_owner_rejects_blank_name(client: TestClient, auth_headers: dict[str, str]) -> None:
@@ -35,6 +82,60 @@ def test_upsert_owner_rejects_blank_name(client: TestClient, auth_headers: dict[
         headers=auth_headers,
     )
     assert response.status_code == 422
+
+
+def test_list_owners_requires_api_key(client: TestClient) -> None:
+    response = client.get("/owners")
+    assert response.status_code == 401
+
+
+def test_list_owners_search_by_substring(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    suffix = uuid.uuid4().hex[:8]
+    name = f"Searchable Owner {suffix}"
+    created = client.post(
+        "/owners",
+        json={"name": name, "phone": "+49 170 3333333"},
+        headers=auth_headers,
+    )
+    assert created.status_code == 201
+    owner_id = created.json()["owner_id"]
+
+    dog = client.post(
+        "/dogs",
+        json={"owner_id": owner_id, "name": f"Search Dog {suffix}"},
+        headers=auth_headers,
+    )
+    assert dog.status_code == 201
+
+    found = client.get(f"/owners?q={suffix}", headers=auth_headers)
+    assert found.status_code == 200
+    rows = found.json()
+    assert len(rows) >= 1
+    hit = next(r for r in rows if r["owner_id"] == owner_id)
+    assert hit["name"] == name
+    assert hit["dog_count"] == 1
+    assert hit["phone"] == "+49 170 3333333"
+
+
+def test_list_owners_literal_percent_in_query(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """LIKE wildcards in q must not match everything (#180 pattern)."""
+    plain = f"Plain Owner {uuid.uuid4().hex[:8]}"
+    with_pct = f"100% Owner {uuid.uuid4().hex[:8]}"
+    assert client.post("/owners", json={"name": plain}, headers=auth_headers).status_code == 201
+    created = client.post("/owners", json={"name": with_pct}, headers=auth_headers)
+    assert created.status_code == 201
+
+    response = client.get("/owners?q=%", headers=auth_headers)
+    assert response.status_code == 200
+    names = {row["name"] for row in response.json()}
+    assert with_pct in names
+    assert plain not in names
 
 
 def test_get_owner_profile_requires_api_key(client: TestClient) -> None:

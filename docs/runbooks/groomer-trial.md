@@ -128,7 +128,7 @@ Send this part to User; it is all they need.
 
 1. **Open** `http://10.x.x.x:5174` (Tailscale must be on). Add it to the home screen for next time. The first screen is **This week**; tap **+** to start a visit.
 2. **Find the dog:** type part of the name → tap the right row (the owner name is shown next to it).
-3. **New client** (first visit only): tap **New client** → owner name → dog name → continue. Breed and the rest get filled in later by Owner; do not worry about them.
+3. **New client** (first visit only): tap **+** next to the search → type the owner name. If they already exist, tap **Use**. Otherwise continue with dog name (phone optional). After **Save visit**, you can start another dog from the same owner without searching again. Breed and the rest get filled in later by Owner.
 4. **Step 1 — before photo:** tap **Take photo** to use the camera, or **Choose photo** to pick one already on the phone. Optional, but it is the picture of how the dog arrived. Tap **Remove** to change it.
 5. **Step 2 — timer:** press **Start** when you start the groom, **Stop** when you finish. If you forget, type the minutes in by hand. Minutes is the one number that matters.
 6. **Step 3 — details and after photo:** the date is already today. Condition score and "what surprised me" are optional but useful, and an **after photo** can be added here. Tap **Save visit** and wait — the button says "Saving…" while it works, and photos take a few seconds over the tunnel. The confirmation shows a visit number and how many photos went up.

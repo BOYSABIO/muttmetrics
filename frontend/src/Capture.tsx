@@ -4,11 +4,17 @@ import {
   createOwner,
   createVisit,
   errorMessage,
+  fetchOwnerProfile,
   listServices,
+  OwnerNameConflictError,
   searchDogs,
+  searchOwners,
   uploadVisitPhoto,
   type CreatedOwner,
   type DogSearchItem,
+  type OwnerConflictCandidate,
+  type OwnerDogItem,
+  type OwnerSearchItem,
   type ServiceListItem,
 } from './api'
 import { todayISODate } from './dates'
@@ -34,7 +40,17 @@ function floorMinutes(ms: number): number {
   return Math.floor(ms / 60000)
 }
 
-type Mode = 'search' | 'new' | 'visit'
+type Mode = 'search' | 'new' | 'visit' | 'after_save'
+
+type AfterSaveState = {
+  owner_id: number
+  owner_name: string
+  visit_date: string
+  saved_dog_id: number
+  saved_dog_name: string
+  dogs: OwnerDogItem[]
+  statusLine: string
+}
 
 type CaptureProps = {
   /** A saved in-progress visit to resume, if the tab was killed mid-groom. */
@@ -52,6 +68,7 @@ type CaptureProps = {
  */
 export function Capture({ draft, startDog, onDone }: CaptureProps) {
   const [ownerName, setOwnerName] = useState('')
+  const [ownerPhone, setOwnerPhone] = useState('')
   const [dogName, setDogName] = useState('')
   const [visitDate, setVisitDate] = useState(draft?.visitDate ?? todayISODate())
   const [actualMinutes, setActualMinutes] = useState(draft?.actualMinutes ?? '')
@@ -87,9 +104,20 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
   const [pendingOwner, setPendingOwner] = useState<
     (CreatedOwner & { typed: string }) | null
   >(null)
+  // Picked from GET /owners search — skip POST /owners (#191).
+  const [pickedOwner, setPickedOwner] = useState<OwnerSearchItem | null>(null)
+  // Live owner search hits while typing a new-client name.
+  const [ownerHits, setOwnerHits] = useState<OwnerSearchItem[]>([])
+  // 409 candidates when create would silently merge (#187).
+  const [nameConflicts, setNameConflicts] = useState<OwnerConflictCandidate[]>(
+    [],
+  )
   // One in-flight guard for both write flows: a second tap while a request
   // is running creates duplicate visits / owners (#92 phone trial).
   const [isBusy, setIsBusy] = useState(false)
+  // After a save: offer another dog from the same owner (#191).
+  const [afterSave, setAfterSave] = useState<AfterSaveState | null>(null)
+  const [nextDogName, setNextDogName] = useState('')
 
   useEffect(() => {
     // No dog / not in visit wizard -> nothing to persist
@@ -167,6 +195,36 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
     })()
   }, [])
 
+  // Debounced owner search on the new-client screen (#191).
+  // Do not clear hits synchronously in the effect (react-hooks/set-state-in-effect);
+  // hide stale rows via ownerHitsVisible below.
+  useEffect(() => {
+    if (mode !== 'new' || pickedOwner !== null) {
+      return
+    }
+    const q = ownerName.trim()
+    if (q.length < 2) {
+      return
+    }
+    let cancelled = false
+    const handle = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const hits = await searchOwners(q)
+          if (!cancelled) {
+            setOwnerHits(hits)
+          }
+        } catch (error) {
+          console.error(error)
+        }
+      })()
+    }, 250)
+    return () => {
+      cancelled = true
+      window.clearTimeout(handle)
+    }
+  }, [mode, ownerName, pickedOwner])
+
   function startTimer() {
     const now = Date.now()
     setStartedAt(now)
@@ -194,7 +252,8 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
     clearDraft()
     setTimerStatus('idle')
     setStartedAt(null)
-    setTickNow(Date.now())
+    // Updater form: avoid impure Date.now() as a direct setState arg (react-hooks/purity).
+    setTickNow(() => Date.now())
     setActualMinutes('')
     // Do not clear `message` here — saveVisit sets a success line then calls
     // resetTimer; wiping it made successful saves look like a no-op.
@@ -290,7 +349,27 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
       }
 
       clearDraft()
-      onDone(`Saved ${selectedDog.dog_name} · ${selectedDog.owner_name}${photoNote}`)
+      const statusLine = `Saved ${selectedDog.dog_name} · ${selectedDog.owner_name}${photoNote}`
+      try {
+        const profile = await fetchOwnerProfile(selectedDog.owner_id)
+        setAfterSave({
+          owner_id: selectedDog.owner_id,
+          owner_name: selectedDog.owner_name,
+          visit_date: visitDate,
+          saved_dog_id: selectedDog.dog_id,
+          saved_dog_name: selectedDog.dog_name,
+          dogs: profile.dogs,
+          statusLine,
+        })
+        setSelectedDog(null)
+        setMode('after_save')
+        setNextDogName('')
+        setMessage(statusLine)
+      } catch (profileError) {
+        // Visit is saved; if the follow-up list fails, still leave with success.
+        console.error(profileError)
+        onDone(statusLine)
+      }
     } catch (error) {
       setMessage(`Not saved: ${errorMessage(error)}. Try again.`)
       console.error(error)
@@ -300,8 +379,55 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
     }
   }
 
+  function beginVisitForOwnerDog(
+    dog: { dog_id: number; name: string },
+    owner: { owner_id: number; name: string },
+    keepDate: string,
+  ): void {
+    setSelectedDog({
+      dog_id: dog.dog_id,
+      owner_id: owner.owner_id,
+      dog_name: dog.name,
+      owner_name: owner.name,
+    })
+    setVisitDate(keepDate)
+    resetVisitDetails()
+    setVisitStep(1)
+    setIntakeFile(null)
+    setAfterFile(null)
+    resetTimer()
+    setAfterSave(null)
+    setNextDogName('')
+    setMode('visit')
+    setMessage(`Next: ${dog.name} · ${owner.name}`)
+  }
+
+  async function addDogThenVisitFromAfterSave(): Promise<void> {
+    if (afterSave === null || isBusy) return
+    const name = nextDogName.trim()
+    if (name === '') {
+      setMessage('Enter a dog name.')
+      return
+    }
+    setIsBusy(true)
+    try {
+      const dog = await createDog(afterSave.owner_id, name)
+      beginVisitForOwnerDog(
+        { dog_id: dog.dog_id, name: dog.name },
+        { owner_id: afterSave.owner_id, name: afterSave.owner_name },
+        afterSave.visit_date,
+      )
+    } catch (error) {
+      setMessage(errorMessage(error))
+      console.error(error)
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
   function exitCapture(): void {
     clearDraft()
+    setAfterSave(null)
     onDone('')
   }
 
@@ -312,6 +438,12 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
    */
   function requestExitCapture(): void {
     if (isBusy) return
+    if (mode === 'after_save' && afterSave !== null) {
+      const line = afterSave.statusLine
+      setAfterSave(null)
+      onDone(line)
+      return
+    }
     if (
       timerStatus === 'running' &&
       !window.confirm('Discard this visit? The timer is still running.')
@@ -337,6 +469,28 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
     setMessage('')
   }
 
+  function pickExistingOwner(hit: OwnerSearchItem | OwnerConflictCandidate): void {
+    setPickedOwner({
+      owner_id: hit.owner_id,
+      name: hit.name,
+      phone: hit.phone,
+      dog_count: 'dog_count' in hit ? hit.dog_count : 0,
+    })
+    setOwnerName(hit.name)
+    setOwnerPhone(hit.phone ?? '')
+    setOwnerHits([])
+    setNameConflicts([])
+    setPendingOwner(null)
+    setMessage(`Using existing client: ${hit.name}`)
+  }
+
+  function clearPickedOwner(): void {
+    setPickedOwner(null)
+    setOwnerPhone('')
+    setNameConflicts([])
+    setMessage('')
+  }
+
   async function continueNewClient() {
     if (isBusy) {
       return
@@ -350,14 +504,28 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
 
     setIsBusy(true)
     setMessage('Creating...')
+    setNameConflicts([])
     try {
       let owner: CreatedOwner
-      if (pendingOwner !== null && pendingOwner.typed === ownerTyped) {
+      let ownerNote = ''
+
+      if (pickedOwner !== null) {
+        // Already a client — only add the dog (#191).
+        owner = {
+          owner_id: pickedOwner.owner_id,
+          name: pickedOwner.name,
+          phone: pickedOwner.phone,
+        }
+        ownerNote = 'existing owner'
+      } else if (pendingOwner !== null && pendingOwner.typed === ownerTyped) {
         // Owner already exists from the last attempt: only the dog is left.
         owner = pendingOwner
+        ownerNote = 'existing owner'
       } else {
-        owner = await createOwner(ownerTyped)
+        const result = await createOwner(ownerTyped, ownerPhone)
+        owner = result.owner
         setPendingOwner({ ...owner, typed: ownerTyped })
+        ownerNote = result.created ? 'new owner' : 'existing owner (matched phone)'
       }
 
       const dog = await createDog(owner.owner_id, dogTyped)
@@ -375,12 +543,23 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
       setVisitDate(todayISODate())
       resetTimer()
       setMode('visit')
-      setMessage(`Ready: ${dog.name} · ${owner.name}`)
+      setMessage(`Ready: ${dog.name} · ${owner.name} (${ownerNote})`)
       setPendingOwner(null)
+      setPickedOwner(null)
+      setOwnerHits([])
+      setNameConflicts([])
       setOwnerName('')
+      setOwnerPhone('')
       setDogName('')
     } catch (error) {
-      setMessage(`Could not create client: ${errorMessage(error)}`)
+      if (error instanceof OwnerNameConflictError) {
+        setNameConflicts(error.candidates)
+        setMessage(
+          'That name is already a client. Pick one below, or add a phone to create another.',
+        )
+      } else {
+        setMessage(`Could not create client: ${errorMessage(error)}`)
+      }
       console.error(error)
     } finally {
       setIsBusy(false)
@@ -404,6 +583,13 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
     )
   }, [query, results])
 
+  const ownerHitsVisible =
+    mode === 'new' &&
+    pickedOwner === null &&
+    ownerName.trim().length >= 2
+      ? ownerHits
+      : []
+
   return (
     <>
           <header className="app-header app-header-capture">
@@ -418,9 +604,11 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
             <h1>
               {mode === 'new'
                 ? 'New client'
-                : mode === 'visit' && selectedDog !== null
-                  ? selectedDog.dog_name
-                  : 'New visit'}
+                : mode === 'after_save'
+                  ? 'Saved'
+                  : mode === 'visit' && selectedDog !== null
+                    ? selectedDog.dog_name
+                    : 'New visit'}
             </h1>
           </header>
 
@@ -446,17 +634,25 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
               autoComplete="off"
               autoFocus
             />
+            {/* Chunky + — not ghost (ghost becomes an underline in the retro theme). */}
+            <button
+              type="button"
+              className="primary search-bar-new"
+              aria-label="New client"
+              title="New client"
+              onClick={() => {
+                setMode('new')
+                setMessage('')
+                setPickedOwner(null)
+                setOwnerHits([])
+                setNameConflicts([])
+                setOwnerPhone('')
+                setPendingOwner(null)
+              }}
+            >
+              +
+            </button>
           </div>
-          <button
-            type="button"
-            className="ghost full-width"
-            onClick={() => {
-              setMode('new')
-              setMessage('')
-            }}
-          >
-            New client instead
-          </button>
           <ul className="dir-card-list">
             {captureMatches.map((dog) => (
               <li key={dog.dog_id}>
@@ -486,15 +682,119 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
 
       {mode === 'new' && (
         <section className="panel">
+          <p className="step-meta">
+            Already a client? Pick them as you type. Or create new — phone is
+            optional unless the name already exists.
+          </p>
           <div className="field">
             <label htmlFor="owner_name">Owner name</label>
             <input
               id="owner_name"
               type="text"
               value={ownerName}
-              onChange={(e) => setOwnerName(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value
+                setOwnerName(next)
+                if (
+                  pickedOwner !== null &&
+                  next.trim().toLowerCase() !== pickedOwner.name.toLowerCase()
+                ) {
+                  clearPickedOwner()
+                }
+                setNameConflicts([])
+              }}
+              disabled={isBusy}
+              autoComplete="off"
             />
           </div>
+
+          {pickedOwner !== null && (
+            <p className="step-meta">
+              Using existing client (id {pickedOwner.owner_id}
+              {pickedOwner.dog_count > 0
+                ? ` · ${pickedOwner.dog_count} dog${pickedOwner.dog_count === 1 ? '' : 's'}`
+                : ''}
+              ).{' '}
+              <button
+                type="button"
+                className="linkish"
+                disabled={isBusy}
+                onClick={clearPickedOwner}
+              >
+                Clear
+              </button>
+            </p>
+          )}
+
+          {ownerHitsVisible.length > 0 && (
+            <ul className="dir-card-list">
+              {ownerHitsVisible.map((hit) => (
+                <li key={hit.owner_id}>
+                  <button
+                    type="button"
+                    className="dir-card"
+                    disabled={isBusy}
+                    onClick={() => pickExistingOwner(hit)}
+                  >
+                    <div className="dir-card-body">
+                      <span className="dir-card-title">{hit.name}</span>
+                      <span className="dir-card-meta">
+                        {hit.phone ?? 'No phone'}
+                        {hit.dog_count > 0
+                          ? ` · ${hit.dog_count} dog${hit.dog_count === 1 ? '' : 's'}`
+                          : ''}
+                      </span>
+                    </div>
+                    <span className="dir-card-action">Use</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {nameConflicts.length > 0 && (
+            <>
+              <p className="step-meta">Did you mean…?</p>
+              <ul className="dir-card-list">
+                {nameConflicts.map((c) => (
+                  <li key={c.owner_id}>
+                    <button
+                      type="button"
+                      className="dir-card"
+                      disabled={isBusy}
+                      onClick={() => pickExistingOwner(c)}
+                    >
+                      <div className="dir-card-body">
+                        <span className="dir-card-title">{c.name}</span>
+                        <span className="dir-card-meta">
+                          {c.phone ?? 'No phone'}
+                        </span>
+                      </div>
+                      <span className="dir-card-action">Use</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {pickedOwner === null && (
+            <div className="field">
+              <label htmlFor="owner_phone">
+                Phone (optional — needed to create a second person with the same
+                name)
+              </label>
+              <input
+                id="owner_phone"
+                type="tel"
+                value={ownerPhone}
+                onChange={(e) => setOwnerPhone(e.target.value)}
+                disabled={isBusy}
+                autoComplete="tel"
+              />
+            </div>
+          )}
+
           <div className="field">
             <label htmlFor="dog_name">Dog name</label>
             <input
@@ -502,16 +802,21 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
               type="text"
               value={dogName}
               onChange={(e) => setDogName(e.target.value)}
+              disabled={isBusy}
             />
           </div>
           <div className="actions stack">
             <button
               type="button"
               className="primary"
-              onClick={continueNewClient}
+              onClick={() => void continueNewClient()}
               disabled={isBusy}
             >
-              {isBusy ? 'Creating…' : 'Continue to visit'}
+              {isBusy
+                ? 'Creating…'
+                : pickedOwner !== null
+                  ? 'Add dog & continue'
+                  : 'Continue to visit'}
             </button>
             <button
               type="button"
@@ -520,9 +825,87 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
               onClick={() => {
                 setMode('search')
                 setMessage('')
+                setPickedOwner(null)
+                setOwnerHits([])
+                setNameConflicts([])
+                setOwnerPhone('')
               }}
             >
               Back
+            </button>
+          </div>
+        </section>
+      )}
+
+      {mode === 'after_save' && afterSave !== null && (
+        <section className="panel">
+          <p className="step-meta">
+            Next: another dog from {afterSave.owner_name}? Same visit date (
+            {afterSave.visit_date}). Each dog gets its own timer.
+          </p>
+          <ul className="dir-card-list">
+            {afterSave.dogs
+              .filter((d) => d.dog_id !== afterSave.saved_dog_id)
+              .map((d) => (
+                <li key={d.dog_id}>
+                  <button
+                    type="button"
+                    className="dir-card"
+                    disabled={isBusy}
+                    onClick={() =>
+                      beginVisitForOwnerDog(
+                        d,
+                        {
+                          owner_id: afterSave.owner_id,
+                          name: afterSave.owner_name,
+                        },
+                        afterSave.visit_date,
+                      )
+                    }
+                  >
+                    <div className="dir-card-body">
+                      <span className="dir-card-title">{d.name}</span>
+                      <span className="dir-card-meta">Start visit</span>
+                    </div>
+                    <span className="dir-card-action">Visit</span>
+                  </button>
+                </li>
+              ))}
+          </ul>
+          {afterSave.dogs.filter((d) => d.dog_id !== afterSave.saved_dog_id)
+            .length === 0 && (
+            <p className="step-meta">No other dogs yet — add one below.</p>
+          )}
+          <div className="field">
+            <label htmlFor="next_dog_name">Add a dog</label>
+            <input
+              id="next_dog_name"
+              type="text"
+              value={nextDogName}
+              onChange={(e) => setNextDogName(e.target.value)}
+              disabled={isBusy}
+              placeholder="New dog name"
+            />
+          </div>
+          <div className="actions stack">
+            <button
+              type="button"
+              className="primary"
+              disabled={isBusy || nextDogName.trim() === ''}
+              onClick={() => void addDogThenVisitFromAfterSave()}
+            >
+              {isBusy ? 'Adding…' : 'Add dog & start visit'}
+            </button>
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={() => {
+                const line = afterSave.statusLine
+                setAfterSave(null)
+                onDone(line)
+              }}
+            >
+              Done
             </button>
           </div>
         </section>

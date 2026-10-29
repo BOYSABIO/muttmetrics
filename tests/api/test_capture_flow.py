@@ -12,14 +12,19 @@ def test_new_client_dog_then_visit(client: TestClient, auth_headers: dict[str, s
     owner_name = f"Flow Owner {suffix}"
     dog_name = f"Flow Dog {suffix}"
 
-    owner_resp = client.post("/owners", json={"name": owner_name}, headers=auth_headers)
+    phone = "+49 170 4444444"
+    owner_resp = client.post(
+        "/owners",
+        json={"name": owner_name, "phone": phone},
+        headers=auth_headers,
+    )
     assert owner_resp.status_code == 201
     owner_id = owner_resp.json()["owner_id"]
 
-    # create-or-get: second call must reuse
+    # create-or-get: same name + same phone (spacing differs) reuses (#187)
     owner_again = client.post(
         "/owners",
-        json={"name": owner_name.upper()},
+        json={"name": owner_name.upper(), "phone": "+491704444444"},
         headers=auth_headers,
     )
     assert owner_again.status_code == 200

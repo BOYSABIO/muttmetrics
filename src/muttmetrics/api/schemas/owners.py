@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class UpsertOwnerRequest(BaseModel):
-    """Find an owner by name or create one."""
+    """Create an owner, or reuse one when name+phone clearly match (#187)."""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -34,6 +34,33 @@ class OwnerResponse(BaseModel):
     name: str
     phone: str | None = None
     email: str | None = None
+
+
+class OwnerSearchItem(BaseModel):
+    """One hit from GET /owners?q= (#191) — pick an existing client in capture."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    owner_id: int
+    name: str
+    phone: str | None = None
+    dog_count: int = 0
+
+
+class OwnerConflictCandidate(BaseModel):
+    """Existing owner the SPA can offer when POST /owners hits a name clash."""
+
+    owner_id: int
+    name: str
+    phone: str | None = None
+
+
+class OwnerNameConflictDetail(BaseModel):
+    """HTTP 409 body: do not guess — pick a candidate or supply a phone (#187)."""
+
+    code: str = "owner_name_conflict"
+    message: str
+    candidates: list[OwnerConflictCandidate]
 
 
 class OwnerDogItem(BaseModel):

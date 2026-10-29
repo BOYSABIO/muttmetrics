@@ -95,9 +95,45 @@ export type OwnerProfile = {
   dogs: OwnerDogItem[]
 }
 
-export type CreatedOwner = { owner_id: number; name: string }
+export type CreatedOwner = {
+  owner_id: number
+  name: string
+  phone?: string | null
+  email?: string | null
+}
 export type CreatedDog = { dog_id: number; name: string }
 export type CreatedVisit = { visit_id: number }
+
+/** One hit from GET /owners?q= (#191). */
+export type OwnerSearchItem = {
+  owner_id: number
+  name: string
+  phone: string | null
+  dog_count: number
+}
+
+export type OwnerConflictCandidate = {
+  owner_id: number
+  name: string
+  phone: string | null
+}
+
+/** POST /owners returned 409 — name exists; pick or add a phone (#187). */
+export class OwnerNameConflictError extends Error {
+  readonly candidates: OwnerConflictCandidate[]
+
+  constructor(message: string, candidates: OwnerConflictCandidate[]) {
+    super(message)
+    this.name = 'OwnerNameConflictError'
+    this.candidates = candidates
+  }
+}
+
+export type UpsertOwnerResult = {
+  owner: CreatedOwner
+  /** true = HTTP 201 (new row); false = HTTP 200 (reused by name+phone). */
+  created: boolean
+}
 
 /** Full visit row after create/get/patch (#193). */
 export type VisitDetail = {
@@ -314,6 +350,16 @@ export function searchDogs(q: string): Promise<DogSearchItem[]> {
   return getJson(qs ? `/dogs?${qs}` : '/dogs')
 }
 
+/** Browse/search owners for capture "Already a client?" (#191). */
+export function searchOwners(q: string): Promise<OwnerSearchItem[]> {
+  const params = new URLSearchParams()
+  if (q.trim() !== '') {
+    params.set('q', q.trim())
+  }
+  const qs = params.toString()
+  return getJson(qs ? `/owners?${qs}` : '/owners')
+}
+
 export function listServices(): Promise<ServiceListItem[]> {
   return getJson('/services')
 }
@@ -341,9 +387,53 @@ export function patchOwner(
   return sendJson('PATCH', `/owners/${ownerId}`, body)
 }
 
-/** Create-or-get by name (#21): an existing owner comes back with 200. */
-export function createOwner(name: string): Promise<CreatedOwner> {
-  return sendJson('POST', '/owners', { name })
+/**
+ * Create an owner, or reuse when name+phone clearly match (#187).
+ *
+ * 409 with candidates → throws OwnerNameConflictError (SPA must pick / add phone).
+ * 201 → created: true; 200 → created: false (same person via phone).
+ */
+export async function createOwner(
+  name: string,
+  phone?: string | null,
+): Promise<UpsertOwnerResult> {
+  const body: Record<string, unknown> = { name }
+  const trimmedPhone = phone?.trim()
+  if (trimmedPhone) {
+    body.phone = trimmedPhone
+  }
+
+  const res = await fetch('/api/owners', {
+    method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify(body),
+  })
+
+  if (res.status === 409) {
+    const text = await res.text()
+    let message = 'An owner with this name already exists.'
+    let candidates: OwnerConflictCandidate[] = []
+    try {
+      const parsed = JSON.parse(text) as {
+        detail?: {
+          message?: string
+          candidates?: OwnerConflictCandidate[]
+        }
+      }
+      if (typeof parsed.detail?.message === 'string') {
+        message = parsed.detail.message
+      }
+      if (Array.isArray(parsed.detail?.candidates)) {
+        candidates = parsed.detail.candidates
+      }
+    } catch {
+      /* plain body */
+    }
+    throw new OwnerNameConflictError(message, candidates)
+  }
+
+  const data = (await readJson(res)) as CreatedOwner
+  return { owner: data, created: res.status === 201 }
 }
 
 /** Create-or-get by (owner_id, name) (#21). */

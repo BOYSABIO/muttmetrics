@@ -243,7 +243,7 @@ uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --por
 |-----|-----|------|
 | `http://127.0.0.1:8000/health` | Ops / smoke | Liveness JSON — **public**, no API key, no Postgres |
 | `http://127.0.0.1:8000/ping` | maintainer smoke | Auth check — requires `X-API-Key` |
-| `http://127.0.0.1:8000/owners` | Onboarding | `POST` create-or-get owner by name |
+| `http://127.0.0.1:8000/owners` | Onboarding | `GET` search (`?q=`); `POST` create / phone-match reuse / **409** on name clash ([#187](https://github.com/BOYSABIO/muttmetrics/issues/187), [#191](https://github.com/BOYSABIO/muttmetrics/issues/191)) |
 | `http://127.0.0.1:8000/owners/{id}` | Directory | `GET` owner profile; `PATCH` safe fields ([#131](https://github.com/BOYSABIO/muttmetrics/issues/131), [#132](https://github.com/BOYSABIO/muttmetrics/issues/132)) |
 | `http://127.0.0.1:8000/dogs` | Onboarding / directory | `POST` create-or-get; `GET` list/search (`?q=`) with `owner_name` |
 | `http://127.0.0.1:8000/dogs/{id}` | Directory | `GET` dog profile; `PATCH` safe fields (writes `size_band` from weight, [#171](https://github.com/BOYSABIO/muttmetrics/issues/171)) |
@@ -297,12 +297,14 @@ Never commit real `.env` values. CI sets `API_KEY` as an environment variable in
 
 ### React capture SPA (#69–#72)
 
-**Only** app UI for groomer/maintainer (not `/docs`). Vite + React + TypeScript in `frontend/`. **All API calls live in `src/api.ts`** (headers, error messages, response types) and shared date helpers in `src/dates.ts` ([#180](https://github.com/BOYSABIO/muttmetrics/issues/180)); components import from there and never call `fetch` themselves. Screens: `App.tsx` is the shell (home vs capture); `ThisWeek.tsx` is the dashboard; `Directory.tsx` is the client list, opening `DogProfileView` / `OwnerProfileView`; `Capture.tsx` is search → new client → 3-step visit wizard, with the resumable draft in `draft.ts`. Top areas: **Visits** | **Directory** ([#138](https://github.com/BOYSABIO/muttmetrics/issues/138)). Visits modes: **search** → **visit**, or **new** client → **visit**. Directory: dog/owner profiles + safe PATCH ([#139](https://github.com/BOYSABIO/muttmetrics/issues/139), [#140](https://github.com/BOYSABIO/muttmetrics/issues/140)). Jinja `/capture` (stage A, #63) was removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86) — no templates, no unauthenticated write path. Phone trial over Tailscale: [`docs/runbooks/groomer-trial.md`](./docs/runbooks/groomer-trial.md).
+**Only** app UI for groomer/maintainer (not `/docs`). Vite + React + TypeScript in `frontend/`. **All API calls live in `src/api.ts`** (headers, error messages, response types) and shared date helpers in `src/dates.ts` ([#180](https://github.com/BOYSABIO/muttmetrics/issues/180)); components import from there and never call `fetch` themselves. Screens: `App.tsx` is the shell (home vs capture); `ThisWeek.tsx` is the dashboard; `Directory.tsx` is the client list, opening `DogProfileView` / `OwnerProfileView`; `Capture.tsx` is search → new client → 3-step visit wizard (then optional back-to-back dog), with the resumable draft in `draft.ts`. Top areas: **This week** | **Clients** ([#138](https://github.com/BOYSABIO/muttmetrics/issues/138)). Capture modes: **search** → **visit**, or **new** client → **visit**, then **after_save** for another dog from the same owner ([#191](https://github.com/BOYSABIO/muttmetrics/issues/191)). Directory: dog/owner profiles + safe PATCH + **Add dog** on the owner ([#139](https://github.com/BOYSABIO/muttmetrics/issues/139), [#140](https://github.com/BOYSABIO/muttmetrics/issues/140), [#191](https://github.com/BOYSABIO/muttmetrics/issues/191)). Jinja `/capture` (stage A, #63) was removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86) — no templates, no unauthenticated write path. Phone trial over Tailscale: [`docs/runbooks/groomer-trial.md`](./docs/runbooks/groomer-trial.md).
 
 | Path | API calls |
 |------|-----------|
 | Returning dog (pick from search) | `GET /dogs?q=` → **only** `POST /visits` with known ids |
-| New client | `POST /owners` → `POST /dogs` (create-or-get) → `POST /visits` |
+| Existing owner, new dog | `GET /owners?q=` (pick) → `POST /dogs` → visit wizard ([#191](https://github.com/BOYSABIO/muttmetrics/issues/191)) |
+| Brand-new client | `POST /owners` (optional phone) → `POST /dogs` → visit; name clash without phone → **409** + candidates ([#187](https://github.com/BOYSABIO/muttmetrics/issues/187)) |
+| Back-to-back second dog | After save: pick sibling or `POST /dogs`, keep `visit_date`, new timer ([#191](https://github.com/BOYSABIO/muttmetrics/issues/191)) |
 
 **Visit wizard (#72, photos #92, money #110)** once identity is known (3 steps):
 
@@ -321,7 +323,7 @@ UI labels are **English** (salon business language).
 - **A `File` cannot be persisted.** The #88 draft stores `hadIntakeFile` / `hadAfterFile` booleans so the resume message can say the photo was not kept
 - **`isBusy` guards both write flows.** Save and new-client Continue are disabled in flight; without it a slow phone upload invites repeat taps and duplicate rows (missed in #87, fixed in #92)
 - **Leaving is guarded too (#178).** Close, Cancel visit and every Back are disabled while a save runs (Close clears the draft, so a failed save would leave nothing to retry). Close, Cancel and Reset ask first while the timer is running
-- **New client keeps a half-finished owner (#178).** If the owner was created but the dog failed, a retry with the same owner name only creates the dog. Names are trimmed and required; the server's error text is shown
+- **New client keeps a half-finished owner (#178).** If the owner was created but the dog failed, a retry reuses that pending owner id (and only creates the dog). Prefer picking an existing owner from search when the name already exists (#191); a bare name-only `POST /owners` that would merge now returns **409** (#187)
 
 **Prerequisites:** Node.js LTS (18+), repo `.env` with `API_KEY`, Postgres up, API running.
 
@@ -343,8 +345,9 @@ npm run dev
 | `http://<pc-ip>:5174` | Vite **preview** server — built `dist/`, network-facing, for the groomer trial |
 | `/api/*` in the SPA | Proxied to `http://127.0.0.1:8000/*` (see `frontend/vite.config.ts`) |
 | `GET /dogs?q=` | Directory browse/search — returns `owner_name` on each row (cap 50) |
+| `GET /owners?q=` | Owner search for capture “Already a client?” (#191) |
 | `GET` / `PATCH /dogs/{id}` | Dog profile read / safe enrichment (#131, #132) |
-| `GET` / `PATCH /owners/{id}` | Owner profile read / safe enrichment (#131, #132) |
+| `GET` / `PATCH /owners/{id}` | Owner profile read / safe enrichment (#131, #132); Add dog via `POST /dogs` |
 | Visit step 2 timer | Client-only; fills `actual_minutes` (floor); editable override. In-progress visit (dog + wizard + timer) persists in `localStorage` (`muttmetrics.draftVisit`) so a phone tab kill / reload can resume ([#88](https://github.com/BOYSABIO/muttmetrics/issues/88)). Cleared on save / cancel / reset. |
 | `frontend/.env` | `VITE_API_KEY` (required) and `VITE_BUSINESS_NAME` (optional header name) — gitignored; never commit. Typed in `src/vite-env.d.ts` |
 | `npm run build` | Production bundle to `frontend/dist/` (`tsc -b` type-checks first) |
@@ -357,24 +360,38 @@ PATCH sends only the fields you change. An explicit `null` clears an optional fi
 
 **Phone trial (#82):** the dev server stays on `127.0.0.1`; the groomer gets `npm run build && npm run preview` on a fixed `:5174`, reachable over Tailscale only on that one port. Full procedure: [`docs/runbooks/groomer-trial.md`](./docs/runbooks/groomer-trial.md).
 
-### Create-or-get owners & dogs (#21)
+### Create-or-get owners & dogs (#21, #187, #191)
 
-Onboarding helpers live in `src/muttmetrics/api/services/`. Prefer directory pick in the SPA when the dog already exists; use create-or-get for first visits via the SPA or `/docs`.
+Onboarding helpers live in `src/muttmetrics/api/services/`. Prefer **picking** an existing owner/dog in the SPA; use POST create when this really is a new person or dog.
 
 **JSON evening flow (maintainer / tools):**
 
-1. `POST /owners` `{"name": "Anna Schmidt"}` → `owner_id` (**201** new / **200** existing)  
+1. `GET /owners?q=anna` → pick `owner_id`, **or** `POST /owners` with name (and phone if the name may already exist)  
 2. `POST /dogs` `{"owner_id": …, "name": "Bella"}` → `dog_id` (**201** / **200**)  
 3. `POST /visits` with those ids → visit row  
 
-**Directory (returning dogs, #71):** `GET /dogs` or `GET /dogs?q=bella` → pick `dog_id` / `owner_id` → `POST /visits` (skip steps 1–2).  
+**`POST /owners` rules (#187):**
+
+| Situation | Result |
+|-----------|--------|
+| Name is new | **201** create (phone optional) |
+| Same name + phone digits match an existing row | **200** reuse |
+| Same name + different phone | **201** second owner |
+| Same name + no phone | **409** with `candidates` — do not silent-merge |
+
+Phone is compared as digits only (`+49 170` ≡ `+49170`). Prefer `GET /owners?q=` in the UI so create rarely has to guess.
+
+**Directory (returning dogs, #71):** `GET /dogs` or `GET /dogs?q=bella` → pick `dog_id` / `owner_id` → `POST /visits` (skip create). Owner profile can **Add dog** without retyping the owner name (#191).
 
 | Endpoint | Lookup key | Notes |
 |----------|------------|--------|
-| `POST /owners` | name (case-insensitive, whitespace-normalized) | Optional `phone` / `email` on **create** only |
+| `GET /owners` | optional `q` substring on name | Cap 50; LIKE wildcards escaped |
+| `POST /owners` | name; phone distinguishes same-name people | See table above |
 | `POST /dogs` | `(owner_id, name)` | Optional `breed_id`; **404** if owner/breed missing |
 
 Blank names after normalize → **422**.
+
+**Two dogs at once (#191):** log two visits (own minutes/timer each). No shared timer in v1.
 
 ### POST /visits (#20)
 
