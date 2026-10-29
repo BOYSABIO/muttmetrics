@@ -7,14 +7,32 @@ from muttmetrics.models import Dog, Owner, Photo, Visit
 
 def test_all_models_exported() -> None:
     """Public model exports stay in sync with the tables."""
-    assert set(models.__all__) == {"Breed", "Dog", "Owner", "Photo", "Service", "Visit"}
+    assert set(models.__all__) == {
+        "AddOn",
+        "Breed",
+        "Dog",
+        "Owner",
+        "Photo",
+        "Service",
+        "Visit",
+        "VisitAddOn",
+    }
 
 
 def test_metadata_registers_all_tables() -> None:
     """Importing models registers all tables on shared metadata for Alembic."""
     # Import side effect above must have run first (module-level imports)
     table_names = set(Base.metadata.tables.keys())
-    assert table_names == {"breed", "service", "owner", "dog", "visit", "photo"}
+    assert table_names == {
+        "add_on",
+        "breed",
+        "dog",
+        "owner",
+        "photo",
+        "service",
+        "visit",
+        "visit_add_on",
+    }
 
 
 def test_owner_dog_visit_relationship_chain() -> None:
