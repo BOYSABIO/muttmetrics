@@ -5,6 +5,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from muttmetrics.api.schemas.add_ons import AddOnSummary
+
 
 class UpsertDogRequest(BaseModel):
     """Find a dog by owner + name, or create one."""
@@ -72,6 +74,7 @@ class VisitSummary(BaseModel):
     actual_minutes: int
     condition_score: int | None = None
     status: str | None = None
+    add_ons: list[AddOnSummary] = Field(default_factory=list)
 
 
 class DogProfile(BaseModel):

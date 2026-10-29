@@ -15,6 +15,8 @@ erDiagram
     BREED ||--o{ DOG : "breed_secondary_id"
     SERVICE ||--o{ VISIT : "booked_service_id"
     SERVICE ||--o{ VISIT : "actual_service_id"
+    ADD_ON ||--o{ VISIT_ADD_ON : "used_on"
+    VISIT ||--o{ VISIT_ADD_ON : "has"
     DOG ||--o{ PHOTO : "has"
     VISIT ||--o{ PHOTO : "intake / after"
 
@@ -62,6 +64,18 @@ erDiagram
         numeric price_base
     }
 
+    ADD_ON {
+        int add_on_id PK
+        text slug UK
+        text pricing "flat|per_hour"
+        numeric price_base
+    }
+
+    VISIT_ADD_ON {
+        int visit_id PK,FK
+        int add_on_id PK,FK
+    }
+
     PHOTO {
         int photo_id PK
         int dog_id FK
@@ -81,9 +95,11 @@ erDiagram
 |-------|------|-------------------|
 | `owner` | Slow-changing client (human). Behavioural aggregates. | → many `dog`, many `visit` |
 | `dog` | Slow-changing physical + temperament priors per pet. | → `owner`, → `breed` (×2 for mixes), → many `visit` |
-| `visit` | **Fact table** — one row per groom; training labels live here. | → `dog`, `owner`, → `service` (booked + actual) |
+| `visit` | **Fact table** — one row per groom; training labels live here. | → `dog`, `owner`, → `service` (booked + actual), → many `visit_add_on` |
 | `breed` | Reference priors for cold start (coat, duration, matting risk). | ← `dog.breed_id`, `dog.breed_secondary_id` |
 | `service` | Reference groom types (slug, minutes, **price floor**). | ← `visit.booked_service_id`, `visit.actual_service_id` |
+| `add_on` | Technique / add-on catalog (hand stripping, etc.) ([#192](https://github.com/BOYSABIO/muttmetrics/issues/192)). | ← `visit_add_on` |
+| `visit_add_on` | Which techniques were used on a visit. | → `visit`, → `add_on` |
 | `photo` | One row per stored image file. Bytes live on disk under `PHOTO_ROOT`, **not** in the database ([ADR-002](./adr/002-photo-storage.md)). | → `dog` (required), → `visit` (optional — a profile photo has no visit) |
 
 ## Column groups (by table)
@@ -116,7 +132,8 @@ erDiagram
 | Booking | `booked_service_id`, `booking_channel`, `is_emergency`, `quoted_price` |
 | System-computed at write | `days_since_last`, `predicted_min_p50`, `predicted_min_p90` |
 | Intake | `condition_score` (**0 = worst … 5 = best**, or NULL), `matting_locations[]`, `fleas_or_parasites`, `arrived_wet_dirty` |
-| Outcome | `actual_service_id`, `pivoted`, `pivot_reason`, `shaved_down`, `actual_minutes`, `final_price`, `tip`, `add_ons[]` |
+| Outcome | `actual_service_id`, `pivoted`, `pivot_reason`, `shaved_down`, `actual_minutes`, `final_price`, `tip` |
+| Techniques | via `visit_add_on` → `add_on` ([#192](https://github.com/BOYSABIO/muttmetrics/issues/192); unused `add_ons[]` dropped) |
 | Qualitative | `what_surprised_me`, `behaviour_this_visit` |
 | Status | `status`, `cancelled_hours_before` |
 
@@ -153,14 +170,14 @@ Metrics are **SQL functions** (plus one constants view), not tables ([ADR-003](.
 
 ## Implementation notes
 
-- **Arrays:** list fields use Postgres `ARRAY(Text)`, not JSON (`fear_triggers`, `matting_locations`, `add_ons`, etc.).
+- **Arrays:** list fields use Postgres `ARRAY(Text)`, not JSON (`fear_triggers`, `matting_locations`, etc.). Techniques use `visit_add_on`, not an array on `visit`.
 - **CHECK constraints** (initial migration #8): `dog.handling_score` 1–5; `visit.condition_score` 0–5; `visit.behaviour_this_visit` 1–5; `visit.status` ∈ `completed`, `cancelled`, `no_show`. Postgres rejects invalid values even if application code bugs — e.g. `condition_score = 99` fails with `ck_visit_condition_score`.
 - **Scales (locked [#123](https://github.com/BOYSABIO/muttmetrics/issues/123)):** `visit.condition_score` — **0 = worst** coat / hardest job, **5 = best** / easiest, NULL = not assessed. `dog.handling_score` — **1 = easy** on the table, **5 = hardest**, NULL = unknown (rules prior treats **3** as neutral).
 - **Query indexes** (migration `bba4e6f67c96`, issue #9): FK columns on `dog` and `visit`, plus `visit.visit_date` — for owner/dog listings, visit history, day packing, and service-mix queries.
 - **Required columns:** `owner.name`, `dog.name`, `visit.visit_date`, `visit.actual_minutes`.
 - **Service prices:** `service.price_base` is an optional catalog **floor**. Committed seed leaves it NULL; a gitignored `data/private/pricing.json` overlay fills it locally. Size bands live on `dog`; on-the-spot charge on `visit.quoted_price` / `final_price` / `tip`.
 - **Migrations:** Alembic — `alembic upgrade head` applies schema. See [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
-- **Seed:** `python -m muttmetrics.seed` upserts breeds + services (idempotent).
+- **Seed:** `python -m muttmetrics.seed` upserts breeds + services + add-ons (idempotent).
 
 ### Indexes (issue #9)
 
@@ -179,6 +196,8 @@ Metrics are **SQL functions** (plus one constants view), not tables ([ADR-003](.
 
 | Model | File |
 |-------|------|
+| `AddOn` | `src/muttmetrics/models/add_on.py` |
+| `VisitAddOn` | `src/muttmetrics/models/visit_add_on.py` |
 | `Owner` | `src/muttmetrics/models/owner.py` |
 | `Dog` | `src/muttmetrics/models/dog.py` |
 | `Visit` | `src/muttmetrics/models/visit.py` |

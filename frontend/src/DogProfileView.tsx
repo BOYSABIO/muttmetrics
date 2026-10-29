@@ -546,6 +546,18 @@ export function DogProfileView({
                         ·
                       </span>
                       <span>{formatVisitStatus(v.status)}</span>
+                      {(v.add_ons?.length ?? 0) > 0 && (
+                        <>
+                          <span className="dir-visit-dot" aria-hidden>
+                            ·
+                          </span>
+                          <span>
+                            {v.add_ons
+                              .map((a) => a.name_en ?? a.slug)
+                              .join(', ')}
+                          </span>
+                        </>
+                      )}
                       <span className="dir-visit-edit">Edit</span>
                     </span>
                   </button>

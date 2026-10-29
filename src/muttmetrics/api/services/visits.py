@@ -1,15 +1,62 @@
-"""Visit patch (and later delete) - event facts only."""
+"""Visit patch/delete + add-on join helpers (#192)."""
 
 from __future__ import annotations
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
+from muttmetrics.api.schemas.add_ons import AddOnSummary
+from muttmetrics.api.schemas.dogs import VisitSummary
 from muttmetrics.api.schemas.visits import PatchVisitRequest, VisitResponse
 from muttmetrics.api.services.patching import reject_null_for_required_columns
 from muttmetrics.media import storage
-from muttmetrics.models import Dog, Photo, Service, Visit
+from muttmetrics.models import AddOn, Dog, Photo, Service, Visit, VisitAddOn
 from muttmetrics.services.visit_predictions import _days_since_last
+
+
+def _add_on_summaries(visit: Visit) -> list[AddOnSummary]:
+    return [
+        AddOnSummary.model_validate(link.add_on)
+        for link in visit.visit_add_ons
+        if link.add_on is not None
+    ]
+
+
+def visit_to_response(visit: Visit) -> VisitResponse:
+    """Map a Visit ORM row (with add-ons loaded) to the API response."""
+    base = VisitResponse.model_validate(visit)
+    return base.model_copy(update={"add_ons": _add_on_summaries(visit)})
+
+
+def visit_to_summary(visit: Visit) -> VisitSummary:
+    """Map a Visit ORM row to a dog-profile recent-visit row."""
+    base = VisitSummary.model_validate(visit)
+    return base.model_copy(update={"add_ons": _add_on_summaries(visit)})
+
+
+def load_visit(session: Session, visit_id: int) -> Visit | None:
+    """Load one visit with add-on links + catalog rows."""
+    return session.scalar(
+        select(Visit)
+        .options(selectinload(Visit.visit_add_ons).selectinload(VisitAddOn.add_on))
+        .where(Visit.visit_id == visit_id)
+    )
+
+
+def set_visit_add_ons(session: Session, visit: Visit, add_on_ids: list[int]) -> None:
+    """
+    Replace visit_add_on rows for this visit.
+
+    Raises LookupError if any id is missing from the catalog (route → 404).
+    """
+    ids = list(dict.fromkeys(add_on_ids))
+    for add_on_id in ids:
+        if session.get(AddOn, add_on_id) is None:
+            raise LookupError(f"Add-on {add_on_id} not found")
+
+    visit.visit_add_ons.clear()
+    for add_on_id in ids:
+        visit.visit_add_ons.append(VisitAddOn(add_on_id=add_on_id))
 
 
 def patch_visit(
@@ -19,11 +66,12 @@ def patch_visit(
     body: PatchVisitRequest,
 ) -> VisitResponse:
     """Apply a partial visit update. Raises LookupError / ValueError for the route."""
-    visit = session.get(Visit, visit_id)
+    visit = load_visit(session, visit_id)
     if visit is None:
         raise LookupError(f"Visit {visit_id} not found")
 
     updates = body.model_dump(exclude_unset=True)
+    add_on_ids = updates.pop("add_on_ids", None)
     reject_null_for_required_columns(Visit, updates)
 
     for service_key in ("booked_service_id", "actual_service_id"):
@@ -33,6 +81,9 @@ def patch_visit(
 
     for key, value in updates.items():
         setattr(visit, key, value)
+
+    if add_on_ids is not None:
+        set_visit_add_ons(session, visit, add_on_ids)
 
     # Date changed -> gap is a fact about the new date; predictions stay frozen
     if "visit_date" in updates:
@@ -47,7 +98,9 @@ def patch_visit(
         )
 
     session.flush()
-    return VisitResponse.model_validate(visit)
+    reloaded = load_visit(session, visit.visit_id)
+    assert reloaded is not None
+    return visit_to_response(reloaded)
 
 
 def delete_visit(session: Session, *, visit_id: int) -> None:

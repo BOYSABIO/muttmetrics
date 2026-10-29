@@ -13,6 +13,32 @@ Size bands (kg) live on dog.weight_kg -> size_band, not as separate service SKUs
 Breed priors are domain guesses - edit and re-seed.
 """
 
+# Techniques / add-ons (#192). price_base NULL in git — optional overlay in
+# pricing.json (same file as services; keyed by add-on slug).
+SEED_ADD_ONS: list[dict] = [
+    {
+        "slug": "hand_stripping",
+        "name_de": "Handstripping",
+        "name_en": "Hand stripping",
+        "pricing": "per_hour",
+        "price_base": None,
+    },
+    {
+        "slug": "de_shed",
+        "name_de": "Unterwolle",
+        "name_en": "De-shedding",
+        "pricing": "flat",
+        "price_base": None,
+    },
+    {
+        "slug": "nail_grind",
+        "name_de": "Krallen schleifen",
+        "name_en": "Nail grinding",
+        "pricing": "flat",
+        "price_base": None,
+    },
+]
+
 SEED_SERVICES: list[dict] = [
     {
         "slug": "nails",
