@@ -163,6 +163,19 @@ main.app-home {
   padding-inline: 0.9rem;
 }
 
+/* Capture: new-client affordance beside the filter (not a ghost/underline). */
+.search-bar-new {
+  min-width: 2.85rem;
+  padding-inline: 0.75rem;
+  font-size: 1.35rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.profile-add-dog {
+  margin-top: 0.75rem;
+}
+
 .full-width {
   width: 100%;
 }

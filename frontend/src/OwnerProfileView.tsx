@@ -1,5 +1,11 @@
 import { useState } from 'react'
-import { errorMessage, patchOwner, type OwnerProfile } from './api'
+import {
+  createDog,
+  errorMessage,
+  fetchOwnerProfile,
+  patchOwner,
+  type OwnerProfile,
+} from './api'
 import { DogAvatar } from './DogAvatar'
 
 type OwnerForm = {
@@ -51,6 +57,8 @@ export function OwnerProfileView({
   const [form, setForm] = useState(() => formFromProfile(initial))
   const [isBusy, setIsBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [addingDog, setAddingDog] = useState(false)
+  const [newDogName, setNewDogName] = useState('')
 
   function set<K extends keyof OwnerForm>(key: K, value: OwnerForm[K]): void {
     setForm((f) => ({ ...f, [key]: value }))
@@ -78,6 +86,31 @@ export function OwnerProfileView({
       setProfile(updated)
       setForm(formFromProfile(updated))
       setMessage('Saved')
+      onSaved()
+    } catch (error) {
+      console.error(error)
+      setMessage(errorMessage(error))
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
+  async function addDog(): Promise<void> {
+    if (isBusy) return
+    const name = newDogName.trim()
+    if (name === '') {
+      setMessage('Dog name is required')
+      return
+    }
+    setIsBusy(true)
+    setMessage('Adding dog…')
+    try {
+      const dog = await createDog(profile.owner_id, name)
+      const updated = await fetchOwnerProfile(profile.owner_id)
+      setProfile(updated)
+      setNewDogName('')
+      setAddingDog(false)
+      setMessage(`Added ${dog.name}`)
       onSaved()
     } catch (error) {
       console.error(error)
@@ -246,6 +279,55 @@ export function OwnerProfileView({
                 </li>
               ))}
             </ul>
+          )}
+
+          {addingDog ? (
+            <div className="field-stack profile-add-dog">
+              <div className="field">
+                <label htmlFor="own_new_dog">New dog name</label>
+                <input
+                  id="own_new_dog"
+                  type="text"
+                  value={newDogName}
+                  onChange={(e) => setNewDogName(e.target.value)}
+                  disabled={isBusy}
+                  autoFocus
+                />
+              </div>
+              <div className="actions">
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={isBusy}
+                  onClick={() => void addDog()}
+                >
+                  {isBusy ? 'Adding…' : 'Add dog'}
+                </button>
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => {
+                    setAddingDog(false)
+                    setNewDogName('')
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="actions profile-add-dog">
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={() => {
+                  setAddingDog(true)
+                  setMessage('')
+                }}
+              >
+                Add dog
+              </button>
+            </div>
           )}
         </div>
         </form>
