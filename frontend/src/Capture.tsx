@@ -196,26 +196,33 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
   }, [])
 
   // Debounced owner search on the new-client screen (#191).
+  // Do not clear hits synchronously in the effect (react-hooks/set-state-in-effect);
+  // hide stale rows via ownerHitsVisible below.
   useEffect(() => {
     if (mode !== 'new' || pickedOwner !== null) {
-      setOwnerHits([])
       return
     }
     const q = ownerName.trim()
     if (q.length < 2) {
-      setOwnerHits([])
       return
     }
+    let cancelled = false
     const handle = window.setTimeout(() => {
       void (async () => {
         try {
-          setOwnerHits(await searchOwners(q))
+          const hits = await searchOwners(q)
+          if (!cancelled) {
+            setOwnerHits(hits)
+          }
         } catch (error) {
           console.error(error)
         }
       })()
     }, 250)
-    return () => window.clearTimeout(handle)
+    return () => {
+      cancelled = true
+      window.clearTimeout(handle)
+    }
   }, [mode, ownerName, pickedOwner])
 
   function startTimer() {
@@ -245,7 +252,8 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
     clearDraft()
     setTimerStatus('idle')
     setStartedAt(null)
-    setTickNow(Date.now())
+    // Updater form: avoid impure Date.now() as a direct setState arg (react-hooks/purity).
+    setTickNow(() => Date.now())
     setActualMinutes('')
     // Do not clear `message` here — saveVisit sets a success line then calls
     // resetTimer; wiping it made successful saves look like a no-op.
@@ -575,6 +583,13 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
     )
   }, [query, results])
 
+  const ownerHitsVisible =
+    mode === 'new' &&
+    pickedOwner === null &&
+    ownerName.trim().length >= 2
+      ? ownerHits
+      : []
+
   return (
     <>
           <header className="app-header app-header-capture">
@@ -711,9 +726,9 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
             </p>
           )}
 
-          {pickedOwner === null && ownerHits.length > 0 && (
+          {ownerHitsVisible.length > 0 && (
             <ul className="dir-card-list">
-              {ownerHits.map((hit) => (
+              {ownerHitsVisible.map((hit) => (
                 <li key={hit.owner_id}>
                   <button
                     type="button"
