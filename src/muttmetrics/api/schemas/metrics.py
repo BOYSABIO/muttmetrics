@@ -1,4 +1,4 @@
-"""Pydantic models for GET /metrics/week and /metrics/period (#156 / #170)."""
+"""Pydantic models for GET /metrics/week and /metrics/period (#156 / #170 / #187)."""
 
 from __future__ import annotations
 
@@ -17,7 +17,9 @@ class MetricValue(BaseModel):
     reason: str | None = None  # e.g. "not_enough_data"
 
 
-class WeekSummaryOut(BaseModel):
+class PeriodSummaryOut(BaseModel):
+    """Headline totals for one inclusive range (week, month, or custom)."""
+
     visit_count: int
     groomed_minutes: int
     revenue_ex_tip: float
@@ -70,9 +72,10 @@ class UtilizationDayOut(BaseModel):
 class UtilizationWeekOut(BaseModel):
     """One ISO week of ``metric_utilization_weeks`` (#178).
 
-    ``range_start`` / ``range_end`` are clipped to the requested period. There is
-    deliberately no weekly ``over_buffer``: the cap is per day, so a week reports
-    how many of its days went over.
+    ``week_start`` here is the Monday of that utilization row (SQL grain), not
+    the API period bounds. ``range_start`` / ``range_end`` are clipped to the
+    requested period. There is deliberately no weekly ``over_buffer``: the cap
+    is per day, so a week reports how many of its days went over.
     """
 
     week_start: date
@@ -90,16 +93,16 @@ class UtilizationWeekOut(BaseModel):
 class MetricsPeriodBlock(BaseModel):
     """One inclusive date range of packaged metrics (no nested previous).
 
-    ``week_start`` / ``week_end`` are the range bounds (kept for #158 clients);
-    for a month they are the 1st and last day of that month.
+    ``start`` / ``end`` are the range bounds (#187). For a week they are
+    Monday…Sunday; for a month the 1st…last day.
     """
 
     period: PeriodKind
-    week_start: date
-    week_end: date
+    start: date
+    end: date
     buffer_minutes: int
     min_n: int
-    summary: WeekSummaryOut
+    summary: PeriodSummaryOut
     eur_per_hour: list[EurPerHourCellOut]
     pivot: PivotOut
     overrun: OverrunOut
@@ -109,7 +112,7 @@ class MetricsPeriodBlock(BaseModel):
 
 
 class MetricsWeekOut(MetricsPeriodBlock):
-    """Current week plus the prior Monday–Sunday block for vs-last-week UI."""
+    """Current week plus the prior Monday–Sunday block for vs-last-week curls."""
 
     previous_week: MetricsPeriodBlock | None = None
 

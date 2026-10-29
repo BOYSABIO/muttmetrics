@@ -55,8 +55,8 @@ def test_period_month_matches_fixture(
     assert res.status_code == 200
     data = res.json()
     assert data["period"] == "month"
-    assert data["week_start"] == str(MONTH_START)
-    assert data["week_end"] == str(MONTH_END)
+    assert data["start"] == str(MONTH_START)
+    assert data["end"] == str(MONTH_END)
 
     exp = EXPECTED["summary"]
     assert data["summary"]["visit_count"] == exp["visit_count"]
@@ -69,9 +69,9 @@ def test_period_month_matches_fixture(
     prev = data["previous_period"]
     assert prev is not None
     assert prev["period"] == "month"
-    assert prev["week_start"] == "2026-03-01"
-    assert prev["week_end"] == "2026-03-31"
-    assert date.fromisoformat(prev["week_end"]) == MONTH_START - timedelta(days=1)
+    assert prev["start"] == "2026-03-01"
+    assert prev["end"] == "2026-03-31"
+    assert date.fromisoformat(prev["end"]) == MONTH_START - timedelta(days=1)
 
 
 def test_period_week_range_matches_week_fixture(
@@ -152,8 +152,8 @@ def test_previous_window_for_a_custom_range_is_the_same_length_before_it(
     assert res.status_code == 200
     data = res.json()
     assert data["period"] == "custom"
-    assert data["previous_period"]["week_start"] == "2026-02-28"
-    assert data["previous_period"]["week_end"] == "2026-03-02"
+    assert data["previous_period"]["start"] == "2026-02-28"
+    assert data["previous_period"]["end"] == "2026-03-02"
 
 
 def test_previous_window_for_january_is_last_december(
@@ -166,5 +166,5 @@ def test_previous_window_for_january_is_last_december(
     )
     assert res.status_code == 200
     prev = res.json()["previous_period"]
-    assert (prev["week_start"], prev["week_end"]) == ("2025-12-01", "2025-12-31")
+    assert (prev["start"], prev["end"]) == ("2025-12-01", "2025-12-31")
     assert prev["period"] == "month"

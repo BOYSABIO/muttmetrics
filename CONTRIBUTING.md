@@ -56,7 +56,8 @@ CI runs Playwright against a **real** API + Postgres (`e2e` job in [`.github/wor
 ```powershell
 docker compose exec db createdb -U muttmetrics muttmetrics_e2e   # once
 $env:DATABASE_URL = "postgresql+psycopg://muttmetrics:muttmetrics@127.0.0.1:5432/muttmetrics_e2e"
-$env:API_KEY = "dev-change-me"   # must match frontend/.env VITE_API_KEY
+# ≥24 chars; must match frontend/.env VITE_API_KEY (not the .env.example placeholder — #187)
+$env:API_KEY = "local-e2e-key-not-for-production"
 alembic upgrade head
 python -m muttmetrics.seed
 python ops/demo_data.py          # first time only (refuses if visits exist)
@@ -255,8 +256,8 @@ uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --por
 | `http://127.0.0.1:8000/visits` | Capture | `POST` create visit — requires existing dog/owner ids, and the dog must belong to that owner; optional `add_on_ids` |
 | `http://127.0.0.1:8000/visits/{id}/photos` | Capture | `POST` multipart photo upload; `GET` metadata list ([#30](https://github.com/BOYSABIO/muttmetrics/issues/30)) |
 | `http://127.0.0.1:8000/photos/{id}` | Capture | `GET` the JPEG bytes (API key required — an `<img src>` cannot fetch it) |
-| `http://127.0.0.1:8000/metrics/week` | Dashboard | `GET` one Mon–Sun week + `previous_week` ([#156](https://github.com/BOYSABIO/muttmetrics/issues/156)) |
-| `http://127.0.0.1:8000/metrics/period` | Dashboard | `GET` any inclusive range up to 366 days, e.g. a calendar month ([#170](https://github.com/BOYSABIO/muttmetrics/issues/170)) |
+| `http://127.0.0.1:8000/metrics/period` | Dashboard | `GET` any inclusive range up to 366 days (`start`/`end`; week = Mon–Sun, month = calendar month). SPA uses this for both modes ([#170](https://github.com/BOYSABIO/muttmetrics/issues/170), [#187](https://github.com/BOYSABIO/muttmetrics/issues/187)) |
+| `http://127.0.0.1:8000/metrics/week` | Ops / curl | Thin Mon–Sun wrapper + `previous_week` ([#156](https://github.com/BOYSABIO/muttmetrics/issues/156)); same payload shape, period bounds are `start`/`end` |
 | `http://127.0.0.1:8000/docs` | maintainer | OpenAPI test console — **not** the groomer’s UI |
 | `http://127.0.0.1:5173` (dev) / `:5174` (preview) | groomer | React capture SPA in `frontend/` — **only** salon UI ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)–[#72](https://github.com/BOYSABIO/muttmetrics/issues/72)) |
 
@@ -279,11 +280,18 @@ X-API-Key: <same value as API_KEY in .env>
 | `API_KEY` in `.env` | Server-side secret (required; see `.env.example`) |
 | Header `X-API-Key` | What callers send |
 | `require_api_key` in `src/muttmetrics/api/deps.py` | FastAPI dependency — 401 if missing/wrong |
+| Startup check ([#187](https://github.com/BOYSABIO/muttmetrics/issues/187)) | API refuses to start if `API_KEY` is `dev-change-me` or shorter than 24 characters |
 | `GET /health` | Stays **public** (no key) |
 | Every other route: `/ping`, owners, dogs, breeds, services, visits, metrics | Protected |
 | Photo routes (`/visits/{id}/photos`, `/dogs/{id}/photos`, `/photos/{id}`) | Protected — these serve client photos |
 
 All write paths require `X-API-Key`. The unauthenticated Jinja `/capture` form is gone ([#86](https://github.com/BOYSABIO/muttmetrics/issues/86)).
+
+Generate a local key (same value in root `.env` and `frontend/.env` as `VITE_API_KEY`):
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
 
 In `/docs`, use **Authorize** and set `X-API-Key` to your `.env` value before calling protected endpoints.
 
@@ -291,7 +299,7 @@ Quick checks:
 
 ```bash
 curl.exe -s -w "`nHTTP %{http_code}`n" http://127.0.0.1:8000/health
-curl.exe -s -w "`nHTTP %{http_code}`n" -H "X-API-Key: dev-change-me" http://127.0.0.1:8000/ping
+curl.exe -s -w "`nHTTP %{http_code}`n" -H "X-API-Key: %API_KEY%" http://127.0.0.1:8000/ping
 ```
 
 Never commit real `.env` values. CI sets `API_KEY` as an environment variable in `.github/workflows/ci.yml`; inside tests, the `client` fixture sets it with `monkeypatch`.

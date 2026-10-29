@@ -1,8 +1,11 @@
-"""GET /metrics/week and /metrics/period (#156 / #170).
+"""GET /metrics/week and /metrics/period (#156 / #170 / #187).
 
 Thin HTTP layer: parse and validate the query, call ``api.services.metrics``,
 return the response model. The SQL lives in the service, the formulas in
 Postgres (ADR-003).
+
+The SPA uses ``/metrics/period`` for week and month (#187). ``/metrics/week``
+stays as a Mon–Sun convenience wrapper (``previous_week``) for curls/ops.
 """
 
 from __future__ import annotations

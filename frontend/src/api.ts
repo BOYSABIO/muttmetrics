@@ -185,7 +185,8 @@ export type MetricValue = {
   reason: string | null
 }
 
-export type WeekSummary = {
+/** Headline totals for one inclusive range (#187; was WeekSummary). */
+export type PeriodSummary = {
   visit_count: number
   groomed_minutes: number
   revenue_ex_tip: number
@@ -243,11 +244,12 @@ export type UtilizationWeek = {
 
 export type MetricsPeriodBlock = {
   period: 'week' | 'month' | 'custom'
-  week_start: string
-  week_end: string
+  /** Inclusive range bounds (#187; was week_start / week_end). */
+  start: string
+  end: string
   buffer_minutes: number
   min_n: number
-  summary: WeekSummary
+  summary: PeriodSummary
   eur_per_hour: EurPerHourCell[]
   overrun: OverrunOut
   p90_miss: P90MissOut
@@ -256,7 +258,9 @@ export type MetricsPeriodBlock = {
 }
 
 export type MetricsPeriodOut = MetricsPeriodBlock & {
+  /** Present on /metrics/week only (thin wrapper). */
   previous_week?: MetricsPeriodBlock | null
+  /** Present on /metrics/period (what the SPA uses). */
   previous_period?: MetricsPeriodBlock | null
 }
 
@@ -514,6 +518,7 @@ export async function fetchPhotoBlob(photoId: number): Promise<Blob | null> {
   return res.ok ? res.blob() : null
 }
 
+/** Prefer ``fetchMetricsPeriod`` — SPA uses /period for week and month (#187). */
 export function fetchMetricsWeek(
   start: string,
   bufferMinutes: number,
