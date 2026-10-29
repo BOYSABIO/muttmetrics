@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import {
   errorMessage,
   fetchMetricsPeriod,
-  fetchMetricsWeek,
   type MetricValue,
   type MetricsPeriodOut,
 } from './api'
@@ -223,9 +222,14 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
     void (async () => {
       let next: LoadResult
       try {
+        // One endpoint for both modes (#187): week = Mon…Sun, month = 1st…last.
         const fetched =
           mode === 'week'
-            ? await fetchMetricsWeek(weekStart, DEFAULT_BUFFER_MINUTES)
+            ? await fetchMetricsPeriod(
+                weekStart,
+                toISODate(addDays(parseISODate(weekStart), 6)),
+                DEFAULT_BUFFER_MINUTES,
+              )
             : await fetchMetricsPeriod(
                 monthStart,
                 toISODate(lastOfMonth(parseISODate(monthStart))),
@@ -281,13 +285,12 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
   const rangeLabel =
     mode === 'week'
       ? formatWeekRange(
-          data?.week_start ?? weekStart,
-          data?.week_end ?? toISODate(addDays(parseISODate(weekStart), 6)),
+          data?.start ?? weekStart,
+          data?.end ?? toISODate(addDays(parseISODate(weekStart), 6)),
         )
       : formatMonthRange(
-          data?.week_start ?? monthStart,
-          data?.week_end ??
-            toISODate(lastOfMonth(parseISODate(monthStart))),
+          data?.start ?? monthStart,
+          data?.end ?? toISODate(lastOfMonth(parseISODate(monthStart))),
         )
 
   function goPrev(): void {
@@ -366,7 +369,7 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
 
   const showJumpCurrent = mode === 'week' ? weeksBack > 0 : monthsBack > 0
   const canGoNext = mode === 'week' ? canGoNextWeek : canGoNextMonth
-  const periodKey = data?.week_start ?? (mode === 'week' ? weekStart : monthStart)
+  const periodKey = data?.start ?? (mode === 'week' ? weekStart : monthStart)
 
   const coatPanel =
     minN === undefined ? null : (

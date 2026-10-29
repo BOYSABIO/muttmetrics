@@ -22,10 +22,10 @@ from muttmetrics.api.schemas.metrics import (
     OverrunOut,
     P90MissOut,
     PeriodKind,
+    PeriodSummaryOut,
     PivotOut,
     UtilizationDayOut,
     UtilizationWeekOut,
-    WeekSummaryOut,
 )
 
 DEFAULT_BUFFER_MINUTES = 240
@@ -61,8 +61,8 @@ def _metric_value(raw: Any) -> MetricValue:
     return MetricValue(value=float(raw), reason=None)
 
 
-def _empty_summary() -> WeekSummaryOut:
-    return WeekSummaryOut(
+def _empty_summary() -> PeriodSummaryOut:
+    return PeriodSummaryOut(
         visit_count=0,
         groomed_minutes=0,
         revenue_ex_tip=0.0,
@@ -121,7 +121,7 @@ def load_period_metrics(
     if summary_row is None:
         summary = _empty_summary()
     else:
-        summary = WeekSummaryOut(
+        summary = PeriodSummaryOut(
             visit_count=int(summary_row["visit_count"]),
             groomed_minutes=int(summary_row["groomed_minutes"]),
             revenue_ex_tip=float(summary_row["revenue_ex_tip"]),
@@ -285,8 +285,8 @@ def load_period_metrics(
 
     return MetricsPeriodBlock(
         period=kind,
-        week_start=period_start,
-        week_end=period_end,
+        start=period_start,
+        end=period_end,
         buffer_minutes=buffer_minutes,
         min_n=min_n,
         summary=summary,

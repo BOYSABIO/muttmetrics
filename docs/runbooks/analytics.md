@@ -29,7 +29,7 @@ docker compose exec -T db psql -U muttmetrics -d muttmetrics -f /tmp/q.sql
 
 Or open the same SQL in the Postgres extension. See [`db-peek.md`](./db-peek.md) and [`ops/README.md`](../../ops/README.md).
 
-API: `GET /metrics/week?start=YYYY-MM-DD` (Monday) or `GET /metrics/period?start=&end=` (any inclusive range, max 366 days).
+API: `GET /metrics/period?start=&end=` (any inclusive range, max 366 days; response bounds are `start` / `end` — [#187](https://github.com/BOYSABIO/muttmetrics/issues/187)). `GET /metrics/week?start=` (Monday) remains a thin Mon–Sun wrapper with `previous_week` for curls/ops.
 
 ## Privacy (public vs private)
 
@@ -172,7 +172,7 @@ We publish **two** named rates so pricing power and take-home are never confused
 
 | Name | Value | Used by |
 |------|-------|---------|
-| `MIN_N` | `5` | Metric functions + `metric_constants.min_n`; API exposes `min_n` on `/metrics/week` and `/metrics/period`; UI must not hard-code |
+| `MIN_N` | `5` | Metric functions + `metric_constants.min_n`; API exposes `min_n` on `/metrics/period` (and `/metrics/week`); UI must not hard-code |
 
 When code lands, this value should appear **once** (e.g. a SQL constant table, a migration-seeded setting, or a single module constant imported by API and tests). Amending the number means amending this table and that single implementation site.
 

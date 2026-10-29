@@ -23,7 +23,8 @@ from tests.db_guard import DEFAULT_TEST_DATABASE_URL, require_test_database
 from tests.fixtures.load_metric_month import load_metric_month
 from tests.fixtures.load_metric_week import load_metric_week
 
-_DEFAULT_API_KEY = "test-api-key"
+# Long enough for #187 (MIN_API_KEY_LENGTH); not the .env.example placeholder.
+_DEFAULT_API_KEY = "test-api-key-not-for-production"
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -37,6 +38,9 @@ def pytest_configure(config: pytest.Config) -> None:
         os.environ["DATABASE_URL"] = require_test_database(url)
     except ValueError as exc:
         raise pytest.UsageError(str(exc)) from exc
+    # Health/error tests call create_app() without the client fixture; give
+    # them a key that passes the #187 length / placeholder checks.
+    os.environ.setdefault("API_KEY", _DEFAULT_API_KEY)
 
 
 @pytest.fixture(autouse=True)

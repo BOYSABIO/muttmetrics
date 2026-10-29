@@ -1,5 +1,8 @@
 """FastAPI application factory and ASGI entrypoint."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -13,6 +16,14 @@ from muttmetrics.api.routes.photos import router as photos_router
 from muttmetrics.api.routes.ping import router as ping_router
 from muttmetrics.api.routes.services import router as services_router
 from muttmetrics.api.routes.visits import router as visits_router
+from muttmetrics.config import get_settings
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Load settings when the server starts — refuse insecure API_KEY (#187)."""
+    get_settings()
+    yield
 
 
 def create_app() -> FastAPI:
@@ -21,6 +32,7 @@ def create_app() -> FastAPI:
         title="MuttMetrics",
         version="0.1.0",
         description="Duration intelligence API - capture and priors",
+        lifespan=lifespan,
     )
 
     @app.exception_handler(Exception)

@@ -7,9 +7,13 @@ from pathlib import Path
 
 import uvicorn
 
+from muttmetrics.config import get_settings
+
 
 def main() -> None:
     """Run uvicorn with safe reload defaults for local development."""
+    # Fail before binding the port if API_KEY is missing/insecure (#187).
+    get_settings()
     # .../src/muttmetrics/api/__main__.py → parents[2] == .../src
     src_dir = Path(__file__).resolve().parents[2]
     uvicorn.run(

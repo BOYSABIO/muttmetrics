@@ -127,6 +127,7 @@ Photos are served only through the API and require the shared `X-API-Key`. The k
 
 - **Never host `dist/` publicly** (a static host, a public tunnel, a shared drive). The key and the API behind it go with it.
 - **Don't reuse the key** anywhere else. It is a door code for this API, not a password.
+- **Don't ship the example:** the API refuses to start if `API_KEY` is still `dev-change-me` or shorter than 24 characters ([#187](https://github.com/BOYSABIO/muttmetrics/issues/187)).
 - **Rotating it means a rebuild:** change `API_KEY` in `.env` and `VITE_API_KEY` in `frontend/.env`, restart the API, then `npm run build` and restart preview. Phones pick up the new bundle on reload.
 
 **Upgrade path (not done yet):** have the Vite dev/preview proxy add the `X-API-Key` header server-side, so the key never reaches the browser. Do it before anything outside the tailnet can reach the app ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)).

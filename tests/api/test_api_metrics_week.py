@@ -42,8 +42,8 @@ def test_metrics_week_full_fixture(
     data = r.json()
 
     assert data["period"] == "week"
-    assert data["week_start"] == str(WEEK_START)
-    assert data["week_end"] == str(WEEK_START + timedelta(days=6))
+    assert data["start"] == str(WEEK_START)
+    assert data["end"] == str(WEEK_START + timedelta(days=6))
     assert data["buffer_minutes"] == BUFFER_MINUTES
 
     assert data["min_n"] == MIN_N
@@ -98,7 +98,7 @@ def test_metrics_week_full_fixture(
     # Week before Syn* has no rows
     prev = data["previous_week"]
     assert prev is not None
-    assert prev["week_start"] == str(WEEK_START - timedelta(days=7))
+    assert prev["start"] == str(WEEK_START - timedelta(days=7))
     assert prev["summary"]["visit_count"] == 0
 
 
@@ -128,5 +128,5 @@ def test_metrics_week_empty_week_returns_200(
     # Asking for the empty week → previous_week is the Syn* fixture week
     prev = data["previous_week"]
     assert prev is not None
-    assert prev["week_start"] == str(WEEK_START)
+    assert prev["start"] == str(WEEK_START)
     assert prev["summary"]["visit_count"] == EXPECTED["week_summary"][WEEK_START]["visit_count"]
