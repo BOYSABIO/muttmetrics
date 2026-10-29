@@ -5,11 +5,13 @@ import {
   createVisit,
   errorMessage,
   fetchOwnerProfile,
+  listAddOns,
   listServices,
   OwnerNameConflictError,
   searchDogs,
   searchOwners,
   uploadVisitPhoto,
+  type AddOnListItem,
   type CreatedOwner,
   type DogSearchItem,
   type OwnerConflictCandidate,
@@ -95,6 +97,8 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
   const [tickNow, setTickNow] = useState(() => Date.now())
   const [services, setServices] = useState<ServiceListItem[]>([])
   const [serviceId, setServiceId] = useState(draft?.serviceId ?? '')
+  const [addOns, setAddOns] = useState<AddOnListItem[]>([])
+  const [addOnIds, setAddOnIds] = useState<number[]>(draft?.addOnIds ?? [])
   const [finalPrice, setFinalPrice] = useState(draft?.finalPrice ?? '')
   const [tip, setTip] = useState(draft?.tip ?? '')
   const [quotedPrice, setQuotedPrice] = useState(draft?.quotedPrice ?? '')
@@ -135,6 +139,7 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
       conditionScore,
       surprise,
       serviceId,
+      addOnIds,
       finalPrice,
       tip,
       quotedPrice,
@@ -155,6 +160,7 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
     intakeFile,
     afterFile,
     serviceId,
+    addOnIds,
     finalPrice,
     tip,
     quotedPrice,
@@ -186,8 +192,9 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
   useEffect(() => {
     void (async () => {
       try {
-        const rows = await listServices()
-        setServices(rows)
+        const [svc, extras] = await Promise.all([listServices(), listAddOns()])
+        setServices(svc)
+        setAddOns(extras)
       } catch (error) {
         console.error(error)
         setMessage('Could not load services - check API / seed')
@@ -263,10 +270,17 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
     setConditionScore('')
     setSurprise('')
     setServiceId('')
+    setAddOnIds([])
     setFinalPrice('')
     setTip('')
     setQuotedPrice('')
     setShavedDown(false)
+  }
+
+  function toggleAddOn(id: number) {
+    setAddOnIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
   }
 
 
@@ -298,6 +312,7 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
         status: 'completed',
         actual_service_id: Number(serviceId),
         booked_service_id: Number(serviceId), // until booking exists: booked = actual
+        add_on_ids: addOnIds,
         final_price: Number(finalPrice),
         shaved_down: shavedDown,
       }
@@ -1029,6 +1044,34 @@ export function Capture({ draft, startDog, onDone }: CaptureProps) {
                   ))}
                 </select>
               </div>
+              {addOns.length > 0 && (
+                <div className="field">
+                  <label id="add_ons_label">Add-ons (optional)</label>
+                  <div
+                    className="chip-row"
+                    role="group"
+                    aria-labelledby="add_ons_label"
+                  >
+                    {addOns.map((a) => {
+                      const on = addOnIds.includes(a.add_on_id)
+                      return (
+                        <label
+                          key={a.add_on_id}
+                          className={`chip ${on ? 'chip-on' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            disabled={isBusy}
+                            onChange={() => toggleAddOn(a.add_on_id)}
+                          />
+                          {a.name_en ?? a.slug}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
               <div className="field">
                 <label htmlFor="final_price">Final price (€)</label>
                 <input

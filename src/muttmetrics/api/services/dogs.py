@@ -1,17 +1,17 @@
 """Dog create-or-get, search, and Directory profile reads."""
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from muttmetrics.api.schemas.dogs import (
     DogProfile,
     DogSearchItem,
     OwnerSummary,
     PatchDogRequest,
-    VisitSummary,
 )
 from muttmetrics.api.services.patching import reject_null_for_required_columns
-from muttmetrics.models import Breed, Dog, Owner, Photo, Visit
+from muttmetrics.api.services.visits import visit_to_summary
+from muttmetrics.models import Breed, Dog, Owner, Photo, Visit, VisitAddOn
 from muttmetrics.priors.size import size_band_from_weight
 from muttmetrics.services.visit_eligibility import visit_counts_clause
 
@@ -128,6 +128,7 @@ def get_dog_profile(
     limit = max(0, min(recent_limit, 50))
     visits = session.scalars(
         select(Visit)
+        .options(selectinload(Visit.visit_add_ons).selectinload(VisitAddOn.add_on))
         .where(Visit.dog_id == dog_id)
         .order_by(Visit.visit_date.desc(), Visit.visit_id.desc())
         .limit(limit)
@@ -163,7 +164,7 @@ def get_dog_profile(
     return profile.model_copy(
         update={
             "owner": OwnerSummary.model_validate(dog.owner),
-            "recent_visits": [VisitSummary.model_validate(v) for v in visits],
+            "recent_visits": [visit_to_summary(v) for v in visits],
             "avatar_photo_id": avatar_photo_id,
             "visit_count": int(visit_count or 0),
             "last_visit_date": last_visit_date,

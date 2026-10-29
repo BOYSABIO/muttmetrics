@@ -1,12 +1,14 @@
 """Optional price overrides loaded from a gitignored local file.
 
-Service prices are the salon's commercial data. They are never committed.
-Put real values in `data/private/pricing.json` (gitignored):
+Service and add-on prices are the salon's commercial data. They are never
+committed. Put real values in `data/private/pricing.json` (gitignored):
 
-    {"full_groom": 75, "de_mat": 100}
+    {"full_groom": 75, "de_mat": 100, "hand_stripping": 45}
 
-Missing file, missing key, or a bad value simply leaves `price_base` NULL,
-which is a valid state - nothing downstream requires a catalog price.
+Keys are slugs from the service or add_on catalogs. Missing file, missing key,
+or a bad value simply leaves `price_base` NULL, which is a valid state -
+nothing downstream requires a catalog price (#192 records add-ons; it does
+not auto-price visits from them).
 """
 
 from __future__ import annotations

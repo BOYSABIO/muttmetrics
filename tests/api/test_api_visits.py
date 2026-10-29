@@ -7,11 +7,18 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from muttmetrics.models import Breed, Dog, Owner
+from muttmetrics.seed.data import SEED_ADD_ONS
 
 MINIMAL_BASE = {
     "visit_date": "2026-09-07",
     "actual_minutes": 60,
 }
+
+
+def _hand_stripping_id(client: TestClient, auth_headers: dict[str, str]) -> int:
+    """Resolve seeded hand_stripping id from GET /add-ons."""
+    rows = client.get("/add-ons", headers=auth_headers).json()
+    return next(row["add_on_id"] for row in rows if row["slug"] == "hand_stripping")
 
 
 @pytest.fixture
@@ -424,3 +431,107 @@ def test_delete_visit_returns_204_then_404(
     profile = client.get(f"/dogs/{dog_id}", headers=auth_headers)
     assert profile.status_code == 200
     assert all(v["visit_id"] != visit_id for v in profile.json()["recent_visits"])
+
+
+def test_create_visit_with_add_ons_persists_and_shows_on_profile(
+    client: TestClient,
+    demo_dog_owner: tuple[int, int],
+    auth_headers: dict[str, str],
+) -> None:
+    owner_id, dog_id = demo_dog_owner
+    add_on_id = _hand_stripping_id(client, auth_headers)
+
+    response = client.post(
+        "/visits",
+        json={
+            "dog_id": dog_id,
+            "owner_id": owner_id,
+            "add_on_ids": [add_on_id, add_on_id],  # dedupe
+            **MINIMAL_BASE,
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert len(data["add_ons"]) == 1
+    assert data["add_ons"][0]["slug"] == "hand_stripping"
+    assert data["add_ons"][0]["pricing"] == "per_hour"
+
+    got = client.get(f"/visits/{data['visit_id']}", headers=auth_headers)
+    assert got.status_code == 200
+    assert got.json()["add_ons"][0]["add_on_id"] == add_on_id
+
+    profile = client.get(f"/dogs/{dog_id}", headers=auth_headers)
+    assert profile.status_code == 200
+    recent = profile.json()["recent_visits"][0]
+    assert recent["visit_id"] == data["visit_id"]
+    assert recent["add_ons"][0]["slug"] == "hand_stripping"
+    assert {a["slug"] for a in SEED_ADD_ONS}  # catalog still seeded
+
+
+def test_create_visit_unknown_add_on_returns_404_not_500(
+    client: TestClient,
+    demo_dog_owner: tuple[int, int],
+    auth_headers: dict[str, str],
+) -> None:
+    owner_id, dog_id = demo_dog_owner
+    response = client.post(
+        "/visits",
+        json={
+            "dog_id": dog_id,
+            "owner_id": owner_id,
+            "add_on_ids": [999999],
+            **MINIMAL_BASE,
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 404
+    assert "Add-on 999999" in response.json()["detail"]
+
+
+def test_patch_visit_replaces_and_clears_add_ons(
+    client: TestClient,
+    demo_dog_owner: tuple[int, int],
+    auth_headers: dict[str, str],
+) -> None:
+    owner_id, dog_id = demo_dog_owner
+    add_on_id = _hand_stripping_id(client, auth_headers)
+
+    created = client.post(
+        "/visits",
+        json={
+            "dog_id": dog_id,
+            "owner_id": owner_id,
+            "add_on_ids": [add_on_id],
+            **MINIMAL_BASE,
+        },
+        headers=auth_headers,
+    )
+    assert created.status_code == 201
+    visit_id = created.json()["visit_id"]
+
+    cleared = client.patch(
+        f"/visits/{visit_id}",
+        json={"add_on_ids": []},
+        headers=auth_headers,
+    )
+    assert cleared.status_code == 200
+    assert cleared.json()["add_ons"] == []
+
+    restored = client.patch(
+        f"/visits/{visit_id}",
+        json={"add_on_ids": [add_on_id]},
+        headers=auth_headers,
+    )
+    assert restored.status_code == 200
+    assert restored.json()["add_ons"][0]["slug"] == "hand_stripping"
+
+    # Omit add_on_ids → leave join rows alone
+    minutes_only = client.patch(
+        f"/visits/{visit_id}",
+        json={"actual_minutes": 70},
+        headers=auth_headers,
+    )
+    assert minutes_only.status_code == 200
+    assert minutes_only.json()["actual_minutes"] == 70
+    assert minutes_only.json()["add_ons"][0]["slug"] == "hand_stripping"

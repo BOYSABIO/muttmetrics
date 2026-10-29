@@ -11,7 +11,13 @@ from muttmetrics.api.schemas.visits import (
     PatchVisitRequest,
     VisitResponse,
 )
-from muttmetrics.api.services.visits import delete_visit, patch_visit
+from muttmetrics.api.services.visits import (
+    delete_visit,
+    load_visit,
+    patch_visit,
+    set_visit_add_ons,
+    visit_to_response,
+)
 from muttmetrics.models import Dog, Owner, Service, Visit
 from muttmetrics.services.visit_predictions import compute_visit_predictions
 
@@ -72,7 +78,16 @@ def create_visit(body: CreateVisitRequest, session: DbSession) -> VisitResponse:
     )
     session.add(visit)
     session.flush()
-    return VisitResponse.model_validate(visit)
+
+    try:
+        set_visit_add_ons(session, visit, body.add_on_ids)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    session.flush()
+    reloaded = load_visit(session, visit.visit_id)
+    assert reloaded is not None
+    return visit_to_response(reloaded)
 
 
 @router.get(
@@ -81,10 +96,10 @@ def create_visit(body: CreateVisitRequest, session: DbSession) -> VisitResponse:
 )
 def read_visit(visit_id: int, session: DbSession) -> VisitResponse:
     """Load one visit for Directory edit (#193)."""
-    visit = session.get(Visit, visit_id)
+    visit = load_visit(session, visit_id)
     if visit is None:
         raise HTTPException(status_code=404, detail=f"Visit {visit_id} not found")
-    return VisitResponse.model_validate(visit)
+    return visit_to_response(visit)
 
 
 @router.patch(

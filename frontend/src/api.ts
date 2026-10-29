@@ -27,6 +27,25 @@ export type ServiceListItem = {
   price_base: number | null
 }
 
+/** Technique / add-on catalog row (#192). */
+export type AddOnListItem = {
+  add_on_id: number
+  slug: string
+  name_en: string | null
+  name_de: string | null
+  pricing: string
+  price_base: number | null
+}
+
+/** Add-on nested on a visit / dog recent visit (#192). */
+export type AddOnSummary = {
+  add_on_id: number
+  slug: string
+  name_en: string | null
+  name_de: string | null
+  pricing: string
+}
+
 export type BreedListItem = {
   breed_id: number
   name_de: string | null
@@ -39,6 +58,7 @@ export type VisitSummary = {
   actual_minutes: number
   condition_score: number | null
   status: string | null
+  add_ons: AddOnSummary[]
 }
 
 export type DogProfile = {
@@ -145,6 +165,7 @@ export type VisitDetail = {
   condition_score: number | null
   booked_service_id: number | null
   actual_service_id: number | null
+  add_ons: AddOnSummary[]
   what_surprised_me: string | null
   quoted_price: number | null
   final_price: number | null
@@ -362,6 +383,10 @@ export function searchOwners(q: string): Promise<OwnerSearchItem[]> {
 
 export function listServices(): Promise<ServiceListItem[]> {
   return getJson('/services')
+}
+
+export function listAddOns(): Promise<AddOnListItem[]> {
+  return getJson('/add-ons')
 }
 
 export function listBreeds(): Promise<BreedListItem[]> {

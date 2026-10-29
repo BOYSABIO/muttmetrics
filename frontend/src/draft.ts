@@ -29,6 +29,8 @@ export type DraftVisit = {
   conditionScore: string
   surprise: string
   serviceId: string
+  /** Selected add-on catalog ids (#192). Missing on older drafts → treat as []. */
+  addOnIds: number[]
   finalPrice: string
   tip: string
   quotedPrice: string
@@ -62,6 +64,11 @@ export function loadDraft(): DraftVisit | null {
   } catch {
     clearDraft()
     return null
+  }
+
+  // Older drafts (#192) may omit addOnIds
+  if (!Array.isArray(draft.addOnIds)) {
+    draft = { ...draft, addOnIds: [] }
   }
 
   const now = Date.now()

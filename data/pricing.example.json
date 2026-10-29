@@ -1,8 +1,11 @@
 {
-  "_comment": "Copy to data/private/pricing.json (gitignored) and replace with real floors. These numbers are synthetic.",
+  "_comment": "Copy to data/private/pricing.json (gitignored) and replace with real floors. These numbers are synthetic. Keys are service or add-on slugs (#192).",
   "nails": 0,
   "teeth": 0,
   "bath_trim": 0,
   "full_groom": 0,
-  "de_mat": 0
+  "de_mat": 0,
+  "hand_stripping": 0,
+  "de_shed": 0,
+  "nail_grind": 0
 }

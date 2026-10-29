@@ -182,6 +182,18 @@ When code lands, this value should appear **once** (e.g. a SQL constant table, a
 
 **Not in M5 (on purpose):** tip-only totals, client counts, breed mixes, P&L, year views, custom date pickers. Calendar **month** on the same decision metrics is in via [#170](https://github.com/BOYSABIO/muttmetrics/issues/170) (same formulas, longer range). When something new earns a permanent definition (numerator, denominator, eligibility, `MIN_N`), amend **this** runbook first — same rule as #126.
 
+## Techniques / add-ons (#192) — recorded, not sliced yet
+
+Capture can attach catalog techniques to a visit (`visit_add_on` → `add_on`: hand stripping, de-shed, nail grind, …). **Price stays `final_price`** — add-ons are labels for what work happened, not an auto-priced calculator.
+
+| Question | Answer for now |
+|----------|----------------|
+| Do current €/hour cells include technique? | **No.** `#27` still groups by `condition_score` × `shaved_down` only. A hand-stripped full groom sits in the same coat cell as a normal one. |
+| Should €/hour be shown **by technique** later? | **Yes, once `n` supports it.** Same eligibility and `MIN_N` as today; a cell would be (at least) one `add_on` within the range — likely `EXISTS` join to `visit_add_on`, not a new fact column. Do not ship a technique slice while most cells sit under `MIN_N`. |
+| Does a visit with two add-ons count twice? | Decide when the metric is defined (visit-once vs once-per-technique). Prefer **visit-once** for overall €/hour; technique slices can be “visits that used this add-on.” Amend this runbook before SQL. |
+
+**M7 (#33) dataset builder:** when the feature matrix is exported, include add-on flags (e.g. boolean / categorical columns from `visit_add_on` + `add_on.slug`). Techniques are first-class features for duration/price models — not free text to parse later.
+
 ## Learning notes
 
 **Tips vs list price.** Restaurants often separate “sales” (house) from tips (staff). A sole groomer *is* the house — take-home includes tips. For analytics and future models, tip-inflated €/hour can hide weak pricing (“clients tip when they feel guilty about mats”). Defining **both** rates keeps the groomer payoff honest and the analyst lens clean.
@@ -192,10 +204,13 @@ When code lands, this value should appear **once** (e.g. a SQL constant table, a
 
 **Aggregates don’t compose.** Summing across weeks is fine; averaging weekly averages (or applying `MIN_N` per week then hoping the month is honest) is not. Recompute from visit rows for every range you show (#170).
 
+**Techniques vs coat.** Hand stripping can make €/hour look like a “normal” full groom if you only slice by coat × shaved. Recording the technique (#192) is what makes a later technique slice honest — and what feeds M7 features (#33).
+
 ## Related
 
 - Path / exit: [#159](https://github.com/BOYSABIO/muttmetrics/issues/159)
 - Range functions: [#155](https://github.com/BOYSABIO/muttmetrics/issues/155) · fixtures: [#16](https://github.com/BOYSABIO/muttmetrics/issues/16)
 - Metrics: [#27](https://github.com/BOYSABIO/muttmetrics/issues/27) €/hour · [#28](https://github.com/BOYSABIO/muttmetrics/issues/28) pivot/overrun · [#29](https://github.com/BOYSABIO/muttmetrics/issues/29) utilization
+- Techniques / add-ons (record now, slice later): [#192](https://github.com/BOYSABIO/muttmetrics/issues/192) · M7 feature matrix: [#33](https://github.com/BOYSABIO/muttmetrics/issues/33)
 - Capture health: [`compliance.md`](./compliance.md) · priors/calibration: [`prior.md`](../prior.md)
 - Encoding-safe SQL: [#154](https://github.com/BOYSABIO/muttmetrics/issues/154)

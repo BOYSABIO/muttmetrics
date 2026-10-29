@@ -251,7 +251,8 @@ uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --por
 | `http://127.0.0.1:8000/dogs/{id}/photos` | Directory | `POST` profile photo upload |
 | `http://127.0.0.1:8000/breeds` | Directory | `GET` breed catalog for the breed picker ([#151](https://github.com/BOYSABIO/muttmetrics/issues/151)) |
 | `http://127.0.0.1:8000/services` | Capture | `GET` seeded package catalog for the SPA picker ([#110](https://github.com/BOYSABIO/muttmetrics/issues/110)) |
-| `http://127.0.0.1:8000/visits` | Capture | `POST` create visit — requires existing dog/owner ids, and the dog must belong to that owner |
+| `http://127.0.0.1:8000/add-ons` | Capture | `GET` seeded technique / add-on catalog ([#192](https://github.com/BOYSABIO/muttmetrics/issues/192)) |
+| `http://127.0.0.1:8000/visits` | Capture | `POST` create visit — requires existing dog/owner ids, and the dog must belong to that owner; optional `add_on_ids` |
 | `http://127.0.0.1:8000/visits/{id}/photos` | Capture | `POST` multipart photo upload; `GET` metadata list ([#30](https://github.com/BOYSABIO/muttmetrics/issues/30)) |
 | `http://127.0.0.1:8000/photos/{id}` | Capture | `GET` the JPEG bytes (API key required — an `<img src>` cannot fetch it) |
 | `http://127.0.0.1:8000/metrics/week` | Dashboard | `GET` one Mon–Sun week + `previous_week` ([#156](https://github.com/BOYSABIO/muttmetrics/issues/156)) |

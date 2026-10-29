@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from muttmetrics.models.owner import Owner
     from muttmetrics.models.photo import Photo
     from muttmetrics.models.service import Service
+    from muttmetrics.models.visit_add_on import VisitAddOn
 
 
 class Visit(Base):
@@ -91,7 +92,7 @@ class Visit(Base):
     actual_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     final_price: Mapped[float | None] = mapped_column(Numeric, nullable=True)
     tip: Mapped[float | None] = mapped_column(Numeric, nullable=True)
-    add_ons: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
+    # Techniques live in visit_add_on (#192); unused visit.add_ons[] was dropped.
 
     # Qualitative
     what_surprised_me: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -107,3 +108,7 @@ class Visit(Base):
     photos: Mapped[list[Photo]] = relationship(back_populates="visit")
     booked_service: Mapped[Service | None] = relationship(foreign_keys=[booked_service_id])
     actual_service: Mapped[Service | None] = relationship(foreign_keys=[actual_service_id])
+    visit_add_ons: Mapped[list[VisitAddOn]] = relationship(
+        back_populates="visit",
+        cascade="all, delete-orphan",
+    )

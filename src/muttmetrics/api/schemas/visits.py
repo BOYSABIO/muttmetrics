@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from muttmetrics.api.schemas.add_ons import AddOnSummary
+
 
 class CreateVisitRequest(BaseModel):
     """Body for POST /visits — only what an exhausted groomer should type."""
@@ -20,6 +22,7 @@ class CreateVisitRequest(BaseModel):
                     "condition_score": 3,
                     "booked_service_id": 4,
                     "actual_service_id": 4,
+                    "add_on_ids": [1],
                     "what_surprised_me": "calmer than last time",
                     "status": "completed",
                 }
@@ -35,6 +38,10 @@ class CreateVisitRequest(BaseModel):
     condition_score: int | None = Field(default=None, ge=0, le=5)
     booked_service_id: int | None = None
     actual_service_id: int | None = None
+    add_on_ids: list[int] = Field(
+        default_factory=list,
+        description="Technique / add-on catalog ids (#192); unknown → 404",
+    )
     what_surprised_me: str | None = None
     quoted_price: float | None = Field(default=None, ge=0)
     final_price: float | None = Field(default=None, ge=0)
@@ -56,6 +63,7 @@ class VisitResponse(BaseModel):
     condition_score: int | None = None
     booked_service_id: int | None = None
     actual_service_id: int | None = None
+    add_ons: list[AddOnSummary] = Field(default_factory=list)
     what_surprised_me: str | None = None
     quoted_price: float | None = Field(default=None, ge=0)
     final_price: float | None = Field(default=None, ge=0)
@@ -72,6 +80,8 @@ class PatchVisitRequest(BaseModel):
 
     System-computed columns (days_since_last, predicted_min_*) are omitted
     on purpose; extra=\"forbid\" rejects them if a client sends them.
+
+    `add_on_ids`: omit → leave join rows; send (including []) → replace the set.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -82,6 +92,7 @@ class PatchVisitRequest(BaseModel):
     condition_score: int | None = Field(default=None, ge=0, le=5)
     booked_service_id: int | None = None
     actual_service_id: int | None = None
+    add_on_ids: list[int] | None = None
     what_surprised_me: str | None = None
     quoted_price: float | None = Field(default=None, ge=0)
     final_price: float | None = Field(default=None, ge=0)
