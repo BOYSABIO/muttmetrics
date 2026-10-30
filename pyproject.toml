@@ -25,7 +25,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0",
-  "ruff==0.17.1",  # keep equal to the ruff-pre-commit rev (tests/unit/test_tool_versions.py)
+  "ruff==0.17.3",  # keep equal to the ruff-pre-commit rev (tests/unit/test_tool_versions.py)
   "httpx2>=2.0",  # Starlette TestClient prefers httpx2; plain httpx is deprecated
   "pre-commit>=4.0",
   "pip-audit>=2.7",
