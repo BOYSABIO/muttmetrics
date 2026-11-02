@@ -12,7 +12,7 @@ class PhotoResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     photo_id: int
-    dog_id: int
+    pet_id: int
     visit_id: int | None = None
     kind: Literal["intake", "after", "profile"]
     content_type: str

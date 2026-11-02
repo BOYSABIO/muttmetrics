@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from tests.fixtures.metric_month import VISITS as MONTH_VISITS
 from tests.fixtures.metric_week import VISITS as WEEK_VISITS
 
-from muttmetrics.models import Dog, Owner, Visit
+from muttmetrics.models import Owner, Pet, Visit
 
 
 def test_loads_both_fixtures_into_an_empty_database(db_session: Session) -> None:
@@ -19,12 +19,12 @@ def test_refuses_when_visits_already_exist(db_session: Session) -> None:
     owner = Owner(name="Syn Real Client")
     db_session.add(owner)
     db_session.flush()
-    dog = Dog(owner_id=owner.owner_id, name="Syn Real Dog")
+    dog = Pet(owner_id=owner.owner_id, name="Syn Real Dog")
     db_session.add(dog)
     db_session.flush()
     db_session.add(
         Visit(
-            dog_id=dog.dog_id,
+            pet_id=dog.pet_id,
             owner_id=owner.owner_id,
             visit_date=WEEK_VISITS[0]["visit_date"],
             actual_minutes=60,

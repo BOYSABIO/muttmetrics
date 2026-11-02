@@ -1,15 +1,19 @@
-"""Dog onboarding + Directory profile schemas."""
+"""Pet onboarding + Directory profile schemas."""
 
 from datetime import date
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from muttmetrics.api.schemas.add_ons import AddOnSummary
+from muttmetrics.species import DEFAULT_SPECIES
+
+SpeciesLiteral = Literal["dog", "cat"]
 
 
-class UpsertDogRequest(BaseModel):
-    """Find a dog by owner + name, or create one."""
+class UpsertPetRequest(BaseModel):
+    """Find a pet by owner + name + species, or create one."""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -17,6 +21,7 @@ class UpsertDogRequest(BaseModel):
                 {
                     "owner_id": 1,
                     "name": "Bella",
+                    "species": "dog",
                     "breed_id": 1,
                 }
             ]
@@ -24,37 +29,43 @@ class UpsertDogRequest(BaseModel):
     )
 
     owner_id: int = Field(..., description="Existing owner primary key")
-    name: str = Field(..., min_length=1, description="Dog call name")
+    name: str = Field(..., min_length=1, description="Pet call name")
+    species: SpeciesLiteral = Field(
+        default=DEFAULT_SPECIES,  # type: ignore[assignment]
+        description="dog or cat (ADR-004); default dog",
+    )
     breed_id: int | None = Field(
         default=None, description="Optional breed.breed_id from seed catalog"
     )
 
 
-class DogResponse(BaseModel):
+class PetResponse(BaseModel):
     """Minimal response for create-or-get (capture path)."""
 
     model_config = ConfigDict(from_attributes=True)
 
-    dog_id: int
+    pet_id: int
     owner_id: int
     name: str
+    species: SpeciesLiteral
     breed_id: int | None = None
 
 
-class DogSearchItem(BaseModel):
-    """One row in the directory list (dog + owner label)"""
+class PetSearchItem(BaseModel):
+    """One row in the directory list (pet + owner label)"""
 
     model_config = ConfigDict(from_attributes=True)
 
-    dog_id: int
+    pet_id: int
     name: str
+    species: SpeciesLiteral
     owner_id: int
     owner_name: str
     last_visit_date: date | None = None
 
 
 class OwnerSummary(BaseModel):
-    """Owner stub nested on a dog profile (not the full owner page)."""
+    """Owner stub nested on a pet profile (not the full owner page)."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -65,7 +76,7 @@ class OwnerSummary(BaseModel):
 
 
 class VisitSummary(BaseModel):
-    """Recent visit row for a dog profile (facts only — not analytics)."""
+    """Recent visit row for a pet profile (facts only — not analytics)."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -77,14 +88,15 @@ class VisitSummary(BaseModel):
     add_ons: list[AddOnSummary] = Field(default_factory=list)
 
 
-class DogProfile(BaseModel):
-    """Full dog profile for Directory (#131). Hand-entered + read-only derived."""
+class PetProfile(BaseModel):
+    """Full pet profile for Directory (#131). Hand-entered + read-only derived."""
 
     model_config = ConfigDict(from_attributes=True)
 
-    dog_id: int
+    pet_id: int
     owner_id: int
     name: str
+    species: SpeciesLiteral
     breed_id: int | None = None
     breed_secondary_id: int | None = None
     sex: str | None = None
@@ -128,12 +140,13 @@ class DogProfile(BaseModel):
     recent_visits: list[VisitSummary] = Field(default_factory=list)
 
 
-class PatchDogRequest(BaseModel):
-    """Partial dog update - hand entered fields only."""
+class PatchPetRequest(BaseModel):
+    """Partial pet update - hand entered fields only."""
 
     model_config = ConfigDict(extra="forbid")
 
     name: str | None = None
+    species: SpeciesLiteral | None = None
     breed_id: int | None = None
     breed_secondary_id: int | None = None
     sex: str | None = None

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { fetchPhotoBlob } from './api'
 
-type DogAvatarProps = {
+type PetAvatarProps = {
   photoId: number | null | undefined
   name: string
   size?: 'md' | 'lg'
@@ -38,13 +38,13 @@ function CameraBadge() {
   )
 }
 
-export function DogAvatar({
+export function PetAvatar({
   photoId,
   name,
   size = 'md',
   onPickFile,
   disabled = false,
-}: DogAvatarProps) {
+}: PetAvatarProps) {
   const [src, setSrc] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const inputId = useId()

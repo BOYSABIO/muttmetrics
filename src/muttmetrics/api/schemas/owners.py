@@ -44,7 +44,7 @@ class OwnerSearchItem(BaseModel):
     owner_id: int
     name: str
     phone: str | None = None
-    dog_count: int = 0
+    pet_count: int = 0
 
 
 class OwnerConflictCandidate(BaseModel):
@@ -63,13 +63,14 @@ class OwnerNameConflictDetail(BaseModel):
     candidates: list[OwnerConflictCandidate]
 
 
-class OwnerDogItem(BaseModel):
-    """Dog stub on an owner profile."""
+class OwnerPetItem(BaseModel):
+    """Pet stub on an owner profile."""
 
     model_config = ConfigDict(from_attributes=True)
 
-    dog_id: int
+    pet_id: int
     name: str
+    species: str
 
 
 class OwnerProfile(BaseModel):
@@ -97,7 +98,7 @@ class OwnerProfile(BaseModel):
     lifetime_value: Decimal | None = Field(default=None, description="Derived — display only")
     reliability_score: Decimal | None = Field(default=None, description="Derived — display only")
 
-    dogs: list[OwnerDogItem] = Field(default_factory=list)
+    pets: list[OwnerPetItem] = Field(default_factory=list)
 
 
 class PatchOwnerRequest(BaseModel):

@@ -1,7 +1,7 @@
 """Load the synthetic test fixtures into an EMPTY local database, for demos and
 screenshots (#16, #180).
 
-The rows are the same Syn* owners, dogs and visits the metric tests use, with
+The rows are the same Syn* owners, pets and visits the metric tests use, with
 hand-computed answers in tests/fixtures/. They land in March and April 2026, so
 open the dashboard and step back to those weeks / that month.
 

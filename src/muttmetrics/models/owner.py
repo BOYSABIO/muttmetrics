@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from muttmetrics.db.base import Base
 
 if TYPE_CHECKING:
-    from muttmetrics.models.dog import Dog
+    from muttmetrics.models.pet import Pet
     from muttmetrics.models.visit import Visit
 
 
@@ -44,5 +44,5 @@ class Owner(Base):
     reliability_score: Mapped[float | None] = mapped_column(Numeric, nullable=True)
 
     # Relationships
-    dogs: Mapped[list[Dog]] = relationship(back_populates="owner")
+    pets: Mapped[list[Pet]] = relationship(back_populates="owner")
     visits: Mapped[list[Visit]] = relationship(back_populates="owner")

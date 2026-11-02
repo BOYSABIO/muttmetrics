@@ -1,5 +1,5 @@
 -- Weekly capture compliance numerator (#22).
--- Denominator is manual: ask how many dogs were groomed that week.
+-- Denominator is manual: ask how many pets were groomed that week.
 -- Compliance % = 100.0 * completed_visits / grooms_reported  (skip if denom = 0).
 --
 -- Week = Mon–Sun on visit_date (salon calendar). Edit the two dates below.
@@ -39,7 +39,7 @@ SELECT
   d.name AS dog_name,
   o.name AS owner_name
 FROM visit v
-JOIN dog d ON d.dog_id = v.dog_id
+JOIN pet d ON d.pet_id = v.pet_id
 JOIN owner o ON o.owner_id = v.owner_id
 WHERE v.visit_date >= DATE '2026-10-05'
   AND v.visit_date <= DATE '2026-10-11'

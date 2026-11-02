@@ -6,11 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from muttmetrics.api.schemas.add_ons import AddOnSummary
-from muttmetrics.api.schemas.dogs import VisitSummary
+from muttmetrics.api.schemas.pets import VisitSummary
 from muttmetrics.api.schemas.visits import PatchVisitRequest, VisitResponse
 from muttmetrics.api.services.patching import reject_null_for_required_columns
 from muttmetrics.media import storage
-from muttmetrics.models import AddOn, Dog, Photo, Service, Visit, VisitAddOn
+from muttmetrics.models import AddOn, Pet, Photo, Service, Visit, VisitAddOn
 from muttmetrics.services.visit_predictions import _days_since_last
 
 
@@ -29,7 +29,7 @@ def visit_to_response(visit: Visit) -> VisitResponse:
 
 
 def visit_to_summary(visit: Visit) -> VisitSummary:
-    """Map a Visit ORM row to a dog-profile recent-visit row."""
+    """Map a Visit ORM row to a pet-profile recent-visit row."""
     base = VisitSummary.model_validate(visit)
     return base.model_copy(update={"add_ons": _add_on_summaries(visit)})
 
@@ -87,12 +87,12 @@ def patch_visit(
 
     # Date changed -> gap is a fact about the new date; predictions stay frozen
     if "visit_date" in updates:
-        dog = session.get(Dog, visit.dog_id)
-        if dog is None:
-            raise LookupError(f"Dog {visit.dog_id} not found")
+        pet = session.get(Pet, visit.pet_id)
+        if pet is None:
+            raise LookupError(f"Pet {visit.pet_id} not found")
         visit.days_since_last = _days_since_last(
             session,
-            dog_id=dog.dog_id,
+            pet_id=pet.pet_id,
             visit_date=visit.visit_date,
             exclude_visit_id=visit.visit_id,
         )

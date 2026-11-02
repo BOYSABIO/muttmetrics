@@ -4,13 +4,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from muttmetrics.api.schemas.owners import (
-    OwnerDogItem,
+    OwnerPetItem,
     OwnerProfile,
     OwnerSearchItem,
     PatchOwnerRequest,
 )
 from muttmetrics.api.services.patching import reject_null_for_required_columns
-from muttmetrics.models import Dog, Owner, Visit
+from muttmetrics.models import Owner, Pet, Visit
 from muttmetrics.services.visit_eligibility import visit_counts_clause
 
 
@@ -93,15 +93,15 @@ def search_owners(
     Directory / capture owner pick (#191).
 
     Empty / blank q → up to `limit` owners by name.
-    Non-empty q → name ILIKE %q% (wildcards escaped, same as dog search).
+    Non-empty q → name ILIKE %q% (wildcards escaped, same as pet search).
     """
-    dog_count_sq = (
-        select(Dog.owner_id, func.count().label("dog_count")).group_by(Dog.owner_id).subquery()
+    pet_count_sq = (
+        select(Pet.owner_id, func.count().label("pet_count")).group_by(Pet.owner_id).subquery()
     )
 
     stmt = (
-        select(Owner, dog_count_sq.c.dog_count)
-        .outerjoin(dog_count_sq, Owner.owner_id == dog_count_sq.c.owner_id)
+        select(Owner, pet_count_sq.c.pet_count)
+        .outerjoin(pet_count_sq, Owner.owner_id == pet_count_sq.c.owner_id)
         .order_by(Owner.name)
         .limit(limit)
     )
@@ -116,26 +116,26 @@ def search_owners(
             owner_id=owner.owner_id,
             name=owner.name,
             phone=owner.phone,
-            dog_count=int(dog_count or 0),
+            pet_count=int(pet_count or 0),
         )
-        for owner, dog_count in rows
+        for owner, pet_count in rows
     ]
 
 
 def get_owner_profile(session: Session, *, owner_id: int) -> OwnerProfile:
     """
-    Load one owner for Directory: contact fields + dog list.
+    Load one owner for Directory: contact fields + pet list.
 
     Raises LookupError if owner_id missing (route -> 404).
     """
     owner = session.scalar(
-        select(Owner).options(selectinload(Owner.dogs)).where(Owner.owner_id == owner_id)
+        select(Owner).options(selectinload(Owner.pets)).where(Owner.owner_id == owner_id)
     )
     if owner is None:
         raise LookupError(f"Owner {owner_id} not found")
 
-    dogs = sorted(owner.dogs, key=lambda d: d.name.lower())
-    # Live total across all dogs — derived owner.visit_count can lag / be null.
+    pets = sorted(owner.pets, key=lambda d: d.name.lower())
+    # Live total across all pets — derived owner.visit_count can lag / be null.
     visit_count = session.scalar(
         select(func.count())
         .select_from(Visit)
@@ -144,7 +144,7 @@ def get_owner_profile(session: Session, *, owner_id: int) -> OwnerProfile:
     profile = OwnerProfile.model_validate(owner)
     return profile.model_copy(
         update={
-            "dogs": [OwnerDogItem.model_validate(d) for d in dogs],
+            "pets": [OwnerPetItem.model_validate(d) for d in pets],
             "visit_count": int(visit_count or 0),
         }
     )

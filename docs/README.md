@@ -19,6 +19,7 @@ Everything written about the project, grouped by what you're trying to do. **Tas
 | [ADR-001 — Derived fields](architecture/adr/001-derived-fields.md) | Hand-entered vs derived vs system-computed columns |
 | [ADR-002 — Photo storage](architecture/adr/002-photo-storage.md) | Bytes on disk, metadata in Postgres |
 | [ADR-003 — Metric definitions](architecture/adr/003-metric-views.md) | Metric formulas as Postgres range functions, one definition per metric; `MIN_N` in SQL (#155, #170) |
+| [ADR-004 — Species](architecture/adr/004-species.md) | One `pet` table + `species` (cats now; more species later). Not a cats table ([#190](https://github.com/BOYSABIO/muttmetrics/issues/190)) |
 | [Rules prior (P50/P90)](prior.md) | Duration formula (#23), persist on create (#24), calibration SQL (#25), how we fill data (#127) |
 | [Ops layout](architecture/ops-layout.md) | Why maintainer tooling lives under `ops/` (#125) |
 

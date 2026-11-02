@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from muttmetrics.api.deps import get_db, require_api_key
 from muttmetrics.api.schemas.photos import PhotoResponse
 from muttmetrics.media import images, storage
-from muttmetrics.models import Dog, Photo, Visit
+from muttmetrics.models import Pet, Photo, Visit
 
 router = APIRouter(tags=["photos"])
 
@@ -19,7 +19,7 @@ DbSession = Annotated[Session, Depends(get_db)]
 def _store_photo(
     *,
     session: Session,
-    dog_id: int,
+    pet_id: int,
     visit_id: int | None,
     kind: Literal["intake", "after", "profile"],
     raw: bytes,
@@ -35,7 +35,7 @@ def _store_photo(
     storage.write_bytes(key, processed)
 
     photo = Photo(
-        dog_id=dog_id,
+        pet_id=pet_id,
         visit_id=visit_id,
         kind=kind,
         storage_key=key,
@@ -77,7 +77,7 @@ def upload_visit_photo(
 
     photo = _store_photo(
         session=session,
-        dog_id=visit.dog_id,
+        pet_id=visit.pet_id,
         visit_id=visit.visit_id,
         kind=kind,
         raw=file.file.read(images.MAX_UPLOAD_BYTES + 1),
@@ -86,22 +86,22 @@ def upload_visit_photo(
 
 
 @router.post(
-    "/dogs/{dog_id}/photos",
+    "/pets/{pet_id}/photos",
     status_code=201,
     dependencies=[Depends(require_api_key)],
 )
-def upload_dog_profile_photo(
-    dog_id: int,
+def upload_pet_profile_photo(
+    pet_id: int,
     session: DbSession,
     file: Annotated[UploadFile, File()],
 ) -> PhotoResponse:
-    """Store a profile photo for a dog (Directory avatar). visit_id stays null."""
-    if session.get(Dog, dog_id) is None:
-        raise HTTPException(status_code=404, detail=f"Dog {dog_id} not found")
+    """Store a profile photo for a pet (Directory avatar). visit_id stays null."""
+    if session.get(Pet, pet_id) is None:
+        raise HTTPException(status_code=404, detail=f"Pet {pet_id} not found")
 
     photo = _store_photo(
         session=session,
-        dog_id=dog_id,
+        pet_id=pet_id,
         visit_id=None,
         kind="profile",
         raw=file.file.read(images.MAX_UPLOAD_BYTES + 1),

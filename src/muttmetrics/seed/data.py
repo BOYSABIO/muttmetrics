@@ -84,10 +84,11 @@ SEED_SERVICES: list[dict] = [
 
 # matting_risk: 1 (low) .. 5 (pelted / Doodle territory)
 # typical_size_band is a catalog hint for people reading the breed list. It uses
-# xs/s/m/l/xl (toy breeds are "xs"). Nothing in the code reads it: a dog's own
-# size_band comes from its weight (priors/size.py, s/m/l/xl only, #171).
+# xs/s/m/l/xl (toy breeds are "xs"). Nothing in the code reads it: a pet's own
+# size_band comes from its weight (priors/size.py, s/m/l/xl only, #171 / #190).
 SEED_BREEDS: list[dict] = [
     {
+        "species": "dog",
         "name_en": "French Bulldog",
         "name_de": "Französische Bulldogge",
         "default_coat_type": "smooth",
@@ -100,6 +101,7 @@ SEED_BREEDS: list[dict] = [
         "home_care_protocol": "Wipe folds; short coat — brushing optional.",
     },
     {
+        "species": "dog",
         "name_en": "Labrador Retriever",
         "name_de": "Labrador Retriever",
         "default_coat_type": "double",
@@ -112,6 +114,7 @@ SEED_BREEDS: list[dict] = [
         "home_care_protocol": "Brush during shed season; bath as needed.",
     },
     {
+        "species": "dog",
         "name_en": "German Shepherd",
         "name_de": "Deutscher Schäferhund",
         "default_coat_type": "double",
@@ -124,6 +127,7 @@ SEED_BREEDS: list[dict] = [
         "home_care_protocol": "Heavy seasonal shed — undercoat rake.",
     },
     {
+        "species": "dog",
         "name_en": "Poodle",
         "name_de": "Pudel",
         "default_coat_type": "curly",
@@ -136,6 +140,7 @@ SEED_BREEDS: list[dict] = [
         "home_care_protocol": "Line brush every 2–3 days; never skip under ears/armpits.",
     },
     {
+        "species": "dog",
         "name_en": "Cockapoo",
         "name_de": "Cockapoo",
         "default_coat_type": "curly",
@@ -148,6 +153,7 @@ SEED_BREEDS: list[dict] = [
         "home_care_protocol": "Daily brush; high de-mat risk if skipped.",
     },
     {
+        "species": "dog",
         "name_en": "Labradoodle",
         "name_de": "Labradoodle",
         "default_coat_type": "curly",
@@ -160,6 +166,7 @@ SEED_BREEDS: list[dict] = [
         "home_care_protocol": "Daily brush; coat varies by generation — assume high mat risk.",
     },
     {
+        "species": "dog",
         "name_en": "Goldendoodle",
         "name_de": "Goldendoodle",
         "default_coat_type": "curly",
@@ -172,6 +179,7 @@ SEED_BREEDS: list[dict] = [
         "home_care_protocol": "Daily brush; behind ears and armpits first.",
     },
     {
+        "species": "dog",
         "name_en": "Shih Tzu",
         "name_de": "Shih Tzu",
         "default_coat_type": "double",
@@ -184,6 +192,7 @@ SEED_BREEDS: list[dict] = [
         "home_care_protocol": "Daily brush if long coat; face and ears carefully.",
     },
     {
+        "species": "dog",
         "name_en": "Yorkshire Terrier",
         "name_de": "Yorkshire Terrier",
         "default_coat_type": "single",
@@ -196,6 +205,7 @@ SEED_BREEDS: list[dict] = [
         "home_care_protocol": "Brush several times a week; fine hair tangles easily.",
     },
     {
+        "species": "dog",
         "name_en": "Maltese",
         "name_de": "Malteser",
         "default_coat_type": "single",
@@ -208,6 +218,7 @@ SEED_BREEDS: list[dict] = [
         "home_care_protocol": "Daily brush; keep coat clean and dry.",
     },
     {
+        "species": "dog",
         "name_en": "Mixed breed",
         "name_de": "Mischling",
         "default_coat_type": None,
@@ -217,6 +228,71 @@ SEED_BREEDS: list[dict] = [
         "matting_risk": 3,
         "blows_coat": None,
         "recommended_interval_days": 49,
-        "home_care_protocol": "Assess coat at first visit; fill dog-level coat fields.",
+        "home_care_protocol": "Assess coat at first visit; fill pet-level coat fields.",
+    },
+    {
+        "species": "cat",
+        "name_en": "Domestic Short Hair",
+        "name_de": "Hauskatze kurzhaar",
+        "default_coat_type": "smooth",
+        "default_hair_or_fur": "fur",
+        "typical_size_band": "m",
+        "base_groom_minutes": 45,
+        "matting_risk": 2,
+        "blows_coat": True,
+        "recommended_interval_days": 56,
+        "home_care_protocol": "Brush weekly; more in shed season.",
+    },
+    {
+        "species": "cat",
+        "name_en": "Domestic Long Hair",
+        "name_de": "Hauskatze langhaar",
+        "default_coat_type": "double",
+        "default_hair_or_fur": "fur",
+        "typical_size_band": "m",
+        "base_groom_minutes": 70,
+        "matting_risk": 3,
+        "blows_coat": True,
+        "recommended_interval_days": 49,
+        "home_care_protocol": "Brush several times a week; check armpits and trousers.",
+    },
+    {
+        "species": "cat",
+        "name_en": "Persian",
+        "name_de": "Perser",
+        "default_coat_type": "double",
+        "default_hair_or_fur": "fur",
+        "typical_size_band": "m",
+        "base_groom_minutes": 90,
+        "matting_risk": 4,
+        "blows_coat": False,
+        "recommended_interval_days": 35,
+        "home_care_protocol": "Daily brush; face and sanitary trim as needed.",
+    },
+    {
+        "species": "cat",
+        "name_en": "Maine Coon",
+        "name_de": "Maine Coon",
+        "default_coat_type": "double",
+        "default_hair_or_fur": "fur",
+        "typical_size_band": "l",
+        "base_groom_minutes": 80,
+        "matting_risk": 3,
+        "blows_coat": True,
+        "recommended_interval_days": 49,
+        "home_care_protocol": "Brush the breeches and ruff; large cat, extra handling time.",
+    },
+    {
+        "species": "cat",
+        "name_en": "Mixed cat",
+        "name_de": "Mischling (Katze)",
+        "default_coat_type": None,
+        "default_hair_or_fur": None,
+        "typical_size_band": "m",
+        "base_groom_minutes": 50,
+        "matting_risk": 2,
+        "blows_coat": None,
+        "recommended_interval_days": 56,
+        "home_care_protocol": "Assess coat at first visit; fill pet-level coat fields.",
     },
 ]

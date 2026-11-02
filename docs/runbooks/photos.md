@@ -83,7 +83,7 @@ ORDER BY photo_id;
 -- everything for one client (this is the query deletion depends on)
 SELECT p.photo_id, p.storage_key, d.name AS dog, o.name AS owner
 FROM photo p
-JOIN dog d ON d.dog_id = p.dog_id
+JOIN pet d ON d.pet_id = p.pet_id
 JOIN owner o ON o.owner_id = d.owner_id
 WHERE o.owner_id = :owner_id;
 

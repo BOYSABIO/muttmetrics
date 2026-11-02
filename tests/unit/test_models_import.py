@@ -2,7 +2,7 @@
 
 from muttmetrics import models
 from muttmetrics.db.base import Base
-from muttmetrics.models import Dog, Owner, Photo, Visit
+from muttmetrics.models import Owner, Pet, Photo, Visit
 
 
 def test_all_models_exported() -> None:
@@ -10,8 +10,8 @@ def test_all_models_exported() -> None:
     assert set(models.__all__) == {
         "AddOn",
         "Breed",
-        "Dog",
         "Owner",
+        "Pet",
         "Photo",
         "Service",
         "Visit",
@@ -21,13 +21,12 @@ def test_all_models_exported() -> None:
 
 def test_metadata_registers_all_tables() -> None:
     """Importing models registers all tables on shared metadata for Alembic."""
-    # Import side effect above must have run first (module-level imports)
     table_names = set(Base.metadata.tables.keys())
     assert table_names == {
         "add_on",
         "breed",
-        "dog",
         "owner",
+        "pet",
         "photo",
         "service",
         "visit",
@@ -35,12 +34,12 @@ def test_metadata_registers_all_tables() -> None:
     }
 
 
-def test_owner_dog_visit_relationship_chain() -> None:
-    """Relationships are bidirectional along owner → dogs → visits."""
-    assert Owner.dogs.property.back_populates == "owner"
-    assert Dog.owner.property.back_populates == "dogs"
-    assert Dog.visits.property.back_populates == "dog"
-    assert Visit.dog.property.back_populates == "visits"
+def test_owner_pet_visit_relationship_chain() -> None:
+    """Relationships are bidirectional along owner → pets → visits."""
+    assert Owner.pets.property.back_populates == "owner"
+    assert Pet.owner.property.back_populates == "pets"
+    assert Pet.visits.property.back_populates == "pet"
+    assert Visit.pet.property.back_populates == "visits"
     assert Owner.visits.property.back_populates == "owner"
     assert Visit.owner.property.back_populates == "visits"
 
@@ -51,10 +50,10 @@ def test_visit_required_columns() -> None:
     assert Visit.__table__.c.visit_date.nullable is False
 
 
-def test_photo_visit_optional_dog_required() -> None:
-    """Profile photos have no visit; every photo belongs to a dog."""
+def test_photo_visit_optional_pet_required() -> None:
+    """Profile photos have no visit; every photo belongs to a pet."""
     assert Photo.__table__.c.visit_id.nullable is True
-    assert Photo.__table__.c.dog_id.nullable is False
+    assert Photo.__table__.c.pet_id.nullable is False
 
 
 def test_photo_storage_key_unique() -> None:

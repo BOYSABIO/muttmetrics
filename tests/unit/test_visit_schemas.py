@@ -12,13 +12,13 @@ def test_minimal_valid_payload() -> None:
     """A minimal valid payload."""
     body = CreateVisitRequest.model_validate(
         {
-            "dog_id": 1,
+            "pet_id": 1,
             "owner_id": 1,
             "visit_date": "2026-09-07",
             "actual_minutes": 60,
         }
     )
-    assert body.dog_id == 1
+    assert body.pet_id == 1
     assert body.visit_date == date(2026, 9, 7)
     assert body.actual_minutes == 60
     assert body.condition_score is None
@@ -29,7 +29,7 @@ def test_actual_minutes_must_be_positive() -> None:
     with pytest.raises(ValidationError):
         CreateVisitRequest.model_validate(
             {
-                "dog_id": 1,
+                "pet_id": 1,
                 "owner_id": 1,
                 "visit_date": "2026-09-07",
                 "actual_minutes": 0,
@@ -42,7 +42,7 @@ def test_condition_score_out_of_range() -> None:
     with pytest.raises(ValidationError):
         CreateVisitRequest.model_validate(
             {
-                "dog_id": 1,
+                "pet_id": 1,
                 "owner_id": 1,
                 "visit_date": "2026-09-07",
                 "actual_minutes": 45,
@@ -56,7 +56,7 @@ def test_missing_required_fields() -> None:
     with pytest.raises(ValidationError):
         CreateVisitRequest.model_validate(
             {
-                "dog_id": 1,
+                "pet_id": 1,
                 "owner_id": 1,
                 "visit_date": "2026-09-07",
                 # actual_minutes missing

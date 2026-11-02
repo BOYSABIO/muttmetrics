@@ -21,7 +21,7 @@ from tests.fixtures.metric_week import (
     WEEK_START,
 )
 
-from muttmetrics.models import Breed, Dog, Owner, Visit
+from muttmetrics.models import Breed, Owner, Pet, Visit
 
 
 def _in_week(v: dict) -> bool:
@@ -148,11 +148,11 @@ def test_metric_week_loads_all_visits(db_session: Session, metric_week: dict) ->
     """Load onto the pad; count only Syn* rows (real DB may already have visits)."""
     syn_owners = db_session.scalars(select(Owner).where(Owner.name.like("Syn Owner%"))).all()
     assert len(syn_owners) == 2
-    assert len(metric_week["dog_ids"]) == 3
+    assert len(metric_week["pet_ids"]) == 3
 
-    syn_dog_ids = list(metric_week["dog_ids"].values())
+    syn_pet_ids = list(metric_week["pet_ids"].values())
     syn_visit_count = db_session.scalar(
-        select(func.count()).select_from(Visit).where(Visit.dog_id.in_(syn_dog_ids))
+        select(func.count()).select_from(Visit).where(Visit.pet_id.in_(syn_pet_ids))
     )
     assert syn_visit_count == len(VISITS) == 13
 
@@ -165,8 +165,8 @@ def test_metric_week_avg_duration_by_breed(db_session: Session, metric_week: dic
             func.avg(Visit.actual_minutes),
             func.count(),
         )
-        .join(Dog, Visit.dog_id == Dog.dog_id)
-        .join(Breed, Dog.breed_id == Breed.breed_id)
+        .join(Pet, Visit.pet_id == Pet.pet_id)
+        .join(Breed, Pet.breed_id == Breed.breed_id)
         .where(Breed.name_en.like("Syn Breed%"))
         .group_by(Breed.name_en)
         .order_by(Breed.name_en)

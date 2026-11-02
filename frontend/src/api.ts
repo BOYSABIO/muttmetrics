@@ -10,9 +10,12 @@
 // Response types (mirror the Pydantic schemas in src/muttmetrics/api/schemas)
 // ---------------------------------------------------------------------------
 
-export type DogSearchItem = {
-  dog_id: number
+export type Species = 'dog' | 'cat'
+
+export type PetSearchItem = {
+  pet_id: number
   name: string
+  species: Species
   owner_id: number
   owner_name: string
   last_visit_date: string | null
@@ -21,6 +24,7 @@ export type DogSearchItem = {
 export type ServiceListItem = {
   service_id: number
   slug: string | null
+  species: string | null
   name_en: string | null
   name_de: string | null
   base_minutes: number | null
@@ -48,6 +52,7 @@ export type AddOnSummary = {
 
 export type BreedListItem = {
   breed_id: number
+  species: Species
   name_de: string | null
   name_en: string | null
 }
@@ -61,10 +66,11 @@ export type VisitSummary = {
   add_ons: AddOnSummary[]
 }
 
-export type DogProfile = {
-  dog_id: number
+export type PetProfile = {
+  pet_id: number
   owner_id: number
   name: string
+  species: Species
   breed_id: number | null
   breed_secondary_id: number | null
   sex: string | null
@@ -95,9 +101,10 @@ export type DogProfile = {
   recent_visits: VisitSummary[]
 }
 
-export type OwnerDogItem = {
-  dog_id: number
+export type OwnerPetItem = {
+  pet_id: number
   name: string
+  species: Species
 }
 
 export type OwnerProfile = {
@@ -112,7 +119,7 @@ export type OwnerProfile = {
   notes: string | null
   visit_count: number | null
   lifetime_value: number | null
-  dogs: OwnerDogItem[]
+  pets: OwnerPetItem[]
 }
 
 export type CreatedOwner = {
@@ -121,7 +128,7 @@ export type CreatedOwner = {
   phone?: string | null
   email?: string | null
 }
-export type CreatedDog = { dog_id: number; name: string }
+export type CreatedPet = { pet_id: number; name: string; species: Species }
 export type CreatedVisit = { visit_id: number }
 
 /** One hit from GET /owners?q= (#191). */
@@ -129,7 +136,7 @@ export type OwnerSearchItem = {
   owner_id: number
   name: string
   phone: string | null
-  dog_count: number
+  pet_count: number
 }
 
 export type OwnerConflictCandidate = {
@@ -158,7 +165,7 @@ export type UpsertOwnerResult = {
 /** Full visit row after create/get/patch (#193). */
 export type VisitDetail = {
   visit_id: number
-  dog_id: number
+  pet_id: number
   owner_id: number
   visit_date: string
   actual_minutes: number
@@ -366,13 +373,13 @@ async function uploadFile<T>(path: string, form: FormData): Promise<T> {
 // Endpoints
 // ---------------------------------------------------------------------------
 
-export function searchDogs(q: string): Promise<DogSearchItem[]> {
+export function searchPets(q: string): Promise<PetSearchItem[]> {
   const params = new URLSearchParams()
   if (q.trim() !== '') {
     params.set('q', q.trim())
   }
   const qs = params.toString()
-  return getJson(qs ? `/dogs?${qs}` : '/dogs')
+  return getJson(qs ? `/pets?${qs}` : '/pets')
 }
 
 /** Browse/search owners for capture "Already a client?" (#191). */
@@ -385,24 +392,30 @@ export function searchOwners(q: string): Promise<OwnerSearchItem[]> {
   return getJson(qs ? `/owners?${qs}` : '/owners')
 }
 
-export function listServices(): Promise<ServiceListItem[]> {
-  return getJson('/services')
+export function listServices(species?: Species): Promise<ServiceListItem[]> {
+  const params = new URLSearchParams()
+  if (species) params.set('species', species)
+  const qs = params.toString()
+  return getJson(qs ? `/services?${qs}` : '/services')
 }
 
 export function listAddOns(): Promise<AddOnListItem[]> {
   return getJson('/add-ons')
 }
 
-export function listBreeds(): Promise<BreedListItem[]> {
-  return getJson('/breeds')
+export function listBreeds(species?: Species): Promise<BreedListItem[]> {
+  const params = new URLSearchParams()
+  if (species) params.set('species', species)
+  const qs = params.toString()
+  return getJson(qs ? `/breeds?${qs}` : '/breeds')
 }
 
-export function fetchDogProfile(dogId: number): Promise<DogProfile> {
-  return getJson(`/dogs/${dogId}`)
+export function fetchPetProfile(petId: number): Promise<PetProfile> {
+  return getJson(`/pets/${petId}`)
 }
 
-export function patchDog(dogId: number, body: Record<string, unknown>): Promise<DogProfile> {
-  return sendJson('PATCH', `/dogs/${dogId}`, body)
+export function patchPet(petId: number, body: Record<string, unknown>): Promise<PetProfile> {
+  return sendJson('PATCH', `/pets/${petId}`, body)
 }
 
 export function fetchOwnerProfile(ownerId: number): Promise<OwnerProfile> {
@@ -465,9 +478,13 @@ export async function createOwner(
   return { owner: data, created: res.status === 201 }
 }
 
-/** Create-or-get by (owner_id, name) (#21). */
-export function createDog(ownerId: number, name: string): Promise<CreatedDog> {
-  return sendJson('POST', '/dogs', { owner_id: ownerId, name })
+/** Create-or-get by (owner_id, name, species) (#21 / #190). */
+export function createPet(
+  ownerId: number,
+  name: string,
+  species: Species = 'dog',
+): Promise<CreatedPet> {
+  return sendJson('POST', '/pets', { owner_id: ownerId, name, species })
 }
 
 export function createVisit(body: Record<string, unknown>): Promise<CreatedVisit> {
@@ -500,13 +517,13 @@ export async function uploadVisitPhoto(
   await uploadFile(`/visits/${visitId}/photos`, form)
 }
 
-export function uploadDogProfilePhoto(
-  dogId: number,
+export function uploadPetProfilePhoto(
+  petId: number,
   file: File,
 ): Promise<{ photo_id: number }> {
   const form = new FormData()
   form.append('file', file)
-  return uploadFile(`/dogs/${dogId}/photos`, form)
+  return uploadFile(`/pets/${petId}/photos`, form)
 }
 
 /**

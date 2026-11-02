@@ -203,7 +203,7 @@ PHOTO_ROOT=C:/muttmetrics-data/photos   # optional; defaults to ~/muttmetrics-da
 | `src/muttmetrics/media/storage.py` | keys ↔ files: key generation, atomic write, read, delete, traversal checks |
 | `src/muttmetrics/media/images.py` | bytes ↔ bytes: decode, EXIF strip, downscale, re-encode JPEG |
 | `src/muttmetrics/api/routes/photos.py` | upload / list / serve |
-| `photo` table | `dog_id`, optional `visit_id`, `kind`, relative `storage_key`, size, sha256, `created_at` |
+| `photo` table | `pet_id`, optional `visit_id`, `kind`, relative `storage_key`, size, sha256, `created_at` |
 | `ops/photo_purge.py` | delete a client's photos (files first, then rows) — dry run by default |
 | `ops/photo_sweep.py` | find files with no row (crash leftovers) — dry run by default |
 
@@ -246,10 +246,10 @@ uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --por
 | `http://127.0.0.1:8000/ping` | maintainer smoke | Auth check — requires `X-API-Key` |
 | `http://127.0.0.1:8000/owners` | Onboarding | `GET` search (`?q=`); `POST` create / phone-match reuse / **409** on name clash ([#187](https://github.com/BOYSABIO/muttmetrics/issues/187), [#191](https://github.com/BOYSABIO/muttmetrics/issues/191)) |
 | `http://127.0.0.1:8000/owners/{id}` | Directory | `GET` owner profile; `PATCH` safe fields ([#131](https://github.com/BOYSABIO/muttmetrics/issues/131), [#132](https://github.com/BOYSABIO/muttmetrics/issues/132)) |
-| `http://127.0.0.1:8000/dogs` | Onboarding / directory | `POST` create-or-get; `GET` list/search (`?q=`) with `owner_name` |
-| `http://127.0.0.1:8000/dogs/{id}` | Directory | `GET` dog profile; `PATCH` safe fields (writes `size_band` from weight, [#171](https://github.com/BOYSABIO/muttmetrics/issues/171)) |
-| `http://127.0.0.1:8000/dogs/{id}/duration-range` | maintainer | `GET` preview of the P50/P90 estimate without creating a visit ([#26](https://github.com/BOYSABIO/muttmetrics/issues/26)); not used by the SPA yet |
-| `http://127.0.0.1:8000/dogs/{id}/photos` | Directory | `POST` profile photo upload |
+| `http://127.0.0.1:8000/pets` | Onboarding / directory | `POST` create-or-get; `GET` list/search (`?q=`) with `owner_name` + `species` |
+| `http://127.0.0.1:8000/pets/{id}` | Directory | `GET` pet profile; `PATCH` safe fields (writes `size_band` from weight + species, [#171](https://github.com/BOYSABIO/muttmetrics/issues/171) / [#190](https://github.com/BOYSABIO/muttmetrics/issues/190)) |
+| `http://127.0.0.1:8000/pets/{id}/duration-range` | maintainer | `GET` preview of the P50/P90 estimate without creating a visit ([#26](https://github.com/BOYSABIO/muttmetrics/issues/26)); not used by the SPA yet |
+| `http://127.0.0.1:8000/pets/{id}/photos` | Directory | `POST` profile photo upload |
 | `http://127.0.0.1:8000/breeds` | Directory | `GET` breed catalog for the breed picker ([#151](https://github.com/BOYSABIO/muttmetrics/issues/151)) |
 | `http://127.0.0.1:8000/services` | Capture | `GET` seeded package catalog for the SPA picker ([#110](https://github.com/BOYSABIO/muttmetrics/issues/110)) |
 | `http://127.0.0.1:8000/add-ons` | Capture | `GET` seeded technique / add-on catalog ([#192](https://github.com/BOYSABIO/muttmetrics/issues/192)) |
@@ -283,7 +283,7 @@ X-API-Key: <same value as API_KEY in .env>
 | Startup check ([#187](https://github.com/BOYSABIO/muttmetrics/issues/187)) | API refuses to start if `API_KEY` is `dev-change-me` or shorter than 24 characters |
 | `GET /health` | Stays **public** (no key) |
 | Every other route: `/ping`, owners, dogs, breeds, services, visits, metrics | Protected |
-| Photo routes (`/visits/{id}/photos`, `/dogs/{id}/photos`, `/photos/{id}`) | Protected — these serve client photos |
+| Photo routes (`/visits/{id}/photos`, `/pets/{id}/photos`, `/photos/{id}`) | Protected — these serve client photos |
 
 All write paths require `X-API-Key`. The unauthenticated Jinja `/capture` form is gone ([#86](https://github.com/BOYSABIO/muttmetrics/issues/86)).
 
@@ -306,14 +306,14 @@ Never commit real `.env` values. CI sets `API_KEY` as an environment variable in
 
 ### React capture SPA (#69–#72)
 
-**Only** app UI for groomer/maintainer (not `/docs`). Vite + React + TypeScript in `frontend/`. **All API calls live in `src/api.ts`** (headers, error messages, response types) and shared date helpers in `src/dates.ts` ([#180](https://github.com/BOYSABIO/muttmetrics/issues/180)); components import from there and never call `fetch` themselves. Screens: `App.tsx` is the shell (home vs capture); `ThisWeek.tsx` is the dashboard; `Directory.tsx` is the client list, opening `DogProfileView` / `OwnerProfileView`; `Capture.tsx` is search → new client → 3-step visit wizard (then optional back-to-back dog), with the resumable draft in `draft.ts`. Top areas: **This week** | **Clients** ([#138](https://github.com/BOYSABIO/muttmetrics/issues/138)). Capture modes: **search** → **visit**, or **new** client → **visit**, then **after_save** for another dog from the same owner ([#191](https://github.com/BOYSABIO/muttmetrics/issues/191)). Directory: dog/owner profiles + safe PATCH + **Add dog** on the owner ([#139](https://github.com/BOYSABIO/muttmetrics/issues/139), [#140](https://github.com/BOYSABIO/muttmetrics/issues/140), [#191](https://github.com/BOYSABIO/muttmetrics/issues/191)). Jinja `/capture` (stage A, #63) was removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86) — no templates, no unauthenticated write path. Phone trial over Tailscale: [`docs/runbooks/groomer-trial.md`](./docs/runbooks/groomer-trial.md).
+**Only** app UI for groomer/maintainer (not `/docs`). Vite + React + TypeScript in `frontend/`. **All API calls live in `src/api.ts`** (headers, error messages, response types) and shared date helpers in `src/dates.ts` ([#180](https://github.com/BOYSABIO/muttmetrics/issues/180)); components import from there and never call `fetch` themselves. Screens: `App.tsx` is the shell (home vs capture); `ThisWeek.tsx` is the dashboard; `Directory.tsx` is the client list, opening `PetProfileView` / `OwnerProfileView`; `Capture.tsx` is search → new client → 3-step visit wizard (then optional back-to-back dog), with the resumable draft in `draft.ts`. Top areas: **This week** | **Clients** ([#138](https://github.com/BOYSABIO/muttmetrics/issues/138)). Capture modes: **search** → **visit**, or **new** client → **visit**, then **after_save** for another dog from the same owner ([#191](https://github.com/BOYSABIO/muttmetrics/issues/191)). Directory: dog/owner profiles + safe PATCH + **Add dog** on the owner ([#139](https://github.com/BOYSABIO/muttmetrics/issues/139), [#140](https://github.com/BOYSABIO/muttmetrics/issues/140), [#191](https://github.com/BOYSABIO/muttmetrics/issues/191)). Jinja `/capture` (stage A, #63) was removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86) — no templates, no unauthenticated write path. Phone trial over Tailscale: [`docs/runbooks/groomer-trial.md`](./docs/runbooks/groomer-trial.md).
 
 | Path | API calls |
 |------|-----------|
-| Returning dog (pick from search) | `GET /dogs?q=` → **only** `POST /visits` with known ids |
-| Existing owner, new dog | `GET /owners?q=` (pick) → `POST /dogs` → visit wizard ([#191](https://github.com/BOYSABIO/muttmetrics/issues/191)) |
-| Brand-new client | `POST /owners` (optional phone) → `POST /dogs` → visit; name clash without phone → **409** + candidates ([#187](https://github.com/BOYSABIO/muttmetrics/issues/187)) |
-| Back-to-back second dog | After save: pick sibling or `POST /dogs`, keep `visit_date`, new timer ([#191](https://github.com/BOYSABIO/muttmetrics/issues/191)) |
+| Returning pet (pick from search) | `GET /pets?q=` → **only** `POST /visits` with known ids |
+| Existing owner, new pet | `GET /owners?q=` (pick) → `POST /pets` → visit wizard ([#191](https://github.com/BOYSABIO/muttmetrics/issues/191)) |
+| Brand-new client | `POST /owners` (optional phone) → `POST /pets` → visit; name clash without phone → **409** + candidates ([#187](https://github.com/BOYSABIO/muttmetrics/issues/187)) |
+| Back-to-back second pet | After save: pick sibling or `POST /pets`, keep `visit_date`, new timer ([#191](https://github.com/BOYSABIO/muttmetrics/issues/191)) |
 
 **Visit wizard (#72, photos #92, money #110)** once identity is known (3 steps):
 
@@ -353,10 +353,10 @@ npm run dev
 | `http://127.0.0.1:5173` | Vite **dev** server — hot reload, this PC only (`strictPort`) |
 | `http://<pc-ip>:5174` | Vite **preview** server — built `dist/`, network-facing, for the groomer trial |
 | `/api/*` in the SPA | Proxied to `http://127.0.0.1:8000/*` (see `frontend/vite.config.ts`) |
-| `GET /dogs?q=` | Directory browse/search — returns `owner_name` on each row (cap 50) |
+| `GET /pets?q=` | Directory browse/search — returns `owner_name` + `species` on each row (cap 50) |
 | `GET /owners?q=` | Owner search for capture “Already a client?” (#191) |
-| `GET` / `PATCH /dogs/{id}` | Dog profile read / safe enrichment (#131, #132) |
-| `GET` / `PATCH /owners/{id}` | Owner profile read / safe enrichment (#131, #132); Add dog via `POST /dogs` |
+| `GET` / `PATCH /pets/{id}` | Pet profile read / safe enrichment (#131, #132, #190) |
+| `GET` / `PATCH /owners/{id}` | Owner profile read / safe enrichment (#131, #132); Add pet via `POST /pets` |
 | Visit step 2 timer | Client-only; fills `actual_minutes` (floor); editable override. In-progress visit (dog + wizard + timer) persists in `localStorage` (`muttmetrics.draftVisit`) so a phone tab kill / reload can resume ([#88](https://github.com/BOYSABIO/muttmetrics/issues/88)). Cleared on save / cancel / reset. |
 | `frontend/.env` | `VITE_API_KEY` (required) and `VITE_BUSINESS_NAME` (optional header name) — gitignored; never commit. Typed in `src/vite-env.d.ts` |
 | `npm run build` | Production bundle to `frontend/dist/` (`tsc -b` type-checks first) |
@@ -376,7 +376,7 @@ Onboarding helpers live in `src/muttmetrics/api/services/`. Prefer **picking** a
 **JSON evening flow (maintainer / tools):**
 
 1. `GET /owners?q=anna` → pick `owner_id`, **or** `POST /owners` with name (and phone if the name may already exist)  
-2. `POST /dogs` `{"owner_id": …, "name": "Bella"}` → `dog_id` (**201** / **200**)  
+2. `POST /pets` `{"owner_id": …, "name": "Bella"}` → `pet_id` (**201** / **200**; `species` defaults to `dog`)  
 3. `POST /visits` with those ids → visit row  
 
 **`POST /owners` rules (#187):**
@@ -390,13 +390,13 @@ Onboarding helpers live in `src/muttmetrics/api/services/`. Prefer **picking** a
 
 Phone is compared as digits only (`+49 170` ≡ `+49170`). Prefer `GET /owners?q=` in the UI so create rarely has to guess.
 
-**Directory (returning dogs, #71):** `GET /dogs` or `GET /dogs?q=bella` → pick `dog_id` / `owner_id` → `POST /visits` (skip create). Owner profile can **Add dog** without retyping the owner name (#191).
+**Directory (returning pets, #71):** `GET /pets` or `GET /pets?q=bella` → pick `pet_id` / `owner_id` → `POST /visits` (skip create). Owner profile can **Add pet** without retyping the owner name (#191).
 
 | Endpoint | Lookup key | Notes |
 |----------|------------|--------|
 | `GET /owners` | optional `q` substring on name | Cap 50; LIKE wildcards escaped |
 | `POST /owners` | name; phone distinguishes same-name people | See table above |
-| `POST /dogs` | `(owner_id, name)` | Optional `breed_id`; **404** if owner/breed missing |
+| `POST /pets` | `(owner_id, name)` | Optional `species` (default `dog`) and `breed_id`; breed must match species (**422**); **404** if owner/breed missing |
 
 Blank names after normalize → **422**.
 
@@ -406,7 +406,7 @@ Blank names after normalize → **422**.
 
 Creates one `visit` row after a groom. Prefer registering via `#21` endpoints above instead of raw SQL.
 
-**Required JSON fields:** `dog_id`, `owner_id`, `visit_date`, `actual_minutes` (> 0).  
+**Required JSON fields:** `pet_id`, `owner_id`, `visit_date`, `actual_minutes` (> 0).  
 **SPA also requires for completed saves:** `actual_service_id`, `final_price` ([#110](https://github.com/BOYSABIO/muttmetrics/issues/110)).  
 **Optional:** `condition_score` (0–5; **0 = worst coat … 5 = best**), `booked_service_id`, `quoted_price`, `tip`, `what_surprised_me`, `status`, `shaved_down` (when wired).
 
@@ -414,7 +414,7 @@ Creates one `visit` row after a groom. Prefer registering via `#21` endpoints ab
 |--------|---------|
 | 201 | Visit created — body includes `visit_id` |
 | 401 | Missing/wrong API key |
-| 404 | Unknown `dog_id`, `owner_id`, `booked_service_id` or `actual_service_id` |
+| 404 | Unknown `pet_id`, `owner_id`, `booked_service_id` or `actual_service_id` |
 | 422 | Validation failed (e.g. `actual_minutes: 0`, a negative price or tip, or a dog that belongs to a different owner) |
 
 The convention across routes ([#177](https://github.com/BOYSABIO/muttmetrics/issues/177)): an id that doesn't exist is **404**; ids that exist but don't fit together, or values out of range, are **422**. Nothing a client sends should reach Postgres and come back as a 500.

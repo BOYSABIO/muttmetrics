@@ -15,7 +15,7 @@ class CreateVisitRequest(BaseModel):
         json_schema_extra={
             "examples": [
                 {
-                    "dog_id": 1,
+                    "pet_id": 1,
                     "owner_id": 1,
                     "visit_date": "2026-09-07",
                     "actual_minutes": 90,
@@ -30,7 +30,7 @@ class CreateVisitRequest(BaseModel):
         }
     )
 
-    dog_id: int = Field(..., description="Existing dog primary key")
+    pet_id: int = Field(..., description="Existing pet primary key")
     owner_id: int = Field(..., description="Existing owner primary key")
     visit_date: date
     actual_minutes: int = Field(..., gt=0, description="Wall-clock minutes for the groom")
@@ -56,7 +56,7 @@ class VisitResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     visit_id: int
-    dog_id: int
+    pet_id: int
     owner_id: int
     visit_date: date
     actual_minutes: int

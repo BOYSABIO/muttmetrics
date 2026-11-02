@@ -1,8 +1,8 @@
-"""Set dog.size_band from weight_kg for rows that already have a weight (#171).
+"""Set pet.size_band from weight_kg + species for rows that already have a weight.
 
-Dogs without weight are skipped — size_band stays NULL. The prior and profile
+Pets without weight are skipped — size_band stays NULL. The prior and profile
 already compute size from weight on read; this only syncs the stored column
-for dogs that were weighed before write-through existed.
+for pets that were weighed before write-through existed.
 
     python ops/backfill_size_band.py             # report only (dry run)
     python ops/backfill_size_band.py --apply     # write size_band
@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from muttmetrics.db.session import session_scope
-from muttmetrics.models import Dog
+from muttmetrics.models import Pet
 from muttmetrics.priors.size import size_band_from_weight
 
 
@@ -27,29 +27,29 @@ class BackfillReport:
     total: int = 0
     no_weight: int = 0
     unchanged: int = 0
-    # (dog_id, weight_kg, old band, new band) for every dog that needs a change
+    # (pet_id, weight_kg, old band, new band) for every pet that needs a change
     changes: list[tuple[int, float, str | None, str | None]] = field(default_factory=list)
 
 
 def backfill(session: Session, *, apply: bool) -> BackfillReport:
-    """Compare every weighed dog's stored size_band with its weight.
+    """Compare every weighed pet's stored size_band with its weight + species.
 
     Dry run (apply=False) only reports. With apply=True the new bands are set
     on the session; the caller decides whether to commit (tests roll back).
     """
     report = BackfillReport()
-    for dog in session.scalars(select(Dog).order_by(Dog.dog_id)):
+    for pet in session.scalars(select(Pet).order_by(Pet.pet_id)):
         report.total += 1
-        if dog.weight_kg is None:
+        if pet.weight_kg is None:
             report.no_weight += 1
             continue
-        new_band = size_band_from_weight(float(dog.weight_kg))
-        if dog.size_band == new_band:
+        new_band = size_band_from_weight(float(pet.weight_kg), pet.species)
+        if pet.size_band == new_band:
             report.unchanged += 1
             continue
-        report.changes.append((dog.dog_id, float(dog.weight_kg), dog.size_band, new_band))
+        report.changes.append((pet.pet_id, float(pet.weight_kg), pet.size_band, new_band))
         if apply:
-            dog.size_band = new_band
+            pet.size_band = new_band
     if apply:
         session.flush()
     return report
@@ -70,14 +70,14 @@ def main() -> int:
     with session_scope() as session:  # commits on success
         report = backfill(session, apply=args.apply)
 
-    for dog_id, weight, old, new in report.changes:
-        print(f"  dog_id={dog_id} weight_kg={weight} {old!r} → {new!r}")
-    print(f"Dogs total:     {report.total}")
+    for pet_id, weight, old, new in report.changes:
+        print(f"  pet_id={pet_id} weight_kg={weight} {old!r} → {new!r}")
+    print(f"Pets total:     {report.total}")
     print(f"No weight:      {report.no_weight} (skipped)")
     print(f"Already match:  {report.unchanged}")
     print(f"Would update:   {len(report.changes)}")
     if args.apply:
-        print(f"\nUpdated {len(report.changes)} dog(s).")
+        print(f"\nUpdated {len(report.changes)} pet(s).")
     else:
         print("\nDry run - nothing written. Re-run with --apply to update.")
     return 0

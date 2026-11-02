@@ -18,7 +18,7 @@ from muttmetrics.api.services.visits import (
     set_visit_add_ons,
     visit_to_response,
 )
-from muttmetrics.models import Dog, Owner, Service, Visit
+from muttmetrics.models import Owner, Pet, Service, Visit
 from muttmetrics.services.visit_predictions import compute_visit_predictions
 
 router = APIRouter(tags=["visits"])
@@ -32,34 +32,34 @@ DbSession = Annotated[Session, Depends(get_db)]
     dependencies=[Depends(require_api_key)],
 )
 def create_visit(body: CreateVisitRequest, session: DbSession) -> VisitResponse:
-    """Persist a post-groom visit; dog and owner must already exist."""
+    """Persist a post-groom visit; pet and owner must already exist."""
     if session.get(Owner, body.owner_id) is None:
         raise HTTPException(status_code=404, detail=f"Owner {body.owner_id} not found")
 
-    dog = session.get(Dog, body.dog_id)
-    if dog is None:
-        raise HTTPException(status_code=404, detail=f"Dog {body.dog_id} not found")
+    pet = session.get(Pet, body.pet_id)
+    if pet is None:
+        raise HTTPException(status_code=404, detail=f"Pet {body.pet_id} not found")
 
     # Both rows exist, but do they belong together? A mismatch would credit
     # this groom to the wrong owner's history.
-    if dog.owner_id != body.owner_id:
+    if pet.owner_id != body.owner_id:
         raise HTTPException(
             status_code=422,
-            detail=f"Dog {body.dog_id} belongs to owner {dog.owner_id}, not {body.owner_id}",
+            detail=f"Pet {body.pet_id} belongs to owner {pet.owner_id}, not {body.owner_id}",
         )
 
-    # Same rule as owner/dog/breed: a referenced id that doesn't exist is a 404,
+    # Same rule as owner/pet/breed: a referenced id that doesn't exist is a 404,
     # caught here instead of as an IntegrityError (500) at flush time.
     for service_id in {body.booked_service_id, body.actual_service_id} - {None}:
         if session.get(Service, service_id) is None:
             raise HTTPException(status_code=404, detail=f"Service {service_id} not found")
 
     days_since_last, p50, p90 = compute_visit_predictions(
-        session, dog=dog, visit_date=body.visit_date
+        session, pet=pet, visit_date=body.visit_date
     )
 
     visit = Visit(
-        dog_id=body.dog_id,
+        pet_id=body.pet_id,
         owner_id=body.owner_id,
         visit_date=body.visit_date,
         actual_minutes=body.actual_minutes,

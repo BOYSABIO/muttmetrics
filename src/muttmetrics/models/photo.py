@@ -20,7 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from muttmetrics.db.base import Base
 
 if TYPE_CHECKING:
-    from muttmetrics.models.dog import Dog
+    from muttmetrics.models.pet import Pet
     from muttmetrics.models.visit import Visit
 
 
@@ -47,14 +47,14 @@ class Photo(Base):
         CheckConstraint("byte_size > 0", name="ck_photo_byte_size"),
         UniqueConstraint("storage_key", name="uq_photo_storage_key"),
         Index("ix_photo_visit_id", "visit_id"),
-        Index("ix_photo_dog_id_kind", "dog_id", "kind"),
+        Index("ix_photo_pet_id_kind", "pet_id", "kind"),
     )
 
     # Identity
     photo_id: Mapped[int] = mapped_column(primary_key=True)
 
-    # What it belongs to: always a dog; a visit only for intake/after shots
-    dog_id: Mapped[int] = mapped_column(ForeignKey("dog.dog_id"), nullable=False)
+    # What it belongs to: always a pet; a visit only for intake/after shots
+    pet_id: Mapped[int] = mapped_column(ForeignKey("pet.pet_id"), nullable=False)
     visit_id: Mapped[int | None] = mapped_column(ForeignKey("visit.visit_id"), nullable=True)
     kind: Mapped[str] = mapped_column(Text, nullable=False)
 
@@ -73,5 +73,5 @@ class Photo(Base):
     )
 
     # Relationships
-    dog: Mapped[Dog] = relationship(back_populates="photos")
+    pet: Mapped[Pet] = relationship(back_populates="photos")
     visit: Mapped[Visit | None] = relationship(back_populates="photos")

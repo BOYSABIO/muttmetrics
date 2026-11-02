@@ -1,30 +1,31 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   errorMessage,
-  fetchDogProfile,
+  fetchPetProfile,
   fetchOwnerProfile,
   listBreeds,
-  searchDogs,
+  searchPets,
   type BreedListItem,
-  type DogProfile,
-  type DogSearchItem,
+  type PetProfile,
+  type PetSearchItem,
   type OwnerProfile,
 } from './api'
 import { formatLastVisit } from './dates'
-import { DogAvatar } from './DogAvatar'
-import { DogProfileView } from './DogProfileView'
-import type { SelectedDog } from './draft'
+import { PetAvatar } from './PetAvatar'
+import { PetProfileView } from './PetProfileView'
+import type { SelectedPet } from './draft'
 import { OwnerProfileView } from './OwnerProfileView'
+import { speciesLabel } from './SpeciesChips'
 
 type DirectoryProps = {
-  onStartVisit?: (dog: SelectedDog) => void
+  onStartVisit?: (dog: SelectedPet) => void
 }
 
 /** Clients: searchable dog list, opening a dog or owner profile. */
 export function Directory({ onStartVisit }: DirectoryProps) {
   const [message, setMessage] = useState('')
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<DogSearchItem[]>([])
+  const [results, setResults] = useState<PetSearchItem[]>([])
   const [breeds, setBreeds] = useState<BreedListItem[]>([])
   const [isBusy, setIsBusy] = useState(false)
   // Kept apart so the list never says "No clients yet" while it is loading
@@ -32,7 +33,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
   const [listStatus, setListStatus] = useState<'loading' | 'ready' | 'error'>(
     'loading',
   )
-  const [openDog, setOpenDog] = useState<DogProfile | null>(null)
+  const [openPet, setOpenPet] = useState<PetProfile | null>(null)
   const [openOwner, setOpenOwner] = useState<OwnerProfile | null>(null)
 
   const filtered = useMemo(() => {
@@ -48,7 +49,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
   useEffect(() => {
     void (async () => {
       try {
-        const [dogs, breedRows] = await Promise.all([searchDogs(''), listBreeds()])
+        const [dogs, breedRows] = await Promise.all([searchPets(''), listBreeds()])
         setResults(dogs)
         setBreeds(breedRows)
         setListStatus('ready')
@@ -63,7 +64,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
   /** Reload the client list, e.g. after a rename, so Back shows fresh rows. */
   async function refreshList(): Promise<void> {
     try {
-      setResults(await searchDogs(''))
+      setResults(await searchPets(''))
       setListStatus('ready')
     } catch (error) {
       console.error(error)
@@ -71,14 +72,14 @@ export function Directory({ onStartVisit }: DirectoryProps) {
     }
   }
 
-  async function openDirectoryDog(dogId: number): Promise<void> {
+  async function openDirectoryPet(dogId: number): Promise<void> {
     if (isBusy) return
     setIsBusy(true)
     setMessage('Loading…')
     try {
-      const profile = await fetchDogProfile(dogId)
+      const profile = await fetchPetProfile(dogId)
       setOpenOwner(null)
-      setOpenDog(profile)
+      setOpenPet(profile)
       setMessage('')
     } catch (error) {
       console.error(error)
@@ -94,7 +95,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
     setMessage('Loading…')
     try {
       const profile = await fetchOwnerProfile(ownerId)
-      setOpenDog(null)
+      setOpenPet(null)
       setOpenOwner(profile)
       setMessage('')
     } catch (error) {
@@ -106,7 +107,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
   }
 
   function closeProfiles(): void {
-    setOpenDog(null)
+    setOpenPet(null)
     setOpenOwner(null)
     setMessage('')
   }
@@ -118,13 +119,13 @@ export function Directory({ onStartVisit }: DirectoryProps) {
       </p>
     ) : null
 
-  if (openDog !== null) {
+  if (openPet !== null) {
     return (
       <>
         {status}
-        <DogProfileView
-          key={openDog.dog_id}
-          profile={openDog}
+        <PetProfileView>
+          key={openPet.pet_id}
+          profile={openPet}
           breeds={breeds}
           onBack={closeProfiles}
           onOpenOwner={(id) => void openDirectoryOwner(id)}
@@ -143,7 +144,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
           key={openOwner.owner_id}
           profile={openOwner}
           onBack={closeProfiles}
-          onOpenDog={(id) => void openDirectoryDog(id)}
+          onOpenPet={(id) => void openDirectoryPet(id)}
           onSaved={() => void refreshList()}
         />
       </>
@@ -167,7 +168,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search dogs or owners…"
+            placeholder="Search pets or owners…"
             autoComplete="off"
           />
         </div>
@@ -198,24 +199,24 @@ export function Directory({ onStartVisit }: DirectoryProps) {
           <>
             <div className="client-list-head" aria-hidden>
               <span>
-                {filtered.length} {filtered.length === 1 ? 'dog' : 'dogs'}
+                {filtered.length} {filtered.length === 1 ? 'pet' : 'pets'}
               </span>
               <span>Last visit</span>
             </div>
             <ul className="dir-card-list client-list">
               {filtered.map((dog) => (
-                <li key={dog.dog_id}>
+                <li key={dog.pet_id}>
                   {/* The whole row opens the dog for a mouse or a tap. The name
                       button is the keyboard / screen-reader way in, with its
                       own handler; the avatar is decoration. */}
                   <div
                     className="dir-card dir-card-row client-row"
                     onClick={() => {
-                      if (!isBusy) void openDirectoryDog(dog.dog_id)
+                      if (!isBusy) void openDirectoryPet(dog.pet_id)
                     }}
                   >
                     <span className="dir-card-avatar-hit" aria-hidden="true">
-                      <DogAvatar photoId={null} name={dog.name} />
+                      <PetAvatar photoId={null} name={dog.name} />
                     </span>
                     <div className="dir-card-body">
                       <button
@@ -224,12 +225,14 @@ export function Directory({ onStartVisit }: DirectoryProps) {
                         disabled={isBusy}
                         onClick={(e) => {
                           e.stopPropagation()
-                          void openDirectoryDog(dog.dog_id)
+                          void openDirectoryPet(dog.pet_id)
                         }}
                       >
                         {dog.name}
                       </button>
                       <div className="dir-card-meta">
+                        {speciesLabel(dog.species)}
+                        {' · '}
                         <button
                           type="button"
                           className="linkish"

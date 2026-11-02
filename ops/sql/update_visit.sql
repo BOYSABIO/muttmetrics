@@ -19,7 +19,7 @@ SELECT
   d.name AS dog_name,
   o.name AS owner_name
 FROM visit v
-JOIN dog d ON d.dog_id = v.dog_id
+JOIN pet d ON d.pet_id = v.pet_id
 JOIN owner o ON o.owner_id = v.owner_id
 WHERE v.visit_id = 123;   -- <-- placeholder visit_id
 

@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import {
-  createDog,
+  createPet,
   errorMessage,
   fetchOwnerProfile,
   patchOwner,
   type OwnerProfile,
+  type Species,
 } from './api'
-import { DogAvatar } from './DogAvatar'
+import { PetAvatar } from './PetAvatar'
+import { SpeciesChips, speciesLabel } from './SpeciesChips'
 
 type OwnerForm = {
   name: string
@@ -41,7 +43,7 @@ function textOrNull(s: string): string | null {
 type OwnerProfileViewProps = {
   profile: OwnerProfile
   onBack: () => void
-  onOpenDog: (dogId: number) => void
+  onOpenPet: (dogId: number) => void
   /** After a save, so the client list can refresh names. */
   onSaved: () => void
 }
@@ -50,15 +52,16 @@ type OwnerProfileViewProps = {
 export function OwnerProfileView({
   profile: initial,
   onBack,
-  onOpenDog,
+  onOpenPet,
   onSaved,
 }: OwnerProfileViewProps) {
   const [profile, setProfile] = useState(initial)
   const [form, setForm] = useState(() => formFromProfile(initial))
   const [isBusy, setIsBusy] = useState(false)
   const [message, setMessage] = useState('')
-  const [addingDog, setAddingDog] = useState(false)
-  const [newDogName, setNewDogName] = useState('')
+  const [addingPet, setAddingPet] = useState(false)
+  const [newPetName, setNewPetName] = useState('')
+  const [newPetSpecies, setNewPetSpecies] = useState<Species>('dog')
 
   function set<K extends keyof OwnerForm>(key: K, value: OwnerForm[K]): void {
     setForm((f) => ({ ...f, [key]: value }))
@@ -95,21 +98,21 @@ export function OwnerProfileView({
     }
   }
 
-  async function addDog(): Promise<void> {
+  async function addPet(): Promise<void> {
     if (isBusy) return
-    const name = newDogName.trim()
+    const name = newPetName.trim()
     if (name === '') {
-      setMessage('Dog name is required')
+      setMessage('Pet name is required')
       return
     }
     setIsBusy(true)
-    setMessage('Adding dog…')
+    setMessage('Adding pet…')
     try {
-      const dog = await createDog(profile.owner_id, name)
+      const dog = await createPet(profile.owner_id, name, newPetSpecies)
       const updated = await fetchOwnerProfile(profile.owner_id)
       setProfile(updated)
-      setNewDogName('')
-      setAddingDog(false)
+      setNewPetName('')
+      setAddingPet(false)
       setMessage(`Added ${dog.name}`)
       onSaved()
     } catch (error) {
@@ -255,25 +258,27 @@ export function OwnerProfileView({
         </div>
 
         <div className="profile-block">
-          <h3 className="profile-section">Dogs</h3>
-          {profile.dogs.length === 0 ? (
-            <p className="step-meta">No dogs on this owner.</p>
+          <h3 className="profile-section">Pets</h3>
+          {profile.pets.length === 0 ? (
+            <p className="step-meta">No pets on this owner.</p>
           ) : (
             <ul className="dir-card-list">
-              {profile.dogs.map((d) => (
-                <li key={d.dog_id}>
+              {profile.pets.map((d) => (
+                <li key={d.pet_id}>
                   <button
                     type="button"
                     className="dir-card"
                     disabled={isBusy}
                     onClick={() => {
-                      onOpenDog(d.dog_id)
+                      onOpenPet(d.pet_id)
                     }}
                   >
-                    <DogAvatar photoId={null} name={d.name} />
+                    <PetAvatar photoId={null} name={d.name} />
                     <div className="dir-card-body">
                       <span className="dir-card-title">{d.name}</span>
-                      <span className="dir-card-meta">Open profile</span>
+                      <span className="dir-card-meta">
+                        {speciesLabel(d.species)} · Open profile
+                      </span>
                     </div>
                   </button>
                 </li>
@@ -281,15 +286,21 @@ export function OwnerProfileView({
             </ul>
           )}
 
-          {addingDog ? (
+          {addingPet ? (
             <div className="field-stack profile-add-dog">
+              <SpeciesChips
+                name="own_new_species"
+                value={newPetSpecies}
+                onChange={setNewPetSpecies}
+                disabled={isBusy}
+              />
               <div className="field">
-                <label htmlFor="own_new_dog">New dog name</label>
+                <label htmlFor="own_new_dog">New pet name</label>
                 <input
                   id="own_new_dog"
                   type="text"
-                  value={newDogName}
-                  onChange={(e) => setNewDogName(e.target.value)}
+                  value={newPetName}
+                  onChange={(e) => setNewPetName(e.target.value)}
                   disabled={isBusy}
                   autoFocus
                 />
@@ -299,16 +310,16 @@ export function OwnerProfileView({
                   type="button"
                   className="primary"
                   disabled={isBusy}
-                  onClick={() => void addDog()}
+                  onClick={() => void addPet()}
                 >
-                  {isBusy ? 'Adding…' : 'Add dog'}
+                  {isBusy ? 'Adding…' : 'Add pet'}
                 </button>
                 <button
                   type="button"
                   disabled={isBusy}
                   onClick={() => {
-                    setAddingDog(false)
-                    setNewDogName('')
+                    setAddingPet(false)
+                    setNewPetName('')
                   }}
                 >
                   Cancel
@@ -321,11 +332,11 @@ export function OwnerProfileView({
                 type="button"
                 disabled={isBusy}
                 onClick={() => {
-                  setAddingDog(true)
+                  setAddingPet(true)
                   setMessage('')
                 }}
               >
-                Add dog
+                Add pet
               </button>
             </div>
           )}
