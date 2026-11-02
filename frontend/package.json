@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "check:no-key-in-dist": "node scripts/check-no-key-in-dist.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "e2e": "playwright test",

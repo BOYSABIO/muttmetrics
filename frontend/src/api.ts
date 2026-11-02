@@ -276,16 +276,9 @@ export type MetricsPeriodOut = MetricsPeriodBlock & {
 // ---------------------------------------------------------------------------
 
 function jsonHeaders(): HeadersInit {
-  return {
-    'Content-Type': 'application/json',
-    'X-API-Key': import.meta.env.VITE_API_KEY,
-  }
-}
-
-function keyOnlyHeaders(): HeadersInit {
-  // No Content-Type: for multipart uploads the browser must set it itself,
-  // because it has to append the boundary marker that separates the parts.
-  return { 'X-API-Key': import.meta.env.VITE_API_KEY }
+  // Auth is added by the Vite /api proxy from server-side API_KEY (#194).
+  // Never send X-API-Key from the browser — it would bake into dist/.
+  return { 'Content-Type': 'application/json' }
 }
 
 /**
@@ -361,9 +354,10 @@ async function sendDelete(path: string): Promise<void> {
 }
 
 async function uploadFile<T>(path: string, form: FormData): Promise<T> {
+  // No Content-Type: the browser must set multipart boundary itself.
+  // No X-API-Key: the Vite proxy injects it (#194).
   const res = await fetch(`/api${path}`, {
     method: 'POST',
-    headers: keyOnlyHeaders(),
     body: form,
   })
   return (await readJson(res)) as T
@@ -524,15 +518,6 @@ export function uploadPetProfilePhoto(
   const form = new FormData()
   form.append('file', file)
   return uploadFile(`/pets/${petId}/photos`, form)
-}
-
-/**
- * The JPEG bytes of one photo, or null if it can't be loaded. An `<img src>`
- * can't send the API key, so the caller turns the blob into an object URL.
- */
-export async function fetchPhotoBlob(photoId: number): Promise<Blob | null> {
-  const res = await fetch(`/api/photos/${photoId}`, { headers: keyOnlyHeaders() })
-  return res.ok ? res.blob() : null
 }
 
 /** Prefer ``fetchMetricsPeriod`` — SPA uses /period for week and month (#187). */

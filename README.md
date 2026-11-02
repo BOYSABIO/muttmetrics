@@ -59,7 +59,7 @@ python -m muttmetrics.api
 
 # React capture UI (second terminal — needs API running on :8000)
 cd frontend
-copy .env.example .env   # Windows; set VITE_API_KEY = same as root API_KEY
+copy .env.example .env   # Windows; optional VITE_BUSINESS_NAME only — API_KEY stays in repo-root .env (#194)
 npm install
 npm run dev
 # open http://127.0.0.1:5173 (dev server — this PC only, fixed port)
