@@ -52,6 +52,39 @@ def build_query(args: argparse.Namespace) -> Select[tuple[Photo]]:
     return stmt.order_by(Photo.photo_id)
 
 
+def photos_for_owner(session, owner_id: int) -> list[Photo]:
+    """Every photo row for every pet of this owner (used by client_erase #195)."""
+    stmt = (
+        select(Photo)
+        .join(Pet, Pet.pet_id == Photo.pet_id)
+        .where(Pet.owner_id == owner_id)
+        .order_by(Photo.photo_id)
+    )
+    return list(session.scalars(stmt))
+
+
+def purge_photos(session, photos: list[Photo], *, apply: bool) -> tuple[int, int]:
+    """Delete photo files then rows. Returns (files_deleted, rows_deleted).
+
+    Dry run (apply=False) deletes nothing. On file errors the row is left so
+    the bytes stay findable — same rule as the CLI.
+    """
+    if not apply:
+        return 0, 0
+    files_deleted = 0
+    rows_deleted = 0
+    for photo in photos:
+        try:
+            if storage.delete(photo.storage_key):
+                files_deleted += 1
+        except (OSError, ValueError) as exc:
+            print(f"  ! could not delete file for photo_id={photo.photo_id}: {exc}")
+            continue
+        session.delete(photo)
+        rows_deleted += 1
+    return files_deleted, rows_deleted
+
+
 def main() -> int:
     args = parse_args()
 
@@ -74,18 +107,7 @@ def main() -> int:
             print("\nDry run - nothing deleted. Re-run with --apply to delete.")
             return 0
 
-        files_deleted = 0
-        rows_deleted = 0
-        for photo in photos:
-            try:
-                if storage.delete(photo.storage_key):
-                    files_deleted += 1
-            except (OSError, ValueError) as exc:
-                # Leave the row in place: while it exists the file is findable.
-                print(f"  ! could not delete file for photo_id={photo.photo_id}: {exc}")
-                continue
-            session.delete(photo)
-            rows_deleted += 1
+        files_deleted, rows_deleted = purge_photos(session, photos, apply=True)
 
         print(f"\nDeleted {files_deleted} file(s) and {rows_deleted} row(s).")
         print("Backups still contain copies - see docs/architecture/privacy.md.")

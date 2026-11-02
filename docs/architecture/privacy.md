@@ -13,9 +13,9 @@ MuttMetrics handles real client-adjacent business data for a dog grooming shop i
 - Client-since date
 - Internal notes
 
-### Dog data
-- Dog name
-- Breed / mix
+### Pet data (dogs, cats, …)
+- Pet name
+- Species and breed / mix
 - Weight and size-related information
 - Coat and temperament fields
 - Medical / grooming-risk notes that matter operationally
@@ -139,6 +139,34 @@ Rules:
 - **Rotating it:** change `API_KEY` in `.env`, restart the API and `npm run preview` (or `dev`). No SPA rebuild.
 - **Hosting `dist/` alone is not enough:** a static host without a proxy that injects the header cannot talk to a keyed API — and must still stay off the public internet until [#83](https://github.com/BOYSABIO/muttmetrics/issues/83).
 
+## Client access and erasure (#195)
+
+Under the GDPR a client can ask **what you hold** (Art. 15) and ask for it to be **erased** (Art. 17). Ops tooling (not a self-serve UI — [#143](https://github.com/BOYSABIO/muttmetrics/issues/143)):
+
+| Request | Command | Runbook |
+|---------|---------|---------|
+| Access / export | `python ops/client_export.py --owner-id N` | [`client-requests.md`](../runbooks/client-requests.md) |
+| Erasure | `python ops/client_erase.py --owner-id N` then `--apply` | same |
+
+Exports land under gitignored `data/exports/` — never commit them.
+
+### Erasure decision: anonymise, do not hard-delete
+
+**Chosen for this salon (#195):** scrub identity, keep visit **facts**.
+
+| Gone from the live DB | Kept (anonymous) |
+|-----------------------|------------------|
+| Owner name → `Erased client #{id}`; phone, email, notes, area, channel, client-since | Owner row id (FK graph) |
+| Pet name → `Erased pet #{id}`; temperament / mobility / vet notes; fear-trigger free text | Species, breed ids, weight, coat/handling scores, size band |
+| All photos (files + rows via `photo_purge`) | — |
+| Visit free text (`what_surprised_me`, `pivot_reason`) | Visit date, minutes, prices, services, condition scores, predictions |
+
+**Why not hard-delete:** visits are the business record and the training history for M7. Bookkeeping and an anonymous model both need those rows. Anonymise leaves no name/phone/email/notes/photos while preserving useful structure.
+
+**Order:** photos first (files then rows), then DB scrub in one transaction. Idempotent: a second erase is a safe no-op.
+
+**Backups:** database dumps still hold the pre-erase PII until they age out of the retention window (daily ≤14 days, retained Sundays ≤8 weeks). Photo backup copies under `BACKUP_ROOT` must be removed as part of the photo purge procedure ([`backup.md`](../runbooks/backup.md) §6). Do not rewrite old dumps. Tell the client the live copy is gone; residual backup copies expire on that schedule.
+
 ## Public-site follow-up
 
 If the salon’s public website or any salon-owned property references or feeds this system, the salon's Datenschutzerklärung must eventually mention:
@@ -150,10 +178,9 @@ If the salon’s public website or any salon-owned property references or feeds 
 
 That is website/privacy-policy work, not a blocking product feature for MuttMetrics.
 
-## What this issue does not solve
+## What this document does not solve
 
 - It does not replace legal review
-- It does not implement **export** tooling (deletion tooling for photos landed with #30; owner/dog/visit export is still manual SQL)
-- It does not define every future policy edge case
+- It does not define every future policy edge case (e.g. a regulator-ordered hard delete of visit facts would be a new written decision)
 
 It does make privacy explicit early, so the repo and product do not drift into bad habits by accident.
