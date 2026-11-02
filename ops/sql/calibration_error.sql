@@ -43,7 +43,7 @@ SELECT
     2
   ) AS p90_hit_rate
 FROM visit v
-LEFT JOIN dog d ON d.dog_id = v.dog_id
+LEFT JOIN pet d ON d.pet_id = v.pet_id
 LEFT JOIN breed b ON b.breed_id = d.breed_id
 WHERE v.actual_minutes IS NOT NULL
   AND v.predicted_min_p50 IS NOT NULL

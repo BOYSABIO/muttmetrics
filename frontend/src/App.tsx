@@ -3,7 +3,7 @@ import './App.css'
 import { APP_NAME, BUSINESS_NAME } from './brand'
 import { Capture } from './Capture'
 import { Directory } from './Directory'
-import { loadDraft, type DraftVisit, type SelectedDog } from './draft'
+import { loadDraft, type DraftVisit, type SelectedPet } from './draft'
 import { ThisWeek } from './ThisWeek'
 
 type Screen = 'home' | 'capture'
@@ -17,7 +17,7 @@ function App() {
   const [resume, setResume] = useState<DraftVisit | null>(() => loadDraft())
   const [screen, setScreen] = useState<Screen>(resume === null ? 'home' : 'capture')
   const [area, setArea] = useState<Area>('this_week')
-  const [startDog, setStartDog] = useState<SelectedDog | null>(null)
+  const [startPet, setStartPet] = useState<SelectedPet | null>(null)
   const [message, setMessage] = useState('')
 
   // Home toast (e.g. "Saved …") used to stick forever after a visit save.
@@ -32,20 +32,20 @@ function App() {
   }, [screen, message])
 
   function openCapture(): void {
-    setStartDog(null)
+    setStartPet(null)
     setMessage('')
     setScreen('capture')
   }
 
-  function startVisitForDog(dog: SelectedDog): void {
-    setStartDog(dog)
+  function startVisitForPet(dog: SelectedPet): void {
+    setStartPet(dog)
     setMessage('')
     setScreen('capture')
   }
 
   function leaveCapture(doneMessage: string): void {
     setResume(null)
-    setStartDog(null)
+    setStartPet(null)
     setMessage(doneMessage)
     setScreen('home')
   }
@@ -102,7 +102,7 @@ function App() {
             )}
             {area === 'this_week' && <ThisWeek onLogVisit={openCapture} />}
             {area === 'directory' && (
-              <Directory onStartVisit={startVisitForDog} />
+              <Directory onStartVisit={startVisitForPet} />
             )}
           </div>
           <button
@@ -119,7 +119,7 @@ function App() {
       )}
 
       {screen === 'capture' && (
-        <Capture draft={resume} startDog={startDog} onDone={leaveCapture} />
+        <Capture draft={resume} startPet={startPet} onDone={leaveCapture} />
       )}
     </main>
   )

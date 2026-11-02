@@ -177,13 +177,13 @@ SELECT count(*) FROM visit;
 SELECT v.visit_id, d.name AS dog, o.name AS owner, v.visit_date, v.actual_minutes,
        v.condition_score, v.what_surprised_me
 FROM visit v
-JOIN dog d   ON d.dog_id = v.dog_id
+JOIN pet d   ON d.pet_id = v.pet_id
 JOIN owner o ON o.owner_id = v.owner_id
 WHERE v.visit_date = CURRENT_DATE
 ORDER BY v.visit_id;
 
 -- double-tap check: same dog twice on the same day
-SELECT dog_id, visit_date, count(*)
+SELECT pet_id, visit_date, count(*)
 FROM visit
 WHERE visit_date = CURRENT_DATE
 GROUP BY dog_id, visit_date

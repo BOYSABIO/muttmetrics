@@ -28,16 +28,16 @@ def visit_id(client: TestClient, auth_headers: dict[str, str]) -> int:
     owner_id = owner.json()["owner_id"]
 
     dog = client.post(
-        "/dogs",
+        "/pets",
         json={"owner_id": owner_id, "name": f"Photo Dog {suffix}"},
         headers=auth_headers,
     )
-    dog_id = dog.json()["dog_id"]
+    pet_id = dog.json()["pet_id"]
 
     visit = client.post(
         "/visits",
         json={
-            "dog_id": dog_id,
+            "pet_id": pet_id,
             "owner_id": owner_id,
             "visit_date": "2026-09-27",
             "actual_minutes": 75,
@@ -164,32 +164,32 @@ def test_upload_dog_profile_photo_sets_avatar(
     suffix = uuid.uuid4().hex[:8]
     owner = client.post("/owners", json={"name": f"Photo Owner {suffix}"}, headers=auth_headers)
     dog = client.post(
-        "/dogs",
+        "/pets",
         json={
             "owner_id": owner.json()["owner_id"],
             "name": f"Photo Dog {suffix}",
         },
         headers=auth_headers,
     )
-    dog_id = dog.json()["dog_id"]
+    pet_id = dog.json()["pet_id"]
 
-    before = client.get(f"/dogs/{dog_id}", headers=auth_headers)
+    before = client.get(f"/pets/{pet_id}", headers=auth_headers)
     assert before.status_code == 200
     assert before.json()["avatar_photo_id"] is None
 
     uploaded = client.post(
-        f"/dogs/{dog_id}/photos",
+        f"/pets/{pet_id}/photos",
         files={"file": ("face.png", _png(640, 640), "image/png")},
         headers=auth_headers,
     )
     assert uploaded.status_code == 201
     body = uploaded.json()
     assert body["kind"] == "profile"
-    assert body["dog_id"] == dog_id
+    assert body["pet_id"] == pet_id
     assert body["visit_id"] is None
     assert list(photo_root.rglob("*.jpg"))
 
-    after = client.get(f"/dogs/{dog_id}", headers=auth_headers)
+    after = client.get(f"/pets/{pet_id}", headers=auth_headers)
     assert after.json()["avatar_photo_id"] == body["photo_id"]
 
 
@@ -197,7 +197,7 @@ def test_upload_dog_profile_unknown_dog_is_404(
     client: TestClient, auth_headers: dict[str, str]
 ) -> None:
     response = client.post(
-        "/dogs/999999/photos",
+        "/pets/999999/photos",
         files={"file": ("face.png", _png(100, 100), "image/png")},
         headers=auth_headers,
     )

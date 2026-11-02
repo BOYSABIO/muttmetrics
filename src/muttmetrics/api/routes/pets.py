@@ -1,4 +1,4 @@
-"""Dog onboarding (create-or-get), directory search/profile, duration-range."""
+"""Pet onboarding (create-or-get), directory search/profile, duration-range."""
 
 from datetime import date
 from typing import Annotated
@@ -7,39 +7,40 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from muttmetrics.api.deps import get_db, require_api_key
-from muttmetrics.api.schemas.dogs import (
-    DogProfile,
-    DogResponse,
-    DogSearchItem,
-    PatchDogRequest,
-    UpsertDogRequest,
-)
 from muttmetrics.api.schemas.duration_range import DurationRangeResponse
-from muttmetrics.api.services.dogs import (
-    create_or_get_dog,
-    get_dog_profile,
-    patch_dog,
-    search_dogs,
+from muttmetrics.api.schemas.pets import (
+    PatchPetRequest,
+    PetProfile,
+    PetResponse,
+    PetSearchItem,
+    UpsertPetRequest,
 )
-from muttmetrics.services.visit_predictions import score_dog_duration_range
+from muttmetrics.api.services.pets import (
+    create_or_get_pet,
+    get_pet_profile,
+    patch_pet,
+    search_pets,
+)
+from muttmetrics.services.visit_predictions import score_pet_duration_range
 
-router = APIRouter(tags=["dogs"])
+router = APIRouter(tags=["pets"])
 
 DbSession = Annotated[Session, Depends(get_db)]
 
 
-@router.post("/dogs", dependencies=[Depends(require_api_key)])
-def upsert_dog(
-    body: UpsertDogRequest,
+@router.post("/pets", dependencies=[Depends(require_api_key)])
+def upsert_pet(
+    body: UpsertPetRequest,
     session: DbSession,
     response: Response,
-) -> DogResponse:
-    """Create a dog or return the existing one for this owner + name."""
+) -> PetResponse:
+    """Create a pet or return the existing one for this owner + name + species."""
     try:
-        dog, created = create_or_get_dog(
+        pet, created = create_or_get_pet(
             session,
             owner_id=body.owner_id,
             name=body.name,
+            species=body.species,
             breed_id=body.breed_id,
         )
     except ValueError as exc:
@@ -48,24 +49,24 @@ def upsert_dog(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     response.status_code = 201 if created else 200
-    return DogResponse.model_validate(dog)
+    return PetResponse.model_validate(pet)
 
 
-@router.get("/dogs", dependencies=[Depends(require_api_key)])
-def list_dogs(
+@router.get("/pets", dependencies=[Depends(require_api_key)])
+def list_pets(
     session: DbSession,
-    q: str | None = Query(default=None, description="Substring match on dog name"),
-) -> list[DogSearchItem]:
-    """Directory search / browse - dog rows with owner_name for the UI."""
-    return search_dogs(session, q=q)
+    q: str | None = Query(default=None, description="Substring match on pet name"),
+) -> list[PetSearchItem]:
+    """Directory search / browse - pet rows with owner_name for the UI."""
+    return search_pets(session, q=q)
 
 
 @router.get(
-    "/dogs/{dog_id}/duration-range",
+    "/pets/{pet_id}/duration-range",
     dependencies=[Depends(require_api_key)],
 )
 def get_duration_range(
-    dog_id: int,
+    pet_id: int,
     session: DbSession,
     as_of: Annotated[
         date | None,
@@ -76,11 +77,11 @@ def get_duration_range(
         Query(description="Booked service id (validated; not in formula v0)"),
     ] = None,
 ) -> DurationRangeResponse:
-    """Preview P50/P90 for a dog without creating a visit (#26)."""
+    """Preview P50/P90 for a pet without creating a visit (#26)."""
     try:
-        result = score_dog_duration_range(
+        result = score_pet_duration_range(
             session,
-            dog_id=dog_id,
+            pet_id=pet_id,
             as_of=as_of or date.today(),
             service_id=service_id,
         )
@@ -88,7 +89,7 @@ def get_duration_range(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     return DurationRangeResponse(
-        dog_id=result.dog_id,
+        pet_id=result.pet_id,
         service_id=result.service_id,
         as_of=result.as_of,
         days_since_last=result.days_since_last,
@@ -98,31 +99,31 @@ def get_duration_range(
     )
 
 
-@router.get("/dogs/{dog_id}", dependencies=[Depends(require_api_key)])
-def read_dog(
-    dog_id: int,
+@router.get("/pets/{pet_id}", dependencies=[Depends(require_api_key)])
+def read_pet(
+    pet_id: int,
     session: DbSession,
     recent_limit: Annotated[
         int,
         Query(ge=0, le=50, description="Max recent visits to include"),
     ] = 10,
-) -> DogProfile:
-    """Directory profile: dog fields, owner summary, recent visits (#131)."""
+) -> PetProfile:
+    """Directory profile: pet fields, owner summary, recent visits (#131)."""
     try:
-        return get_dog_profile(session, dog_id=dog_id, recent_limit=recent_limit)
+        return get_pet_profile(session, pet_id=pet_id, recent_limit=recent_limit)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.patch("/dogs/{dog_id}", dependencies=[Depends(require_api_key)])
-def update_dog(
-    dog_id: int,
-    body: PatchDogRequest,
+@router.patch("/pets/{pet_id}", dependencies=[Depends(require_api_key)])
+def update_pet(
+    pet_id: int,
+    body: PatchPetRequest,
     session: DbSession,
-) -> DogProfile:
-    """Directory: partial update of hand-entered dog fields."""
+) -> PetProfile:
+    """Directory: partial update of hand-entered pet fields."""
     try:
-        return patch_dog(session, dog_id=dog_id, body=body)
+        return patch_pet(session, pet_id=pet_id, body=body)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

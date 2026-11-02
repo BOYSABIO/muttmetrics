@@ -9,5 +9,6 @@ class BreedListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     breed_id: int
+    species: str
     name_de: str | None = None
     name_en: str | None = None

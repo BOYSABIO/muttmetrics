@@ -10,6 +10,7 @@ class ServiceListItem(BaseModel):
 
     service_id: int
     slug: str | None = None
+    species: str | None = None
     name_en: str | None = None
     name_de: str | None = None
     base_minutes: int | None = None

@@ -104,7 +104,7 @@ def test_list_owners_search_by_substring(
     owner_id = created.json()["owner_id"]
 
     dog = client.post(
-        "/dogs",
+        "/pets",
         json={"owner_id": owner_id, "name": f"Search Dog {suffix}"},
         headers=auth_headers,
     )
@@ -116,7 +116,7 @@ def test_list_owners_search_by_substring(
     assert len(rows) >= 1
     hit = next(r for r in rows if r["owner_id"] == owner_id)
     assert hit["name"] == name
-    assert hit["dog_count"] == 1
+    assert hit["pet_count"] == 1
     assert hit["phone"] == "+49 170 3333333"
 
 
@@ -159,12 +159,12 @@ def test_get_owner_profile_includes_dogs(client: TestClient, auth_headers: dict[
     owner_id = created.json()["owner_id"]
 
     dog_a = client.post(
-        "/dogs",
+        "/pets",
         json={"owner_id": owner_id, "name": f"Alpha {uuid.uuid4().hex[:6]}"},
         headers=auth_headers,
     )
     dog_b = client.post(
-        "/dogs",
+        "/pets",
         json={"owner_id": owner_id, "name": f"Beta {uuid.uuid4().hex[:6]}"},
         headers=auth_headers,
     )
@@ -180,9 +180,9 @@ def test_get_owner_profile_includes_dogs(client: TestClient, auth_headers: dict[
     assert body["notes"] is None
     assert body["locale"] == "de"  # server default
     assert body["visit_count"] == 0  # computed on read (#171): no visits yet
-    dog_ids = {d["dog_id"] for d in body["dogs"]}
-    assert dog_a.json()["dog_id"] in dog_ids
-    assert dog_b.json()["dog_id"] in dog_ids
+    pet_ids = {d["pet_id"] for d in body["pets"]}
+    assert dog_a.json()["pet_id"] in pet_ids
+    assert dog_b.json()["pet_id"] in pet_ids
 
 
 def test_patch_owner_requires_api_key(client: TestClient) -> None:

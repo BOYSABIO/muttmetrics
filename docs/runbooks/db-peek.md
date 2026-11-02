@@ -101,7 +101,7 @@ SELECT
   d.name AS dog_name,
   o.name AS owner_name
 FROM visit v
-JOIN dog d ON d.dog_id = v.dog_id
+JOIN pet d ON d.pet_id = v.pet_id
 JOIN owner o ON o.owner_id = v.owner_id
 ORDER BY v.visit_id DESC
 LIMIT 20;
@@ -110,9 +110,9 @@ LIMIT 20;
 ### 3. Likely test / lesson clutter (preview only)
 
 ```sql
-SELECT o.owner_id, o.name AS owner_name, d.dog_id, d.name AS dog_name
+SELECT o.owner_id, o.name AS owner_name, d.pet_id, d.name AS dog_name
 FROM owner o
-LEFT JOIN dog d ON d.owner_id = o.owner_id
+LEFT JOIN pet d ON d.owner_id = o.owner_id
 WHERE o.name ILIKE '%Capture%'
    OR o.name ILIKE '%Lesson%'
    OR o.name ILIKE 'Test Owner%'
@@ -132,7 +132,7 @@ This is **read-only**. To delete synthetic rows safely (preview + FK-ordered del
 
 Breed, phone, notes, visit fixes — Owner’s job, not the SPA. Playbook + recipes:
 
-[`ops-enrichment.md`](./enrichment.md) · [`ops/sql/lookup_breeds.sql`](../../ops/sql/lookup_breeds.sql) · [`enrich_dog_breed.sql`](../../ops/sql/enrich_dog_breed.sql) · [`update_visit.sql`](../../ops/sql/update_visit.sql) · …
+[`ops-enrichment.md`](./enrichment.md) · [`ops/sql/lookup_breeds.sql`](../../ops/sql/lookup_breeds.sql) · [`enrich_pet_breed.sql`](../../ops/sql/enrich_pet_breed.sql) · [`update_visit.sql`](../../ops/sql/update_visit.sql) · …
 
 ## Pytest and this database
 

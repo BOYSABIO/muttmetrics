@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from muttmetrics.models import Breed, Dog, Owner
+from muttmetrics.models import Breed, Owner, Pet
 from muttmetrics.seed.data import SEED_ADD_ONS
 
 MINIMAL_BASE = {
@@ -22,21 +22,21 @@ def _hand_stripping_id(client: TestClient, auth_headers: dict[str, str]) -> int:
 
 
 @pytest.fixture
-def demo_dog_owner(db_session: Session) -> tuple[int, int]:
-    """Insert a throwaway owner+dog on the rollback pad; return (owner_id, dog_id)."""
+def demo_pet_owner(db_session: Session) -> tuple[int, int]:
+    """Insert a throwaway owner+dog on the rollback pad; return (owner_id, pet_id)."""
     owner = Owner(name="Test Owner")
     db_session.add(owner)
     db_session.flush()
-    dog = Dog(owner_id=owner.owner_id, name="Test Dog")
+    dog = Pet(owner_id=owner.owner_id, name="Test Dog")
     db_session.add(dog)
     db_session.flush()
-    return owner.owner_id, dog.dog_id
+    return owner.owner_id, dog.pet_id
 
 
 def test_create_visit_requires_api_key(client: TestClient) -> None:
     response = client.post(
         "/visits",
-        json={"dog_id": 1, "owner_id": 1, **MINIMAL_BASE},
+        json={"pet_id": 1, "owner_id": 1, **MINIMAL_BASE},
     )
     assert response.status_code == 401
 
@@ -46,7 +46,7 @@ def test_create_visit_invalid_body_returns_422(
 ) -> None:
     response = client.post(
         "/visits",
-        json={"dog_id": 1, "owner_id": 1, "visit_date": "2026-09-07", "actual_minutes": 0},
+        json={"pet_id": 1, "owner_id": 1, "visit_date": "2026-09-07", "actual_minutes": 0},
         headers=auth_headers,
     )
     assert response.status_code == 422
@@ -54,13 +54,13 @@ def test_create_visit_invalid_body_returns_422(
 
 def test_create_visit_unknown_dog_returns_404(
     client: TestClient,
-    demo_dog_owner: tuple[int, int],
+    demo_pet_owner: tuple[int, int],
     auth_headers: dict[str, str],
 ) -> None:
-    owner_id, _ = demo_dog_owner
+    owner_id, _ = demo_pet_owner
     response = client.post(
         "/visits",
-        json={"dog_id": 999999, "owner_id": owner_id, **MINIMAL_BASE},
+        json={"pet_id": 999999, "owner_id": owner_id, **MINIMAL_BASE},
         headers=auth_headers,
     )
     assert response.status_code == 404
@@ -68,31 +68,31 @@ def test_create_visit_unknown_dog_returns_404(
 
 def test_create_visit_persists(
     client: TestClient,
-    demo_dog_owner: tuple[int, int],
+    demo_pet_owner: tuple[int, int],
     auth_headers: dict[str, str],
 ) -> None:
-    owner_id, dog_id = demo_dog_owner
+    owner_id, pet_id = demo_pet_owner
     response = client.post(
         "/visits",
-        json={"dog_id": dog_id, "owner_id": owner_id, **MINIMAL_BASE},
+        json={"pet_id": pet_id, "owner_id": owner_id, **MINIMAL_BASE},
         headers=auth_headers,
     )
     assert response.status_code == 201
     data = response.json()
     assert data["visit_id"] >= 1
-    assert data["dog_id"] == dog_id
+    assert data["pet_id"] == pet_id
     assert data["actual_minutes"] == 60
 
 
 def test_create_visit_without_breed_leaves_predictions_null(
     client: TestClient,
-    demo_dog_owner: tuple[int, int],
+    demo_pet_owner: tuple[int, int],
     auth_headers: dict[str, str],
 ) -> None:
-    owner_id, dog_id = demo_dog_owner
+    owner_id, pet_id = demo_pet_owner
     response = client.post(
         "/visits",
-        json={"dog_id": dog_id, "owner_id": owner_id, **MINIMAL_BASE},
+        json={"pet_id": pet_id, "owner_id": owner_id, **MINIMAL_BASE},
         headers=auth_headers,
     )
     assert response.status_code == 201
@@ -119,7 +119,7 @@ def test_create_visit_with_breed_sets_predictions(
     )
     db_session.add(breed)
     db_session.flush()
-    dog = Dog(
+    dog = Pet(
         owner_id=owner.owner_id,
         name="Prior Dog",
         breed_id=breed.breed_id,
@@ -128,12 +128,12 @@ def test_create_visit_with_breed_sets_predictions(
     )
     db_session.add(dog)
     db_session.flush()
-    owner_id, dog_id = owner.owner_id, dog.dog_id
+    owner_id, pet_id = owner.owner_id, dog.pet_id
 
     response = client.post(
         "/visits",
         json={
-            "dog_id": dog_id,
+            "pet_id": pet_id,
             "owner_id": owner_id,
             "visit_date": "2026-10-01",
             "actual_minutes": 90,
@@ -157,15 +157,15 @@ def test_create_visit_sets_days_since_last(
     owner = Owner(name="Interval Owner")
     db_session.add(owner)
     db_session.flush()
-    dog = Dog(owner_id=owner.owner_id, name="Interval Dog")
+    dog = Pet(owner_id=owner.owner_id, name="Interval Dog")
     db_session.add(dog)
     db_session.flush()
-    owner_id, dog_id = owner.owner_id, dog.dog_id
+    owner_id, pet_id = owner.owner_id, dog.pet_id
 
     first = client.post(
         "/visits",
         json={
-            "dog_id": dog_id,
+            "pet_id": pet_id,
             "owner_id": owner_id,
             "visit_date": "2026-09-01",
             "actual_minutes": 60,
@@ -178,7 +178,7 @@ def test_create_visit_sets_days_since_last(
     second = client.post(
         "/visits",
         json={
-            "dog_id": dog_id,
+            "pet_id": pet_id,
             "owner_id": owner_id,
             "visit_date": "2026-10-01",
             "actual_minutes": 60,
@@ -196,18 +196,18 @@ def test_create_visit_sets_days_since_last(
 def test_create_visit_dog_of_another_owner_returns_422(
     client: TestClient,
     db_session: Session,
-    demo_dog_owner: tuple[int, int],
+    demo_pet_owner: tuple[int, int],
     auth_headers: dict[str, str],
 ) -> None:
     """Both rows exist, but the dog isn't this owner's: refuse, don't mis-file."""
-    _, dog_id = demo_dog_owner
+    _, pet_id = demo_pet_owner
     other_owner = Owner(name="Someone Else")
     db_session.add(other_owner)
     db_session.flush()
 
     response = client.post(
         "/visits",
-        json={"dog_id": dog_id, "owner_id": other_owner.owner_id, **MINIMAL_BASE},
+        json={"pet_id": pet_id, "owner_id": other_owner.owner_id, **MINIMAL_BASE},
         headers=auth_headers,
     )
     assert response.status_code == 422
@@ -216,14 +216,14 @@ def test_create_visit_dog_of_another_owner_returns_422(
 
 def test_create_visit_unknown_service_returns_404_not_500(
     client: TestClient,
-    demo_dog_owner: tuple[int, int],
+    demo_pet_owner: tuple[int, int],
     auth_headers: dict[str, str],
 ) -> None:
-    owner_id, dog_id = demo_dog_owner
+    owner_id, pet_id = demo_pet_owner
     response = client.post(
         "/visits",
         json={
-            "dog_id": dog_id,
+            "pet_id": pet_id,
             "owner_id": owner_id,
             "actual_service_id": 999999,
             **MINIMAL_BASE,
@@ -237,14 +237,14 @@ def test_create_visit_unknown_service_returns_404_not_500(
 @pytest.mark.parametrize("field", ["quoted_price", "final_price", "tip"])
 def test_create_visit_negative_money_returns_422(
     client: TestClient,
-    demo_dog_owner: tuple[int, int],
+    demo_pet_owner: tuple[int, int],
     auth_headers: dict[str, str],
     field: str,
 ) -> None:
-    owner_id, dog_id = demo_dog_owner
+    owner_id, pet_id = demo_pet_owner
     response = client.post(
         "/visits",
-        json={"dog_id": dog_id, "owner_id": owner_id, field: -5, **MINIMAL_BASE},
+        json={"pet_id": pet_id, "owner_id": owner_id, field: -5, **MINIMAL_BASE},
         headers=auth_headers,
     )
     assert response.status_code == 422
@@ -252,13 +252,13 @@ def test_create_visit_negative_money_returns_422(
 
 def test_get_visit_returns_row(
     client: TestClient,
-    demo_dog_owner: tuple[int, int],
+    demo_pet_owner: tuple[int, int],
     auth_headers: dict[str, str],
 ) -> None:
-    owner_id, dog_id = demo_dog_owner
+    owner_id, pet_id = demo_pet_owner
     created = client.post(
         "/visits",
-        json={"dog_id": dog_id, "owner_id": owner_id, **MINIMAL_BASE},
+        json={"pet_id": pet_id, "owner_id": owner_id, **MINIMAL_BASE},
         headers=auth_headers,
     )
     visit_id = created.json()["visit_id"]
@@ -275,13 +275,13 @@ def test_get_visit_unknown_404(client: TestClient, auth_headers: dict[str, str])
 
 def test_patch_visit_updates_minutes(
     client: TestClient,
-    demo_dog_owner: tuple[int, int],
+    demo_pet_owner: tuple[int, int],
     auth_headers: dict[str, str],
 ) -> None:
-    owner_id, dog_id = demo_dog_owner
+    owner_id, pet_id = demo_pet_owner
     created = client.post(
         "/visits",
-        json={"dog_id": dog_id, "owner_id": owner_id, **MINIMAL_BASE},
+        json={"pet_id": pet_id, "owner_id": owner_id, **MINIMAL_BASE},
         headers=auth_headers,
     )
     assert created.status_code == 201
@@ -299,13 +299,13 @@ def test_patch_visit_updates_minutes(
 
 def test_patch_visit_rejects_predicted_field(
     client: TestClient,
-    demo_dog_owner: tuple[int, int],
+    demo_pet_owner: tuple[int, int],
     auth_headers: dict[str, str],
 ) -> None:
-    owner_id, dog_id = demo_dog_owner
+    owner_id, pet_id = demo_pet_owner
     created = client.post(
         "/visits",
-        json={"dog_id": dog_id, "owner_id": owner_id, **MINIMAL_BASE},
+        json={"pet_id": pet_id, "owner_id": owner_id, **MINIMAL_BASE},
         headers=auth_headers,
     )
     visit_id = created.json()["visit_id"]
@@ -320,13 +320,13 @@ def test_patch_visit_rejects_predicted_field(
 
 def test_patch_visit_rejects_null_actual_minutes(
     client: TestClient,
-    demo_dog_owner: tuple[int, int],
+    demo_pet_owner: tuple[int, int],
     auth_headers: dict[str, str],
 ) -> None:
-    owner_id, dog_id = demo_dog_owner
+    owner_id, pet_id = demo_pet_owner
     created = client.post(
         "/visits",
-        json={"dog_id": dog_id, "owner_id": owner_id, **MINIMAL_BASE},
+        json={"pet_id": pet_id, "owner_id": owner_id, **MINIMAL_BASE},
         headers=auth_headers,
     )
     visit_id = created.json()["visit_id"]
@@ -356,7 +356,7 @@ def test_patch_visit_date_recomputs_days_since_last_keeps_predictions(
     )
     db_session.add(breed)
     db_session.flush()
-    dog = Dog(
+    dog = Pet(
         owner_id=owner.owner_id,
         name="Patch Date Dog",
         breed_id=breed.breed_id,
@@ -365,12 +365,12 @@ def test_patch_visit_date_recomputs_days_since_last_keeps_predictions(
     )
     db_session.add(dog)
     db_session.flush()
-    owner_id, dog_id = owner.owner_id, dog.dog_id
+    owner_id, pet_id = owner.owner_id, dog.pet_id
 
     first = client.post(
         "/visits",
         json={
-            "dog_id": dog_id,
+            "pet_id": pet_id,
             "owner_id": owner_id,
             "visit_date": "2026-09-01",
             "actual_minutes": 60,
@@ -383,7 +383,7 @@ def test_patch_visit_date_recomputs_days_since_last_keeps_predictions(
     second = client.post(
         "/visits",
         json={
-            "dog_id": dog_id,
+            "pet_id": pet_id,
             "owner_id": owner_id,
             "visit_date": "2026-10-01",
             "actual_minutes": 90,
@@ -410,13 +410,13 @@ def test_patch_visit_date_recomputs_days_since_last_keeps_predictions(
 
 def test_delete_visit_returns_204_then_404(
     client: TestClient,
-    demo_dog_owner: tuple[int, int],
+    demo_pet_owner: tuple[int, int],
     auth_headers: dict[str, str],
 ) -> None:
-    owner_id, dog_id = demo_dog_owner
+    owner_id, pet_id = demo_pet_owner
     created = client.post(
         "/visits",
-        json={"dog_id": dog_id, "owner_id": owner_id, **MINIMAL_BASE},
+        json={"pet_id": pet_id, "owner_id": owner_id, **MINIMAL_BASE},
         headers=auth_headers,
     )
     visit_id = created.json()["visit_id"]
@@ -428,23 +428,23 @@ def test_delete_visit_returns_204_then_404(
     again = client.delete(f"/visits/{visit_id}", headers=auth_headers)
     assert again.status_code == 404
 
-    profile = client.get(f"/dogs/{dog_id}", headers=auth_headers)
+    profile = client.get(f"/pets/{pet_id}", headers=auth_headers)
     assert profile.status_code == 200
     assert all(v["visit_id"] != visit_id for v in profile.json()["recent_visits"])
 
 
 def test_create_visit_with_add_ons_persists_and_shows_on_profile(
     client: TestClient,
-    demo_dog_owner: tuple[int, int],
+    demo_pet_owner: tuple[int, int],
     auth_headers: dict[str, str],
 ) -> None:
-    owner_id, dog_id = demo_dog_owner
+    owner_id, pet_id = demo_pet_owner
     add_on_id = _hand_stripping_id(client, auth_headers)
 
     response = client.post(
         "/visits",
         json={
-            "dog_id": dog_id,
+            "pet_id": pet_id,
             "owner_id": owner_id,
             "add_on_ids": [add_on_id, add_on_id],  # dedupe
             **MINIMAL_BASE,
@@ -461,7 +461,7 @@ def test_create_visit_with_add_ons_persists_and_shows_on_profile(
     assert got.status_code == 200
     assert got.json()["add_ons"][0]["add_on_id"] == add_on_id
 
-    profile = client.get(f"/dogs/{dog_id}", headers=auth_headers)
+    profile = client.get(f"/pets/{pet_id}", headers=auth_headers)
     assert profile.status_code == 200
     recent = profile.json()["recent_visits"][0]
     assert recent["visit_id"] == data["visit_id"]
@@ -471,14 +471,14 @@ def test_create_visit_with_add_ons_persists_and_shows_on_profile(
 
 def test_create_visit_unknown_add_on_returns_404_not_500(
     client: TestClient,
-    demo_dog_owner: tuple[int, int],
+    demo_pet_owner: tuple[int, int],
     auth_headers: dict[str, str],
 ) -> None:
-    owner_id, dog_id = demo_dog_owner
+    owner_id, pet_id = demo_pet_owner
     response = client.post(
         "/visits",
         json={
-            "dog_id": dog_id,
+            "pet_id": pet_id,
             "owner_id": owner_id,
             "add_on_ids": [999999],
             **MINIMAL_BASE,
@@ -491,16 +491,16 @@ def test_create_visit_unknown_add_on_returns_404_not_500(
 
 def test_patch_visit_replaces_and_clears_add_ons(
     client: TestClient,
-    demo_dog_owner: tuple[int, int],
+    demo_pet_owner: tuple[int, int],
     auth_headers: dict[str, str],
 ) -> None:
-    owner_id, dog_id = demo_dog_owner
+    owner_id, pet_id = demo_pet_owner
     add_on_id = _hand_stripping_id(client, auth_headers)
 
     created = client.post(
         "/visits",
         json={
-            "dog_id": dog_id,
+            "pet_id": pet_id,
             "owner_id": owner_id,
             "add_on_ids": [add_on_id],
             **MINIMAL_BASE,

@@ -22,8 +22,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from muttmetrics.db.base import Base
 
 if TYPE_CHECKING:
-    from muttmetrics.models.dog import Dog
     from muttmetrics.models.owner import Owner
+    from muttmetrics.models.pet import Pet
     from muttmetrics.models.photo import Photo
     from muttmetrics.models.service import Service
     from muttmetrics.models.visit_add_on import VisitAddOn
@@ -52,7 +52,7 @@ class Visit(Base):
             "status IS NULL OR status IN ('completed', 'cancelled', 'no_show')",
             name="ck_visit_status",
         ),
-        Index("ix_visit_dog_id", "dog_id"),
+        Index("ix_visit_pet_id", "pet_id"),
         Index("ix_visit_owner_id", "owner_id"),
         Index("ix_visit_visit_date", "visit_date"),
         Index("ix_visit_booked_service_id", "booked_service_id"),
@@ -61,7 +61,7 @@ class Visit(Base):
 
     # Identity
     visit_id: Mapped[int] = mapped_column(primary_key=True)
-    dog_id: Mapped[int] = mapped_column(ForeignKey("dog.dog_id"), nullable=False)
+    pet_id: Mapped[int] = mapped_column(ForeignKey("pet.pet_id"), nullable=False)
     owner_id: Mapped[int] = mapped_column(ForeignKey("owner.owner_id"), nullable=False)
     visit_date: Mapped[date] = mapped_column(Date, nullable=False)
 
@@ -103,7 +103,7 @@ class Visit(Base):
     cancelled_hours_before: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Relationships
-    dog: Mapped[Dog] = relationship(back_populates="visits")
+    pet: Mapped[Pet] = relationship(back_populates="visits")
     owner: Mapped[Owner] = relationship(back_populates="visits")
     photos: Mapped[list[Photo]] = relationship(back_populates="visit")
     booked_service: Mapped[Service | None] = relationship(foreign_keys=[booked_service_id])

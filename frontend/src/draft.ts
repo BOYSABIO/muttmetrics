@@ -4,23 +4,26 @@
  * serializable), so the draft only remembers that there was one.
  */
 
+import type { Species } from './api'
+
 export type TimerStatus = 'idle' | 'running' | 'stopped'
 
 export type VisitStep = 1 | 2 | 3
 
-/** The dog a visit is for, with the names shown in the header. */
-export type SelectedDog = {
-  dog_id: number
+/** The pet a visit is for, with the names shown in the header. */
+export type SelectedPet = {
+  pet_id: number
   owner_id: number
-  dog_name: string
+  pet_name: string
   owner_name: string
+  species: Species
 }
 
 const DRAFT_KEY = 'muttmetrics.draftVisit'
 const DRAFT_MAX_AGE_MS = 12 * 60 * 60 * 1000 // 12 hours
 
 export type DraftVisit = {
-  selectedDog: SelectedDog
+  selectedPet: SelectedPet
   visitStep: VisitStep
   timerStatus: TimerStatus
   startedAt: number | null
@@ -52,23 +55,59 @@ export function saveDraft(draft: Omit<DraftVisit, 'savedAt'>): void {
   localStorage.setItem(DRAFT_KEY, JSON.stringify(full))
 }
 
+function coerceSelected(raw: unknown): SelectedPet | null {
+  if (raw === null || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const petId =
+    typeof o.pet_id === 'number'
+      ? o.pet_id
+      : typeof o.dog_id === 'number'
+        ? o.dog_id
+        : null
+  const petName =
+    typeof o.pet_name === 'string'
+      ? o.pet_name
+      : typeof o.dog_name === 'string'
+        ? o.dog_name
+        : null
+  const ownerId = typeof o.owner_id === 'number' ? o.owner_id : null
+  const ownerName = typeof o.owner_name === 'string' ? o.owner_name : null
+  if (petId === null || petName === null || ownerId === null || ownerName === null) {
+    return null
+  }
+  return {
+    pet_id: petId,
+    owner_id: ownerId,
+    pet_name: petName,
+    owner_name: ownerName,
+    species: o.species === 'cat' ? 'cat' : 'dog',
+  }
+}
+
 export function loadDraft(): DraftVisit | null {
   const raw = localStorage.getItem(DRAFT_KEY)
   if (raw === null) {
     return null
   }
 
-  let draft: DraftVisit
+  let parsed: Record<string, unknown>
   try {
-    draft = JSON.parse(raw) as DraftVisit
+    parsed = JSON.parse(raw) as Record<string, unknown>
   } catch {
     clearDraft()
     return null
   }
 
-  // Older drafts (#192) may omit addOnIds
-  if (!Array.isArray(draft.addOnIds)) {
-    draft = { ...draft, addOnIds: [] }
+  const selectedPet = coerceSelected(parsed.selectedPet ?? parsed.selectedDog)
+  if (selectedPet === null) {
+    clearDraft()
+    return null
+  }
+
+  const draft: DraftVisit = {
+    ...(parsed as unknown as DraftVisit),
+    selectedPet,
+    addOnIds: Array.isArray(parsed.addOnIds) ? (parsed.addOnIds as number[]) : [],
   }
 
   const now = Date.now()
@@ -97,11 +136,11 @@ export function resumeMessage(draft: DraftVisit): string {
   if (draft.hadIntakeFile) lost.push('before')
   if (draft.hadAfterFile) lost.push('after')
   if (lost.length === 0) {
-    return `Resumed timer for ${draft.selectedDog.dog_name}`
+    return `Resumed timer for ${draft.selectedPet.pet_name}`
   }
   const many = lost.length > 1
   return (
-    `Resumed timer for ${draft.selectedDog.dog_name} — the ${lost.join(' and ')} ` +
+    `Resumed timer for ${draft.selectedPet.pet_name} — the ${lost.join(' and ')} ` +
     `photo${many ? 's' : ''} could not be kept, please pick ${many ? 'them' : 'it'} again`
   )
 }

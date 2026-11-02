@@ -69,7 +69,7 @@ function formatVisitDate(iso: string): string {
 
 type VisitEditViewProps = {
   visitId: number
-  dogName: string
+  petName: string
   onBack: () => void
   /** After save or delete — parent reloads the dog profile. */
   onDone: () => void
@@ -81,7 +81,7 @@ type VisitEditViewProps = {
  */
 export function VisitEditView({
   visitId,
-  dogName,
+  petName,
   onBack,
   onDone,
 }: VisitEditViewProps) {
@@ -229,7 +229,7 @@ export function VisitEditView({
           <div className="profile-hero-text">
             <h2>Edit visit</h2>
             <p className="step-meta">
-              {dogName}
+              {petName}
               {visit !== null ? ` · ${formatVisitDate(visit.visit_date)}` : ''}
             </p>
           </div>

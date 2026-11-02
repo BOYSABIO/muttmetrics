@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from muttmetrics.models import Breed, Dog, Owner, Visit
+from muttmetrics.models import Breed, Owner, Pet, Visit
 from tests.fixtures.metric_month import DOGS, OWNERS, VISITS
 
 
 def load_metric_month(session: Session) -> dict[str, dict[str, int]]:
-    """Insert SynMonth* breeds/owners/dogs/visits. Returns id maps by recipe key."""
+    """Insert SynMonth* breeds/owners/pets/visits. Returns id maps by recipe key."""
     breed_ids: dict[str, int] = {}
     owner_ids: dict[str, int] = {}
-    dog_ids: dict[str, int] = {}
+    pet_ids: dict[str, int] = {}
     dog_owner_key = {d["key"]: d["owner_key"] for d in DOGS}
 
     for breed_en in {d["breed_en"] for d in DOGS}:
@@ -34,18 +34,18 @@ def load_metric_month(session: Session) -> dict[str, dict[str, int]]:
         owner_ids[spec["key"]] = owner.owner_id
 
     for spec in DOGS:
-        dog = Dog(
+        dog = Pet(
             name=spec["name"],
             owner_id=owner_ids[spec["owner_key"]],
             breed_id=breed_ids[spec["breed_en"]],
         )
         session.add(dog)
         session.flush()
-        dog_ids[spec["key"]] = dog.dog_id
+        pet_ids[spec["key"]] = dog.pet_id
 
     for spec in VISITS:
         visit = Visit(
-            dog_id=dog_ids[spec["dog_key"]],
+            pet_id=pet_ids[spec["dog_key"]],
             owner_id=owner_ids[dog_owner_key[spec["dog_key"]]],
             visit_date=spec["visit_date"],
             status=spec["status"],
@@ -61,4 +61,4 @@ def load_metric_month(session: Session) -> dict[str, dict[str, int]]:
         session.add(visit)
 
     session.flush()
-    return {"breed_ids": breed_ids, "owner_ids": owner_ids, "dog_ids": dog_ids}
+    return {"breed_ids": breed_ids, "owner_ids": owner_ids, "pet_ids": pet_ids}

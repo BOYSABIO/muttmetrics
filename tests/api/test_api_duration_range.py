@@ -1,19 +1,19 @@
-"""GET /dogs/{id}/duration-range (#26)."""
+"""GET /pets/{id}/duration-range (#26)."""
 
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from muttmetrics.models import Breed, Dog, Owner
+from muttmetrics.models import Breed, Owner, Pet
 
 
 def test_duration_range_requires_api_key(client: TestClient) -> None:
-    assert client.get("/dogs/1/duration-range").status_code == 401
+    assert client.get("/pets/1/duration-range").status_code == 401
 
 
 def test_duration_range_unknown_dog_404(client: TestClient, auth_headers: dict[str, str]) -> None:
-    r = client.get("/dogs/999999/duration-range", headers=auth_headers)
+    r = client.get("/pets/999999/duration-range", headers=auth_headers)
     assert r.status_code == 404
 
 
@@ -32,7 +32,7 @@ def test_duration_range_with_breed(
     )
     db_session.add(breed)
     db_session.flush()
-    dog = Dog(
+    dog = Pet(
         owner_id=owner.owner_id,
         name="Range Dog",
         breed_id=breed.breed_id,
@@ -41,10 +41,10 @@ def test_duration_range_with_breed(
     )
     db_session.add(dog)
     db_session.flush()
-    dog_id = dog.dog_id
+    pet_id = dog.pet_id
 
     r = client.get(
-        f"/dogs/{dog_id}/duration-range",
+        f"/pets/{pet_id}/duration-range",
         params={"as_of": "2026-10-01"},
         headers=auth_headers,
     )
@@ -71,7 +71,7 @@ def test_duration_range_matches_visit_create(
     )
     db_session.add(breed)
     db_session.flush()
-    dog = Dog(
+    dog = Pet(
         owner_id=owner.owner_id,
         name="Sync Dog",
         breed_id=breed.breed_id,
@@ -80,17 +80,17 @@ def test_duration_range_matches_visit_create(
     )
     db_session.add(dog)
     db_session.flush()
-    owner_id, dog_id = owner.owner_id, dog.dog_id
+    owner_id, pet_id = owner.owner_id, dog.pet_id
 
     preview = client.get(
-        f"/dogs/{dog_id}/duration-range",
+        f"/pets/{pet_id}/duration-range",
         params={"as_of": "2026-10-01"},
         headers=auth_headers,
     )
     created = client.post(
         "/visits",
         json={
-            "dog_id": dog_id,
+            "pet_id": pet_id,
             "owner_id": owner_id,
             "visit_date": "2026-10-01",
             "actual_minutes": 90,
@@ -123,13 +123,13 @@ def test_duration_range_weight_changes_prediction(
     db_session.add(breed)
     db_session.flush()
 
-    small = Dog(
+    small = Pet(
         owner_id=owner.owner_id,
         name="Small Dog",
         breed_id=breed.breed_id,
         weight_kg=8,  # → s → 0.85
     )
-    giant = Dog(
+    giant = Pet(
         owner_id=owner.owner_id,
         name="Giant Dog",
         breed_id=breed.breed_id,
@@ -139,12 +139,12 @@ def test_duration_range_weight_changes_prediction(
     db_session.flush()
 
     r_small = client.get(
-        f"/dogs/{small.dog_id}/duration-range",
+        f"/pets/{small.pet_id}/duration-range",
         params={"as_of": "2026-10-16"},
         headers=auth_headers,
     )
     r_giant = client.get(
-        f"/dogs/{giant.dog_id}/duration-range",
+        f"/pets/{giant.pet_id}/duration-range",
         params={"as_of": "2026-10-16"},
         headers=auth_headers,
     )

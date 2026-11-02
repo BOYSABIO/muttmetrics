@@ -4,14 +4,14 @@ How to **fix and enrich** rows after thin capture without corrupting derived fie
 
 ## Preferred path: Directory (SPA)
 
-**Use the app.** Open the SPA home (client list) → tap a dog card (or **Owner**) → edit hand-entered fields → **Save**. Breed, sex, coat, and handling use named selects from the catalog / ADR-001-safe lists (no raw ids or magic strings). Tap **+** (or **Start visit** on a dog profile) for visit capture.
+**Use the app.** Open the SPA home (client list) → tap a pet card (or **Owner**) → edit hand-entered fields → **Save**. Breed, sex, coat, and handling use named selects from the catalog / ADR-001-safe lists (no raw ids or magic strings). Tap **+** (or **Start visit** on a pet profile) for visit capture.
 
-That path uses `GET`/`PATCH` for dogs and owners ([#131](https://github.com/BOYSABIO/muttmetrics/issues/131), [#132](https://github.com/BOYSABIO/muttmetrics/issues/132), UI [#138](https://github.com/BOYSABIO/muttmetrics/issues/138)–[#140](https://github.com/BOYSABIO/muttmetrics/issues/140), UX [#149](https://github.com/BOYSABIO/muttmetrics/issues/149)). Epic [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) is **closed** (2026-10-12).
+That path uses `GET`/`PATCH` for pets and owners ([#131](https://github.com/BOYSABIO/muttmetrics/issues/131), [#132](https://github.com/BOYSABIO/muttmetrics/issues/132), UI [#138](https://github.com/BOYSABIO/muttmetrics/issues/138)–[#140](https://github.com/BOYSABIO/muttmetrics/issues/140), UX [#149](https://github.com/BOYSABIO/muttmetrics/issues/149), species [#190](https://github.com/BOYSABIO/muttmetrics/issues/190)). Epic [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) is **closed** (2026-10-12).
 
 ### Adoption loop (how the shop fills data)
 
-1. **First groom:** `+` → new or existing dog → save **visit** (thin: names, timer, service, price; optional photos/condition). Dog/owner rows can stay sparse.
-2. **Later (offline OK):** home → dog or owner profile → breed, coat, contact, notes → **Save**. That is enrichment, not visit capture.
+1. **First groom:** `+` → new or existing pet → save **visit** (thin: names, species, timer, service, price; optional photos/condition). Pet/owner rows can stay sparse.
+2. **Later (offline OK):** home → pet or owner profile → breed, coat, contact, notes → **Save**. That is enrichment, not visit capture.
 
 Desk-friendly layout and richer breed/vocabulary UX: [#151](https://github.com/BOYSABIO/muttmetrics/issues/151), [#152](https://github.com/BOYSABIO/muttmetrics/issues/152).
 
@@ -27,16 +27,16 @@ Connect for SQL escape-hatch work: [`ops-db-peek.md`](./db-peek.md). Schema: [`s
 |------|----------|
 | **This week (SPA home)** | Week dashboard — definitions in [`analytics.md`](./analytics.md) ([#126](https://github.com/BOYSABIO/muttmetrics/issues/126)); not enrichment |
 | **+ / capture (SPA)** | Mid-groom / post-groom: create the visit row (action, not a nav peer) |
-| **Clients (SPA)** | Browse/edit dog or owner hand-entered fields — **default enrichment** (UI label; same Directory feature) |
+| **Clients (SPA)** | Browse/edit pet or owner hand-entered fields — **default enrichment** (UI label; same Directory feature) |
 | **SQL recipes (below)** | Escape hatch: bulk fixes, edge cases, visit fact corrections, or API down |
 | **Broader insights UI** | Later icebox ([#130](https://github.com/BOYSABIO/muttmetrics/issues/130)) — not enrichment |
 
 ## Golden rules (Directory and SQL)
 
 1. Only edit **hand-entered** columns (see cheat sheet). Directory PATCH already refuses derived fields; SQL must follow the same list.
-2. Prefer Directory for one-off dog/owner enrichment.
+2. Prefer Directory for one-off pet/owner enrichment.
 3. For SQL: **SELECT before UPDATE** — confirm the id; **UPDATE by primary key**; **SELECT after UPDATE**.
-4. **Never UPDATE derived columns** (owner/dog aggregates) or visit **system-computed** columns (`days_since_last`, `predicted_min_p50`, `predicted_min_p90`).
+4. **Never UPDATE derived columns** (owner/pet aggregates) or visit **system-computed** columns (`days_since_last`, `predicted_min_p50`, `predicted_min_p90`).
 5. **No real PII in git** — scripts use placeholders (`123`, `'Example'`). Edit locally; use `ops/**/*.local.sql` if you want a personal copy (gitignored pattern: `ops/*.local.sql`).
 
 ### Safe vs forbidden (cheat sheet)
@@ -44,12 +44,12 @@ Connect for SQL escape-hatch work: [`ops-db-peek.md`](./db-peek.md). Schema: [`s
 | Table | Safe to hand-UPDATE (examples) | Forbidden |
 |-------|----------------------------------|-----------|
 | `owner` | `phone`, `email`, `notes`, `address_area`, `preferred_channel`, `client_since`, `locale`, `name` | `visit_count`, `neglect_rate`, `lifetime_value`, … |
-| `dog` | `breed_id`, `breed_secondary_id`, `weight_kg`, coat/temperament/medical hand-entered fields, `name` | `size_band`, `visit_count`, `last_visit_date`, `avg_duration_min`, … |
+| `pet` | `breed_id`, `breed_secondary_id`, `weight_kg`, `species` (only if correcting a mis-logged animal), coat/temperament/medical hand-entered fields, `name` | `size_band`, `visit_count`, `last_visit_date`, `avg_duration_min`, … |
 | `visit` | `visit_date`, `actual_minutes`, `condition_score` (**0 = worst … 5 = best**), `what_surprised_me`, `status`, service ids / prices / tips if needed | `days_since_last`, `predicted_min_p50`, `predicted_min_p90` |
 
 Why forbidden matters: derived values are **meant to be recomputed from visits**. If you type `last_visit_date` by hand, it can disagree with the real `visit` table. Later analytics will trust the wrong number.
 
-**Default path for visit fixes (#193):** Directory → dog profile → tap a recent visit → edit or delete in the app (`PATCH` / `DELETE /visits/{id}`). Hard delete removes visit photos (files then rows). SQL recipe `update_visit.sql` stays the escape hatch for bulk/offline work.
+**Default path for visit fixes (#193):** Directory → pet profile → tap a recent visit → edit or delete in the app (`PATCH` / `DELETE /visits/{id}`). Hard delete removes visit photos (files then rows). SQL recipe `update_visit.sql` stays the escape hatch for bulk/offline work.
 
 ## SQL escape hatch
 
@@ -72,23 +72,23 @@ Each recipe has a matching file under [`ops/sql/`](../../ops/sql/). Index: [`ops
 
 #### 1. List breeds — `lookup_breeds.sql`
 
-**What it does:** Reads the seeded breed catalog so you know which `breed_id` to attach to a dog.
+**What it does:** Reads the seeded breed catalog (`species`, timings) so you know which `breed_id` to attach to a pet of the same species.
 
 **Why:** Capture often leaves `breed_id` NULL. Cold-start priors for duration live on `breed`. Prefer setting breed in Directory when you can.
 
 ```sql
-SELECT breed_id, name_de, name_en, base_groom_minutes, matting_risk
+SELECT breed_id, species, name_de, name_en, base_groom_minutes, matting_risk
 FROM breed
-ORDER BY name_de;
+ORDER BY species, name_de;
 ```
 
-#### 2. Set a dog’s breed — `enrich_dog_breed.sql`
+#### 2. Set a pet’s breed — `enrich_pet_breed.sql`
 
 **What it does:**
 
-1. Finds the dog (and owner name) so you confirm the right `dog_id`.
+1. Finds the pet (and owner name) so you confirm the right `pet_id`.
 2. Sets `breed_id` (and optionally `breed_secondary_id` for mixes).
-3. Re-reads the dog with breed names joined.
+3. Re-reads the pet with breed names joined.
 
 **Why `JOIN breed`:** Humans read names; the DB stores ids. The join is only for display — the UPDATE still writes the integer FK.
 
@@ -108,21 +108,21 @@ ORDER BY name_de;
 
 **What it does:** Adds contact / notes / area after the fact. Prefer Directory owner profile when editing one client.
 
-#### 5. Enrich a dog (non-breed fields) — `update_dog.sql`
+#### 5. Enrich a pet (non-breed fields) — `update_pet.sql`
 
-**What it does:** Optional coat / temperament / weight / medical notes. Prefer Directory dog profile for single-dog edits. Comment out lines you do not need — never blank-update columns you meant to leave alone.
+**What it does:** Optional coat / temperament / weight / medical notes. Prefer Directory pet profile for single-pet edits. Comment out lines you do not need — never blank-update columns you meant to leave alone.
 
 ### Finding ids quickly
 
 ```sql
--- Dogs with owners (directory-style)
-SELECT d.dog_id, d.name AS dog_name, o.owner_id, o.name AS owner_name, d.breed_id
-FROM dog d
-JOIN owner o ON o.owner_id = d.owner_id
-ORDER BY o.name, d.name;
+-- Pets with owners (directory-style)
+SELECT p.pet_id, p.species, p.name AS pet_name, o.owner_id, o.name AS owner_name, p.breed_id
+FROM pet p
+JOIN owner o ON o.owner_id = p.owner_id
+ORDER BY o.name, p.name;
 
 -- Recent visits
-SELECT visit_id, dog_id, owner_id, visit_date, actual_minutes, status
+SELECT visit_id, pet_id, owner_id, visit_date, actual_minutes, status
 FROM visit
 ORDER BY visit_id DESC
 LIMIT 20;
@@ -130,12 +130,11 @@ LIMIT 20;
 
 ## Out of scope (this playbook)
 
-- A recompute job for the remaining dog/owner aggregates (`avg_duration_min`, owner LTV, …). `last_visit_date` and `visit_count` are computed on read, and `size_band` is written from weight ([#171](https://github.com/BOYSABIO/muttmetrics/issues/171))
+- A recompute job for the remaining pet/owner aggregates (`avg_duration_min`, owner LTV, …). `last_visit_date` and `visit_count` are computed on read, and `size_band` is written from weight + species ([#171](https://github.com/BOYSABIO/muttmetrics/issues/171) / [#190](https://github.com/BOYSABIO/muttmetrics/issues/190))
 - Pet-owner self-serve accounts (icebox [#143](https://github.com/BOYSABIO/muttmetrics/issues/143))
 - Predictions / salon insights home ([#130](https://github.com/BOYSABIO/muttmetrics/issues/130))
-- Visit PATCH in the SPA (still SQL for now)
 
-HTTP `PATCH` for dog/owner obeys the same safe vs forbidden columns as this playbook, and refuses `null` on required columns and impossible weights ([#177](https://github.com/BOYSABIO/muttmetrics/issues/177)); SQL has no such guard, so check values by hand ([ADR-001](../architecture/adr/001-derived-fields.md)).
+HTTP `PATCH` for pet/owner obeys the same safe vs forbidden columns as this playbook, and refuses `null` on required columns and impossible weights ([#177](https://github.com/BOYSABIO/muttmetrics/issues/177)); SQL has no such guard, so check values by hand ([ADR-001](../architecture/adr/001-derived-fields.md)).
 
 ## Related
 

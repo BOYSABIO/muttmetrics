@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import {
   errorMessage,
-  fetchDogProfile,
-  patchDog,
-  uploadDogProfilePhoto,
+  fetchPetProfile,
+  patchPet,
+  uploadPetProfilePhoto,
   type BreedListItem,
-  type DogProfile,
+  type PetProfile,
+  type Species,
 } from './api'
 import { BreedPicker } from './BreedPicker'
-import { DogAvatar } from './DogAvatar'
-import type { SelectedDog } from './draft'
+import { PetAvatar } from './PetAvatar'
+import type { SelectedPet } from './draft'
+import { SpeciesChips } from './SpeciesChips'
 import { VisitEditView } from './VisitEditView'
 
 const SEX_OPTIONS = [
@@ -64,6 +66,7 @@ function parseWeightKg(raw: string): number | null | 'invalid' {
 /** Editable fields, as the inputs hold them (strings for selects/text). */
 type DogForm = {
   name: string
+  species: Species
   breedId: string
   breedSecondaryId: string
   sex: string
@@ -82,9 +85,10 @@ type DogForm = {
   vetNotes: string
 }
 
-function formFromProfile(p: DogProfile): DogForm {
+function formFromProfile(p: PetProfile): DogForm {
   return {
     name: p.name,
+    species: p.species,
     breedId: p.breed_id !== null ? String(p.breed_id) : '',
     breedSecondaryId: p.breed_secondary_id !== null ? String(p.breed_secondary_id) : '',
     sex: p.sex ?? '',
@@ -136,25 +140,25 @@ function formatCoatCondition(score: number | null): string {
   return `Coat ${score}`
 }
 
-type DogProfileViewProps = {
-  profile: DogProfile
+type PetProfileViewProps = {
+  profile: PetProfile
   breeds: BreedListItem[]
   onBack: () => void
   onOpenOwner: (ownerId: number) => void
-  onStartVisit?: (dog: SelectedDog) => void
+  onStartVisit?: (dog: SelectedPet) => void
   /** After a save, so the client list can refresh names. */
   onSaved: () => void
 }
 
 /** One dog's profile: read, safe PATCH (#131/#132), avatar upload. */
-export function DogProfileView({
+export function PetProfileView({
   profile: initial,
   breeds,
   onBack,
   onOpenOwner,
   onStartVisit,
   onSaved,
-}: DogProfileViewProps) {
+}: PetProfileViewProps) {
   const [profile, setProfile] = useState(initial)
   const [form, setForm] = useState(() => formFromProfile(initial))
   const [isBusy, setIsBusy] = useState(false)
@@ -165,7 +169,7 @@ export function DogProfileView({
     setForm((f) => ({ ...f, [key]: value }))
   }
 
-  function show(updated: DogProfile): void {
+  function show(updated: PetProfile): void {
     setProfile(updated)
     setForm(formFromProfile(updated))
   }
@@ -173,7 +177,7 @@ export function DogProfileView({
   async function reloadAfterVisitChange(): Promise<void> {
     setEditingVisitId(null)
     try {
-      const updated = await fetchDogProfile(profile.dog_id)
+      const updated = await fetchPetProfile(profile.pet_id)
       show(updated)
       onSaved()
     } catch (err) {
@@ -185,7 +189,7 @@ export function DogProfileView({
     return (
       <VisitEditView
         visitId={editingVisitId}
-        dogName={profile.name}
+        petName={profile.name}
         onBack={() => setEditingVisitId(null)}
         onDone={() => {
           void reloadAfterVisitChange()
@@ -197,7 +201,7 @@ export function DogProfileView({
   async function save(): Promise<void> {
     if (isBusy) return
     if (form.name.trim() === '') {
-      setMessage('Dog name cannot be empty')
+      setMessage('Pet name cannot be empty')
       return
     }
     const weightKg = parseWeightKg(form.weightKg)
@@ -209,8 +213,9 @@ export function DogProfileView({
     setMessage('Saving…')
     try {
       show(
-        await patchDog(profile.dog_id, {
+        await patchPet(profile.pet_id, {
           name: form.name.trim(),
+          species: form.species,
           breed_id: numberOrNull(form.breedId),
           breed_secondary_id: numberOrNull(form.breedSecondaryId),
           sex: textOrNull(form.sex),
@@ -244,8 +249,8 @@ export function DogProfileView({
     setIsBusy(true)
     setMessage('Uploading photo…')
     try {
-      await uploadDogProfilePhoto(profile.dog_id, file)
-      show(await fetchDogProfile(profile.dog_id))
+      await uploadPetProfilePhoto(profile.pet_id, file)
+      show(await fetchPetProfile(profile.pet_id))
       setMessage('Photo updated')
     } catch (error) {
       console.error(error)
@@ -264,7 +269,7 @@ export function DogProfileView({
       )}
       <section className="panel profile-panel">
         <header className="profile-hero">
-          <DogAvatar
+          <PetAvatar
             photoId={profile.avatar_photo_id}
             name={profile.name}
             size="lg"
@@ -320,10 +325,32 @@ export function DogProfileView({
                 onChange={(e) => set('name', e.target.value)}
               />
             </div>
+            <SpeciesChips
+              name="dir_species"
+              value={form.species}
+              disabled={isBusy}
+              onChange={(next) => {
+                setForm((f) => {
+                  const breedOk = breeds.some(
+                    (b) => String(b.breed_id) === f.breedId && b.species === next,
+                  )
+                  const secondaryOk = breeds.some(
+                    (b) =>
+                      String(b.breed_id) === f.breedSecondaryId && b.species === next,
+                  )
+                  return {
+                    ...f,
+                    species: next,
+                    breedId: breedOk ? f.breedId : '',
+                    breedSecondaryId: secondaryOk ? f.breedSecondaryId : '',
+                  }
+                })
+              }}
+            />
             <BreedPicker
               id="dir_breed"
               label="Breed"
-              breeds={breeds}
+              breeds={breeds.filter((b) => b.species === form.species)}
               value={form.breedId}
               onChange={(v) => set('breedId', v)}
               disabled={isBusy}
@@ -331,7 +358,7 @@ export function DogProfileView({
             <BreedPicker
               id="dir_breed_secondary"
               label="Secondary breed (optional)"
-              breeds={breeds}
+              breeds={breeds.filter((b) => b.species === form.species)}
               value={form.breedSecondaryId}
               onChange={(v) => set('breedSecondaryId', v)}
               disabled={isBusy}
@@ -576,10 +603,11 @@ export function DogProfileView({
               disabled={isBusy}
               onClick={() => {
                 onStartVisit({
-                  dog_id: profile.dog_id,
+                  pet_id: profile.pet_id,
                   owner_id: profile.owner_id,
-                  dog_name: profile.name,
+                  pet_name: profile.name,
                   owner_name: profile.owner.name,
+                  species: profile.species,
                 })
               }}
             >

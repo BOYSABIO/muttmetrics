@@ -1,21 +1,25 @@
 """Breed reference table - hand-encoded priors for cold start."""
 
-from sqlalchemy import Boolean, Integer, String, Text
+from sqlalchemy import Boolean, CheckConstraint, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from muttmetrics.db.base import Base
+from muttmetrics.species import DEFAULT_SPECIES, SPECIES_CHECK_SQL
 
 
 class Breed(Base):
     """
     Domain priors per breed (DE/EN names, coat defaults, duration, matting risk).
 
-    List/array fields on other models use Postgres ARRAY (see ADR / model docstrings).
+    ``species`` must match the pet (ADR-004). List/array fields on other models
+    use Postgres ARRAY (see ADR / model docstrings).
     """
 
     __tablename__ = "breed"
+    __table_args__ = (CheckConstraint(SPECIES_CHECK_SQL, name="ck_breed_species"),)
 
     breed_id: Mapped[int] = mapped_column(primary_key=True)
+    species: Mapped[str] = mapped_column(String, nullable=False, server_default=DEFAULT_SPECIES)
     name_de: Mapped[str | None] = mapped_column(String, nullable=True)
     name_en: Mapped[str | None] = mapped_column(String, nullable=True)
     default_coat_type: Mapped[str | None] = mapped_column(String, nullable=True)

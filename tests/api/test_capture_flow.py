@@ -31,25 +31,25 @@ def test_new_client_dog_then_visit(client: TestClient, auth_headers: dict[str, s
     assert owner_again.json()["owner_id"] == owner_id
 
     dog_resp = client.post(
-        "/dogs",
+        "/pets",
         json={"owner_id": owner_id, "name": dog_name},
         headers=auth_headers,
     )
     assert dog_resp.status_code == 201
-    dog_id = dog_resp.json()["dog_id"]
+    pet_id = dog_resp.json()["pet_id"]
 
     dog_again = client.post(
-        "/dogs",
+        "/pets",
         json={"owner_id": owner_id, "name": dog_name.upper()},
         headers=auth_headers,
     )
     assert dog_again.status_code == 200
-    assert dog_again.json()["dog_id"] == dog_id
+    assert dog_again.json()["pet_id"] == pet_id
 
     visit_resp = client.post(
         "/visits",
         json={
-            "dog_id": dog_id,
+            "pet_id": pet_id,
             "owner_id": owner_id,
             "visit_date": date.today().isoformat(),
             "actual_minutes": 75,
@@ -62,6 +62,6 @@ def test_new_client_dog_then_visit(client: TestClient, auth_headers: dict[str, s
     assert visit_resp.status_code == 201
     body = visit_resp.json()
     assert body["visit_id"] >= 1
-    assert body["dog_id"] == dog_id
+    assert body["pet_id"] == pet_id
     assert body["owner_id"] == owner_id
     assert body["actual_minutes"] == 75
