@@ -1,5 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
-import { fetchPhotoBlob } from './api'
+import { useId, useRef, useState } from 'react'
 
 type PetAvatarProps = {
   photoId: number | null | undefined
@@ -45,41 +44,17 @@ export function PetAvatar({
   onPickFile,
   disabled = false,
 }: PetAvatarProps) {
-  const [src, setSrc] = useState<string | null>(null)
+  // Remember which photoId failed so a new id retries automatically (#194).
+  const [failedPhotoId, setFailedPhotoId] = useState<number | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const inputId = useId()
   const editable = onPickFile !== undefined
 
-  useEffect(() => {
-    let objectUrl: string | null = null
-    let cancelled = false
-
-    async function load() {
-      if (photoId == null) {
-        setSrc(null)
-        return
-      }
-      try {
-        const blob = await fetchPhotoBlob(photoId)
-        if (blob === null) {
-          if (!cancelled) setSrc(null)
-          return
-        }
-        objectUrl = URL.createObjectURL(blob)
-        if (!cancelled) setSrc(objectUrl)
-      } catch {
-        if (!cancelled) setSrc(null)
-      }
-    }
-
-    void load()
-    return () => {
-      cancelled = true
-      if (objectUrl !== null) {
-        URL.revokeObjectURL(objectUrl)
-      }
-    }
-  }, [photoId])
+  // Proxy injects X-API-Key for /api/photos/* — plain <img> is enough.
+  const src =
+    photoId != null && failedPhotoId !== photoId
+      ? `/api/photos/${photoId}`
+      : null
 
   const className = [
     'dog-avatar',
@@ -92,7 +67,16 @@ export function PetAvatar({
   const face = (
     <span className="dog-avatar-face">
       {src !== null ? (
-        <img src={src} alt="" className="dog-avatar-img" />
+        <img
+          src={src}
+          alt=""
+          className="dog-avatar-img"
+          onError={() => {
+            if (photoId != null) {
+              setFailedPhotoId(photoId)
+            }
+          }}
+        />
       ) : (
         <StockDogIcon />
       )}

@@ -86,7 +86,7 @@ npm run preview
 
 **Check:** preview prints a **Local** URL on 5174 and a **Network** URL containing `http://10.x.x.x:5174/`. No Network URL → see troubleshooting.
 
-`npm run build` bakes `frontend/.env` (`VITE_API_KEY`) into `frontend/dist/`. If that key changes, rebuild.
+The SPA bundle does **not** contain `API_KEY` ([#194](https://github.com/BOYSABIO/muttmetrics/issues/194)). Preview's `/api` proxy reads the root `.env` and adds `X-API-Key`. Rotating the key = edit `.env`, restart the API and preview — no rebuild.
 
 ### 1.4 Your own smoke test — before User touches it
 

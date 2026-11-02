@@ -56,8 +56,9 @@ class Settings(BaseSettings):
                 f"(`dev-change-me`) or shorter than {MIN_API_KEY_LENGTH} characters. "
                 "Generate a key with:\n"
                 f"  {_API_KEY_GENERATE_HINT}\n"
-                "Put the same value in `.env` (API_KEY) and "
-                "`frontend/.env` (VITE_API_KEY), then restart the API."
+                "Put it in the repo-root `.env` as API_KEY, then restart "
+                "the API and `npm run dev` / `npm run preview` (the Vite "
+                "proxy reads the same key; the SPA never holds it — #194)."
             )
         return value
 

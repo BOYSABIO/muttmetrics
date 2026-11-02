@@ -56,7 +56,7 @@ CI runs Playwright against a **real** API + Postgres (`e2e` job in [`.github/wor
 ```powershell
 docker compose exec db createdb -U muttmetrics muttmetrics_e2e   # once
 $env:DATABASE_URL = "postgresql+psycopg://muttmetrics:muttmetrics@127.0.0.1:5432/muttmetrics_e2e"
-# ≥24 chars; must match frontend/.env VITE_API_KEY (not the .env.example placeholder — #187)
+# ≥24 chars; Vite preview proxy injects this (no VITE_API_KEY — #187 / #194)
 $env:API_KEY = "local-e2e-key-not-for-production"
 alembic upgrade head
 python -m muttmetrics.seed
@@ -287,7 +287,7 @@ X-API-Key: <same value as API_KEY in .env>
 
 All write paths require `X-API-Key`. The unauthenticated Jinja `/capture` form is gone ([#86](https://github.com/BOYSABIO/muttmetrics/issues/86)).
 
-Generate a local key (same value in root `.env` and `frontend/.env` as `VITE_API_KEY`):
+Generate a local key and put it in the repo-root `.env` as `API_KEY` only (the SPA never holds it — [#194](https://github.com/BOYSABIO/muttmetrics/issues/194)):
 
 ```powershell
 python -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -327,7 +327,7 @@ UI labels are **English** (salon business language).
 
 **Photo upload flow (#92).** The upload endpoint needs a `visit_id`, so files are held in React state and posted **after** `POST /visits` returns. Rules that are easy to break:
 
-- **Uploads send only the key header** (`keyOnlyHeaders()` in `src/api.ts`) — a multipart body must not carry a `Content-Type` header, because the browser has to set it with the boundary marker it generates
+- **Uploads send no auth header** — the Vite `/api` proxy adds `X-API-Key` ([#194](https://github.com/BOYSABIO/muttmetrics/issues/194)); a multipart body must not carry a `Content-Type` header, because the browser has to set it with the boundary marker it generates
 - **Each upload has its own `try`/`catch`** — the visit is already saved, and `saveVisit`'s outer catch says "Not saved", which would be a lie
 - **A `File` cannot be persisted.** The #88 draft stores `hadIntakeFile` / `hadAfterFile` booleans so the resume message can say the photo was not kept
 - **`isBusy` guards both write flows.** Save and new-client Continue are disabled in flight; without it a slow phone upload invites repeat taps and duplicate rows (missed in #87, fixed in #92)
@@ -337,13 +337,12 @@ UI labels are **English** (salon business language).
 **Prerequisites:** Node.js LTS (18+), repo `.env` with `API_KEY`, Postgres up, API running.
 
 ```bash
-# Terminal 1 — API
+# Terminal 1 — API (reads API_KEY from repo-root .env)
 python -m muttmetrics.api
 
-# Terminal 2 — frontend
+# Terminal 2 — frontend (proxy reads the same root API_KEY — #194)
 cd frontend
-cp .env.example .env          # Windows: copy .env.example .env
-# VITE_API_KEY must match root API_KEY
+cp .env.example .env          # Windows: copy .env.example .env (optional VITE_BUSINESS_NAME only)
 npm install
 npm run dev
 ```
@@ -352,20 +351,22 @@ npm run dev
 |-------|------|
 | `http://127.0.0.1:5173` | Vite **dev** server — hot reload, this PC only (`strictPort`) |
 | `http://<pc-ip>:5174` | Vite **preview** server — built `dist/`, network-facing, for the groomer trial |
-| `/api/*` in the SPA | Proxied to `http://127.0.0.1:8000/*` (see `frontend/vite.config.ts`) |
+| `/api/*` in the SPA | Proxied to `http://127.0.0.1:8000/*`; proxy adds `X-API-Key` from root `API_KEY` ([#194](https://github.com/BOYSABIO/muttmetrics/issues/194)) |
 | `GET /pets?q=` | Directory browse/search — returns `owner_name` + `species` on each row (cap 50) |
 | `GET /owners?q=` | Owner search for capture “Already a client?” (#191) |
 | `GET` / `PATCH /pets/{id}` | Pet profile read / safe enrichment (#131, #132, #190) |
 | `GET` / `PATCH /owners/{id}` | Owner profile read / safe enrichment (#131, #132); Add pet via `POST /pets` |
 | Visit step 2 timer | Client-only; fills `actual_minutes` (floor); editable override. In-progress visit (dog + wizard + timer) persists in `localStorage` (`muttmetrics.draftVisit`) so a phone tab kill / reload can resume ([#88](https://github.com/BOYSABIO/muttmetrics/issues/88)). Cleared on save / cancel / reset. |
-| `frontend/.env` | `VITE_API_KEY` (required) and `VITE_BUSINESS_NAME` (optional header name) — gitignored; never commit. Typed in `src/vite-env.d.ts` |
-| `npm run build` | Production bundle to `frontend/dist/` (`tsc -b` type-checks first) |
+| Root `.env` | `API_KEY` (required) — API + Vite proxy; never a `VITE_` name |
+| `frontend/.env` | Optional `VITE_BUSINESS_NAME` only — gitignored; typed in `src/vite-env.d.ts` |
+| `npm run build` | Production bundle to `frontend/dist/` (`tsc -b` type-checks first) — must not contain `API_KEY` |
+| `npm run check:no-key-in-dist` | Greps `dist/` for `API_KEY`; CI runs after build (#194) |
 | `npm run preview` | Serves `dist/` + the same `/api` proxy — what the groomer opens |
 | `npm run e2e` | Playwright smoke against preview + a running API (#196) — see **End-to-end smoke** above |
 
 PATCH sends only the fields you change. An explicit `null` clears an optional field (e.g. `phone`), but `null` on a required column (e.g. owner `locale`) is **422** (#177). Dog `weight_kg` must be > 0 and ≤ 150, which catches grams typed into the kg field. The Directory accepts a comma (`7,5` → 7.5) and refuses to save anything that still isn't a number, instead of sending `null` and wiping the weight (#178).
 
-**Auth note:** `VITE_API_KEY` is baked into `frontend/dist/` at **build** time and is readable by anyone who loads the page — a gate against strangers on a private URL, never a secret. Rules and the upgrade path: [`privacy.md` → API key in the browser](./docs/architecture/privacy.md#api-key-in-the-browser). Always-on OptiPlex ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) and cloud ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)) are iceboxed; desktop host for now.
+**Auth note:** the browser never holds `API_KEY` ([#194](https://github.com/BOYSABIO/muttmetrics/issues/194)). Vite's proxy injects `X-API-Key`; Tailscale is still who may open the app. Details: [`privacy.md` → API key (server-side only)](./docs/architecture/privacy.md#api-key-server-side-only). Always-on OptiPlex ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) must do the same header injection on its static server when Vite preview goes away; cloud ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)) is iceboxed.
 
 **Phone trial (#82):** the dev server stays on `127.0.0.1`; the groomer gets `npm run build && npm run preview` on a fixed `:5174`, reachable over Tailscale only on that one port. Full procedure: [`docs/runbooks/groomer-trial.md`](./docs/runbooks/groomer-trial.md).
 

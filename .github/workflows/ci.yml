@@ -32,6 +32,21 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: SPA must not contain API_KEY (#194)
+        env:
+          # Any ≥24-char stand-in is fine — we only assert it is absent from dist.
+          API_KEY: ci-frontend-key-not-for-production
+        run: |
+          # Plant the key in a throwaway file first so a no-op check can't pass
+          # if the script is broken; then scan the real dist.
+          printf '%s' "$API_KEY" > dist/.key-canary.txt
+          if npm run check:no-key-in-dist; then
+            echo "expected failure when key is planted in dist" >&2
+            exit 1
+          fi
+          rm -f dist/.key-canary.txt
+          npm run check:no-key-in-dist
+
   test:
     runs-on: ubuntu-latest
     services:
@@ -125,8 +140,8 @@ jobs:
 
     env:
       DATABASE_URL: postgresql+psycopg://muttmetrics:muttmetrics@localhost:5432/muttmetrics_e2e
+      # Vite preview proxy injects this; SPA build must not see a VITE_API_KEY (#194).
       API_KEY: ci-e2e-key-not-for-production
-      VITE_API_KEY: ci-e2e-key-not-for-production
       PHOTO_ROOT: /tmp/muttmetrics-e2e-photos
     steps:
       - uses: actions/checkout@v7
@@ -173,7 +188,11 @@ jobs:
       - name: Build SPA
         working-directory: frontend
         run: npm run build
-      
+
+      - name: SPA must not contain API_KEY (#194)
+        working-directory: frontend
+        run: npm run check:no-key-in-dist
+
       - name: Playwright smoke
         working-directory: frontend
         run: npx playwright test

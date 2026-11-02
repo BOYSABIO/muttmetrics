@@ -119,18 +119,25 @@ Telling a client the deletion is instant and total would be false. What is true 
 
 ### Access
 
-Photos are served only through the API and require the shared `X-API-Key`. The key is embedded in the built SPA, so it is a gate against strangers on the network, **not** a secret from anyone who can open the app — which is why the capture UI is not exposed beyond the tailnet ([#82](https://github.com/BOYSABIO/muttmetrics/issues/82)) and why a public deployment needs a real auth decision ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)).
+Photos are served only through the API and require the shared `X-API-Key`. The browser never holds that key ([#194](https://github.com/BOYSABIO/muttmetrics/issues/194)): Vite's `/api` proxy (and later the box's static server on [#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) adds it when forwarding. Anyone who can open the SPA can still *use* the API through that proxy — access control is the Tailscale ACL, not the key. A public deployment still needs a real auth decision ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)).
 
-### API key in the browser
+### API key (server-side only)
 
-`VITE_API_KEY` is compiled into the JavaScript bundle at build time (`npm run build` → `frontend/dist/`). Anyone who can open the app can read it in the browser's dev tools. That is acceptable **only** because the app is reachable over Tailscale alone. Rules:
+`API_KEY` lives in the repo-root `.env`. The SPA calls relative `/api/…` URLs with **no** `X-API-Key`. Vite `dev` / `preview` read `API_KEY` (never a `VITE_` name — those get baked into `dist/`) and inject the header on the proxy hop. Direct `:8000` callers (curl, `/docs`) still send the header themselves.
 
-- **Never host `dist/` publicly** (a static host, a public tunnel, a shared drive). The key and the API behind it go with it.
+| | Holds the key | Can call the API |
+|---|---|---|
+| Browser / `frontend/dist` | No | Yes, via the proxy (Tailscale ACL is the gate) |
+| Vite preview / later Caddy | Yes | Forwards with the header |
+| FastAPI process | Yes | Enforces the header |
+
+Rules:
+
+- **Never put the key in a `VITE_` env var** or anywhere the SPA imports. CI runs `npm run check:no-key-in-dist` after build.
 - **Don't reuse the key** anywhere else. It is a door code for this API, not a password.
-- **Don't ship the example:** the API refuses to start if `API_KEY` is still `dev-change-me` or shorter than 24 characters ([#187](https://github.com/BOYSABIO/muttmetrics/issues/187)).
-- **Rotating it means a rebuild:** change `API_KEY` in `.env` and `VITE_API_KEY` in `frontend/.env`, restart the API, then `npm run build` and restart preview. Phones pick up the new bundle on reload.
-
-**Upgrade path (not done yet):** have the Vite dev/preview proxy add the `X-API-Key` header server-side, so the key never reaches the browser. Do it before anything outside the tailnet can reach the app ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)).
+- **Don't ship the example:** the API and the Vite proxy both refuse `dev-change-me` or keys shorter than 24 characters ([#187](https://github.com/BOYSABIO/muttmetrics/issues/187)).
+- **Rotating it:** change `API_KEY` in `.env`, restart the API and `npm run preview` (or `dev`). No SPA rebuild.
+- **Hosting `dist/` alone is not enough:** a static host without a proxy that injects the header cannot talk to a keyed API — and must still stay off the public internet until [#83](https://github.com/BOYSABIO/muttmetrics/issues/83).
 
 ## Public-site follow-up
 
