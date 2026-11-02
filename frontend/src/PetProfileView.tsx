@@ -269,7 +269,7 @@ export function PetProfileView({
       )}
       <section className="panel profile-panel">
         <header className="profile-hero">
-          <PetAvatar>
+          <PetAvatar
             photoId={profile.avatar_photo_id}
             name={profile.name}
             size="lg"

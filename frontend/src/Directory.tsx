@@ -15,7 +15,7 @@ import { PetAvatar } from './PetAvatar'
 import { PetProfileView } from './PetProfileView'
 import type { SelectedPet } from './draft'
 import { OwnerProfileView } from './OwnerProfileView'
-import { speciesLabel } from './SpeciesChips'
+import { speciesLabel } from './species'
 
 type DirectoryProps = {
   onStartVisit?: (dog: SelectedPet) => void
@@ -123,7 +123,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
     return (
       <>
         {status}
-        <PetProfileView>
+        <PetProfileView
           key={openPet.pet_id}
           profile={openPet}
           breeds={breeds}

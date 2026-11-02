@@ -8,7 +8,8 @@ import {
   type Species,
 } from './api'
 import { PetAvatar } from './PetAvatar'
-import { SpeciesChips, speciesLabel } from './SpeciesChips'
+import { SpeciesChips } from './SpeciesChips'
+import { speciesLabel } from './species'
 
 type OwnerForm = {
   name: string

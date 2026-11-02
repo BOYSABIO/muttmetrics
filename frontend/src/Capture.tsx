@@ -21,7 +21,8 @@ import {
   type Species,
 } from './api'
 import { todayISODate } from './dates'
-import { SpeciesChips, speciesLabel } from './SpeciesChips'
+import { SpeciesChips } from './SpeciesChips'
+import { speciesLabel } from './species'
 import {
   clearDraft,
   resumeMessage,

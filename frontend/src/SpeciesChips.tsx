@@ -1,4 +1,4 @@
-export type Species = 'dog' | 'cat'
+import type { Species } from './species'
 
 const OPTIONS: { value: Species; label: string }[] = [
   { value: 'dog', label: 'Dog' },
@@ -41,10 +41,4 @@ export function SpeciesChips({
       </div>
     </div>
   )
-}
-
-export function speciesLabel(species: string): string {
-  if (species === 'cat') return 'Cat'
-  if (species === 'dog') return 'Dog'
-  return species
 }
