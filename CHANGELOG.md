@@ -16,6 +16,12 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ### Fixed
 
+## [0.6.1] — 2026-11-03
+
+### Changed
+
+- Dev tooling: `actions/setup-python` v7, ruff 0.17.3 (pyproject + pre-commit lockstep), typescript-eslint 8.72.1 (TypeScript stays on ~6.0.2 for peer range)
+
 ## [0.6.0] — 2026-11-03
 
 First numbered M6 release. Earlier work shipped without semver tags; this is the
@@ -39,5 +45,6 @@ baseline the groomer's screen and `/health` can name.
 
 - Insecure / short `API_KEY` values refused at API (and proxy) startup
 
-[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.1
 [0.6.0]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.0
