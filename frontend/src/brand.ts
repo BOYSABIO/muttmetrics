@@ -7,6 +7,11 @@
  */
 export const APP_NAME = 'MuttMetrics'
 
+/** From frontend/package.json via vite.config (#197). Must match API /health.version. */
+export const APP_VERSION: string = String(
+  import.meta.env.VITE_APP_VERSION ?? '0.0.0-dev',
+)
+
 export const BUSINESS_NAME: string = String(
   import.meta.env.VITE_BUSINESS_NAME ?? '',
 ).trim()

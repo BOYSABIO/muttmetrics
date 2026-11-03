@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
-import { APP_NAME, BUSINESS_NAME } from './brand'
+import { APP_NAME, APP_VERSION, BUSINESS_NAME } from './brand'
 import { Capture } from './Capture'
 import { Directory } from './Directory'
 import { loadDraft, type DraftVisit, type SelectedPet } from './draft'
@@ -104,6 +104,9 @@ function App() {
             {area === 'directory' && (
               <Directory onStartVisit={startVisitForPet} />
             )}
+            <p className="app-version" aria-label={`App version ${APP_VERSION}`}>
+              v{APP_VERSION}
+            </p>
           </div>
           <button
             type="button"
