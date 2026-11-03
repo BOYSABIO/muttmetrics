@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -5,6 +6,9 @@ import { defineConfig, loadEnv, type ProxyOptions } from 'vite'
 
 const frontendDir = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(frontendDir, '..')
+const appVersion = JSON.parse(
+  fs.readFileSync(path.join(frontendDir, 'package.json'), 'utf8'),
+).version as string
 
 /** Match API reject_insecure_api_key (#187) — proxy must not forward a toy key. */
 const MIN_API_KEY_LENGTH = 24
@@ -51,6 +55,10 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     plugins: [react()],
+    // Bake package.json version into the SPA so a phone screenshot shows the build (#197).
+    define: {
+      'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
+    },
 
     // npm run dev: maintainer only, hot reload, this PC only
     server: {

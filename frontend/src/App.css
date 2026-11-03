@@ -1168,6 +1168,13 @@ main.app-home:has(.profile-panel) .fab {
   width: 100%;
 }
 
+.app-version {
+  margin: 1.5rem 0 0;
+  font-size: 0.75rem;
+  opacity: 0.55;
+  letter-spacing: 0.02em;
+}
+
 .home-shell .app-header-home {
   margin-bottom: 0.85rem;
 }

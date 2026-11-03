@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from muttmetrics import __version__
 from muttmetrics.api.routes.add_ons import router as add_ons_router
 from muttmetrics.api.routes.breeds import router as breeds_router
 from muttmetrics.api.routes.health import router as health_router
@@ -30,7 +31,7 @@ def create_app() -> FastAPI:
     """Build and return the API app (used by uvicorn and tests)."""
     app = FastAPI(
         title="MuttMetrics",
-        version="0.1.0",
+        version=__version__,
         description="Duration intelligence API - capture and priors",
         lifespan=lifespan,
     )
