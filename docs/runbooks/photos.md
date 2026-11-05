@@ -138,7 +138,7 @@ No rows change: the key is relative, which is the whole reason it is stored that
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| 415 on a photo that opens fine on the phone | HEIC without `pillow-heif` installed | `pip install -e ".[dev]"` |
+| 415 on a photo that opens fine on the phone | HEIC without `pillow-heif` installed | `pip install -e .` |
 | 413 | over 15MB | downscale on the client (#92), or raise `MAX_UPLOAD_BYTES` deliberately |
 | `GET /photos/{id}` returns 404 "file is missing" | row survived, file did not (manual delete, failed restore, wrong `PHOTO_ROOT`) | check `PHOTO_ROOT`; if genuinely gone, delete the row |
 | Photos appear rotated | EXIF orientation was not applied — should be impossible via the API | check the upload went through `POST /visits/{id}/photos`, not a manual file copy |

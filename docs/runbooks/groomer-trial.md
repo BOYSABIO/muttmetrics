@@ -186,7 +186,7 @@ ORDER BY v.visit_id;
 SELECT pet_id, visit_date, count(*)
 FROM visit
 WHERE visit_date = CURRENT_DATE
-GROUP BY dog_id, visit_date
+GROUP BY pet_id, visit_date
 HAVING count(*) > 1;
 ```
 
