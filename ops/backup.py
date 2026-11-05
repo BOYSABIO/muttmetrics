@@ -12,9 +12,9 @@ therefore needs the backup copy removed too - see docs/architecture/privacy.md.
     python ops/backup.py --extra-dest D:/muttmetrics-backup
     python ops/backup.py --skip-photos
 
-Today all destinations are usually on the same disk as the live data. That
-protects against mistakes, not against losing the drive. The second entry
-arrives with the shop box (#93).
+On a single machine every destination is on the same disk as the live data.
+That protects against mistakes, not against losing the drive. The off-site
+copy on the home server (#93) is an --extra-dest on an encrypted drive.
 """
 
 from __future__ import annotations

@@ -1,13 +1,17 @@
-"""One-command deploy for the capture host (#197).
+"""One-command deploy for the capture host (#197, fixed for #93).
 
-Stops at the first failure. Desktop today; OptiPlex (#93) later via
-MUTTMETRICS_RESTART_CMD. No auto-deploy on merge — run this deliberately.
+Stops at the first failure. No auto-deploy on merge: run this deliberately.
 
-    python ops/deploy.py --dry-run
-    python ops/deploy.py
+    python ops/deploy.py --to v0.6.1 --dry-run     # see the plan
+    python ops/deploy.py --to v0.6.1               # salon release (or rollback)
+    python ops/deploy.py --allow-main              # desktop drill from main
 
-Order: guard ref → backup → pull → install → migrate → SPA build →
-restart hook → /health version check.
+Order: guard → backup → move code (checkout tag / pull main) → read version →
+install → migrate → SPA build → restart hook → health checks.
+
+The version is read *after* the code moves, so a release that bumps it isn't
+reported as a mismatch. A tag is checked out detached, which is why there is no
+``git pull`` in the tag path: pull needs a branch and fails without one.
 
 See docs/runbooks/release.md.
 """
@@ -17,13 +21,16 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
+import tomllib
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+TAG_PATTERN = re.compile(r"^v\d+\.\d+\.\d+$")
 
 
 def log(msg: str) -> None:
@@ -35,153 +42,183 @@ def run(
     *,
     dry_run: bool,
     cwd: Path | None = None,
-    env: dict[str, str] | None = None,
 ) -> None:
     display = " ".join(cmd)
     if dry_run:
         log(f"  [dry-run] {display}")
         return
     log(f"  $ {display}")
-    subprocess.run(
-        cmd,
-        cwd=str(cwd or REPO_ROOT),
-        env=env,
-        check=True,
-    )
+    subprocess.run(cmd, cwd=str(cwd or REPO_ROOT), check=True)
 
 
 def git_output(*args: str) -> str:
-    return subprocess.check_output(
-        ["git", *args],
-        cwd=str(REPO_ROOT),
-        text=True,
-    ).strip()
+    return subprocess.check_output(["git", *args], cwd=str(REPO_ROOT), text=True).strip()
 
 
-def refuse_dirty_or_bad_ref(*, allow_main: bool) -> str:
-    """Return the ref name we are deploying from (tag or main)."""
-    dirty = git_output("status", "--porcelain")
-    if dirty:
+def validate_target(tag: str | None, allow_main: bool) -> None:
+    """Exactly one of --to vX.Y.Z or --allow-main, and a well-formed tag."""
+    if tag and allow_main:
+        raise SystemExit("Refusing: use either --to vX.Y.Z or --allow-main, not both.")
+    if not tag and not allow_main:
+        raise SystemExit(
+            "Refusing: say what to deploy. --to vX.Y.Z for a release or rollback, "
+            "--allow-main for a desktop drill."
+        )
+    if tag and not TAG_PATTERN.match(tag):
+        raise SystemExit(f"Refusing: {tag!r} is not a release tag (expected vX.Y.Z).")
+
+
+def check_tag_matches_version(tag: str, version: str) -> None:
+    """A tag must ship the version it is named after (v0.6.1 → 0.6.1)."""
+    if tag != f"v{version}":
+        raise SystemExit(
+            f"Refusing: tag {tag} contains version {version}. "
+            "The release was tagged before the version bump, or on the wrong commit."
+        )
+
+
+def guard_clean_tree() -> None:
+    if git_output("status", "--porcelain"):
         raise SystemExit(
             "Refusing: working tree is dirty. Commit, stash, or discard changes first."
         )
-    try:
-        tag = subprocess.check_output(
-            ["git", "describe", "--tags", "--exact-match", "HEAD"],
-            cwd=str(REPO_ROOT),
-            text=True,
-            stderr=subprocess.DEVNULL,
-        ).strip()
-    except subprocess.CalledProcessError:
-        tag = ""
 
+
+def guard_on_main() -> None:
     branch = git_output("rev-parse", "--abbrev-ref", "HEAD")
-    if tag.startswith("v"):
-        log(f"Ref: tag {tag}")
-        return tag
-    if branch == "main" and allow_main:
-        log("Ref: main (desktop / drill — prefer a v* tag for salon releases)")
-        return "main"
-    raise SystemExit(
-        "Refusing: HEAD must be a v* tag (or main with --allow-main for drills). "
-        f"Now on branch={branch!r} tag={tag or '(none)'}."
-    )
+    if branch != "main":
+        raise SystemExit(
+            f"Refusing: --allow-main needs the main branch checked out (now {branch!r}). "
+            "On the box, deploy a tag with --to instead."
+        )
+
+
+def fetch_and_verify_tag(tag: str) -> None:
+    subprocess.run(["git", "fetch", "--tags", "origin"], cwd=str(REPO_ROOT), check=True)
+    try:
+        git_output("rev-parse", "--verify", "--quiet", f"refs/tags/{tag}^{{commit}}")
+    except subprocess.CalledProcessError:
+        raise SystemExit(f"Refusing: tag {tag} not found on origin.") from None
 
 
 def package_version() -> str:
-    import tomllib
-
     data = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     return str(data["project"]["version"])
 
 
-def health_version(url: str) -> dict:
+def get_json(url: str) -> dict:
     with urllib.request.urlopen(url, timeout=10) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 
-def parse_args() -> argparse.Namespace:
+def get_status(url: str) -> int:
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            return resp.status
+    except urllib.error.HTTPError as exc:
+        return exc.code
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="print steps without running them",
+        "--to",
+        metavar="vX.Y.Z",
+        help="release tag to deploy (also how you roll back: --to the previous tag)",
     )
     p.add_argument(
         "--allow-main",
         action="store_true",
-        help="allow deploying from main (drills / desktop); prefer a v* tag for salon",
+        help="deploy the tip of main instead of a tag (desktop / drills only)",
     )
+    p.add_argument("--dry-run", action="store_true", help="print the steps, change nothing")
     p.add_argument(
         "--skip-backup",
         action="store_true",
-        help="skip ops/backup.py (emergency only — not for salon)",
-    )
-    p.add_argument(
-        "--skip-pull",
-        action="store_true",
-        help="skip git pull (already at the desired commit)",
+        help="skip ops/backup.py (emergency only — never for the salon)",
     )
     p.add_argument(
         "--health-url",
         default="http://127.0.0.1:8000/health",
-        help="URL to check after restart (default: local API)",
+        help="API health URL (default: local API)",
     )
-    return p.parse_args()
+    p.add_argument(
+        "--app-url",
+        default=os.environ.get("MUTTMETRICS_APP_URL", ""),
+        help=(
+            "where the SPA server listens, e.g. http://127.0.0.1:8080 "
+            "(default: $MUTTMETRICS_APP_URL). Used to prove the /api proxy injects the key."
+        ),
+    )
+    return p.parse_args(argv)
 
 
-def main() -> int:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
     dry = args.dry_run
-    log("MuttMetrics deploy (#197)" + (" — dry-run" if dry else ""))
+    validate_target(args.to, args.allow_main)
+    target = args.to or "main"
+    log(f"MuttMetrics deploy → {target}" + (" (dry-run)" if dry else ""))
 
     # 1) Guard
+    log("1. Guard")
     if dry:
-        log("1. Guard: refuse dirty tree; require v* tag or --allow-main")
+        log(
+            "  [dry-run] refuse a dirty tree; "
+            + (f"fetch tags and check {target} exists" if args.to else "require branch main")
+        )
     else:
-        log("1. Guard")
-        refuse_dirty_or_bad_ref(allow_main=args.allow_main)
+        guard_clean_tree()
+        if args.to:
+            fetch_and_verify_tag(args.to)
+        else:
+            guard_on_main()
+    log(f"   running now: {package_version()}")
 
-    expected = package_version()
-    log(f"   package version: {expected}")
-
-    # 2) Backup first
+    # 2) Backup first, with the code that's running now
     log("2. Backup")
     if args.skip_backup:
         log("  ! skipped (--skip-backup)")
     else:
         run([sys.executable, "ops/backup.py"], dry_run=dry)
 
-    # 3) Pull
-    log("3. git pull")
-    if args.skip_pull:
-        log("  ! skipped (--skip-pull)")
+    # 3) Move the code
+    log("3. Code")
+    if args.to:
+        run(["git", "checkout", "--quiet", "--detach", args.to], dry_run=dry)
     else:
         run(["git", "pull", "--ff-only"], dry_run=dry)
 
-    # 4) Install backend deps (editable + locked enough via pyproject)
-    log("4. Install backend")
-    run(
-        [sys.executable, "-m", "pip", "install", "-e", ".[dev]"],
-        dry_run=dry,
-    )
+    # 4) What we're deploying, read after the move
+    if dry:
+        log("4. Version: read from pyproject.toml after step 3")
+        expected = None
+    else:
+        expected = package_version()
+        log(f"4. Version: {expected}")
+        if args.to:
+            check_tag_matches_version(args.to, expected)
 
-    # 5) Migrate
-    log("5. alembic upgrade head")
+    # 5) Backend deps (runtime only; dev tools live on the desktop)
+    log("5. Install backend")
+    run([sys.executable, "-m", "pip", "install", "--quiet", "-e", "."], dry_run=dry)
+
+    # 6) Migrate
+    log("6. alembic upgrade head")
     run([sys.executable, "-m", "alembic", "upgrade", "head"], dry_run=dry)
 
-    # 6) SPA build
-    log("6. SPA build")
+    # 7) SPA build
+    log("7. SPA build")
     npm = "npm.cmd" if os.name == "nt" else "npm"
     run([npm, "ci"], dry_run=dry, cwd=REPO_ROOT / "frontend")
     run([npm, "run", "build"], dry_run=dry, cwd=REPO_ROOT / "frontend")
 
-    # 7) Restart services
-    log("7. Restart services")
+    # 8) Restart services
+    log("8. Restart services")
     restart_cmd = os.environ.get("MUTTMETRICS_RESTART_CMD", "").strip()
     if restart_cmd:
-        # shell form for #93 systemd one-liners, e.g.
-        # MUTTMETRICS_RESTART_CMD="sudo systemctl restart muttmetrics-api muttmetrics-caddy"
+        # Shell form for the box (#93), e.g.
+        # MUTTMETRICS_RESTART_CMD="sudo systemctl restart muttmetrics-api caddy"
         if dry:
             log(f"  [dry-run] shell: {restart_cmd}")
         else:
@@ -189,32 +226,45 @@ def main() -> int:
             subprocess.run(restart_cmd, shell=True, check=True, cwd=str(REPO_ROOT))
     else:
         log(
-            "  No MUTTMETRICS_RESTART_CMD set — restart API + SPA server yourself "
-            "(desktop: stop/start muttmetrics-api and npm run preview; "
-            "box #93: set the env to systemctl restart …)."
+            "  No MUTTMETRICS_RESTART_CMD set — restart the API and the SPA server yourself "
+            "(desktop: muttmetrics-api + npm run preview)."
         )
 
-    # 8) Health / version
-    log("8. Health check")
+    # 9) Health
+    log("9. Health")
     if dry:
-        log(f"  [dry-run] GET {args.health_url} — expect version={expected}")
+        log(f"  [dry-run] GET {args.health_url} → version must match")
+        if args.app_url:
+            log(f"  [dry-run] GET {args.app_url}/api/services → 200 (proxy adds the key)")
         return 0
 
     try:
-        body = health_version(args.health_url)
+        body = get_json(args.health_url)
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
         raise SystemExit(
             f"Health check failed at {args.health_url}: {exc}. "
             "Start/restart the API, then re-check, or fix MUTTMETRICS_RESTART_CMD."
         ) from exc
-
-    got = body.get("version")
     log(f"  /health → {body}")
-    if got != expected:
+    if body.get("version") != expected:
         raise SystemExit(
-            f"Version mismatch: package={expected!r} /health.version={got!r}. "
+            f"Version mismatch: deployed={expected!r} /health.version={body.get('version')!r}. "
             "Is the old API process still running?"
         )
+
+    if args.app_url:
+        # /health needs no key, so it can't prove the proxy works. /services does.
+        url = f"{args.app_url.rstrip('/')}/api/services"
+        status = get_status(url)
+        log(f"  {url} → {status}")
+        if status != 200:
+            raise SystemExit(
+                f"SPA proxy check failed ({status}). 401 = the SPA server isn't adding "
+                "X-API-Key from API_KEY (#194); 502/connection error = it can't reach the API."
+            )
+    else:
+        log("  (no --app-url / MUTTMETRICS_APP_URL: proxy check skipped)")
+
     log("Deploy OK.")
     return 0
 

@@ -5,7 +5,9 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: muttmetrics
-      POSTGRES_PASSWORD: muttmetrics
+      # From the repo-root .env (#93). Only used when the volume is first created:
+      # changing it later needs ALTER USER, see docs/runbooks/db-peek.md.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env (see .env.example)}
       POSTGRES_DB: muttmetrics
     ports:
       - "127.0.0.1:5432:5432"

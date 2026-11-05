@@ -11,7 +11,7 @@ Schema reference: [`schema.md`](../architecture/schema.md). Connection values ma
 | **Host / server name** | `localhost` | Hostname where Postgres listens — **not** the database name |
 | Port | `5432` | |
 | User | `muttmetrics` | |
-| Password | `muttmetrics` | Local only; never use this pattern in production |
+| Password | `POSTGRES_PASSWORD` in `.env` | Set when the volume is first created (see below) |
 | **Database** | `muttmetrics` | Separate field from host |
 | SSL | off | Local Docker |
 
@@ -20,7 +20,13 @@ Schema reference: [`schema.md`](../architecture/schema.md). Connection values ma
 `DATABASE_URL` in `.env` is the same idea in one string:
 
 ```text
-postgresql+psycopg://muttmetrics:muttmetrics@localhost:5432/muttmetrics
+postgresql+psycopg://muttmetrics:<POSTGRES_PASSWORD>@localhost:5432/muttmetrics
+```
+
+**Changing the password later.** Postgres only reads `POSTGRES_PASSWORD` when the volume is first created. To change it on an existing database, set the new value in the database first, then in `.env` (both `POSTGRES_PASSWORD` and the password inside `DATABASE_URL`), then restart the API:
+
+```bash
+docker compose exec db psql -U muttmetrics -d muttmetrics -c "ALTER USER muttmetrics PASSWORD '<new>';"
 ```
 
 ## Connect from the editor (primary)
@@ -30,7 +36,7 @@ postgresql+psycopg://muttmetrics:muttmetrics@localhost:5432/muttmetrics
 3. Fill host `localhost`, port `5432`, user/password/database as above; SSL disabled.
 4. Connect, then open a SQL editor against database `muttmetrics`.
 
-You should see tables such as `owner`, `dog`, `visit`, `breed`, `service` (after `alembic upgrade head`).
+You should see tables such as `owner`, `pet`, `visit`, `breed`, `service` (after `alembic upgrade head`).
 
 ## Connect with `psql` (secondary)
 
@@ -86,7 +92,7 @@ Copy-paste into the extension SQL editor or `psql`.
 ```sql
 SELECT
   (SELECT COUNT(*) FROM owner) AS owners,
-  (SELECT COUNT(*) FROM dog) AS dogs,
+  (SELECT COUNT(*) FROM pet) AS pets,
   (SELECT COUNT(*) FROM visit) AS visits;
 ```
 

@@ -32,7 +32,7 @@ BACKUP_ROOT=C:/muttmetrics-data/backups   # defaults to ~/muttmetrics-data/backu
 | Theft, fire, ransomware                 | **no**   |
 
 
-The first four are the ones that have nearly happened. The rest needs a second machine, which arrives with the shop box ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)): it will back up to the maintainer's PC over Tailscale, and that is a second `--extra-dest`, not a rewrite.
+The first four are the ones that have nearly happened. The rest needs a second machine, which arrives with the home server ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)): an encrypted drive kept outside the house is a second `--extra-dest`, not a rewrite.
 
 ## 1. Running a backup
 
@@ -57,7 +57,7 @@ python ops/backup_check.py --max-age-hours 24
 
 Prints the age of the last run and exits **non-zero** when it is stale or missing. It also verifies that the dump named in the status file actually exists, because a status report is a claim and the directory is the fact.
 
-Run it after any gap — a holiday, a reinstall, a Python upgrade. Automated alerting is iceboxed until the shop box exists ([#104](https://github.com/BOYSABIO/muttmetrics/issues/104)); the exit code is the hook it will use.
+Run it after any gap — a holiday, a reinstall, a Python upgrade. Automated alerting comes after the home server ([#104](https://github.com/BOYSABIO/muttmetrics/issues/104)); the exit code is the hook it will use.
 
 ## 3. Retention
 
@@ -104,14 +104,19 @@ python ops/backup_check.py
 
 The log file is the proof it ran unattended.
 
-### Linux (shop box, #93)
+### Linux (home server, #93)
 
-Same script, no changes:
+Same script, no changes. It runs as the unprivileged `muttmetrics` user that owns the checkout, not as root. That user needs to be in the `docker` group, because the script calls `docker compose exec`. Be aware that the `docker` group is root-equivalent on that machine, so don't add anyone else to it.
 
 ```ini
 # /etc/systemd/system/muttmetrics-backup.service
+[Unit]
+Description=MuttMetrics backup (DB dump + photos)
+
 [Service]
 Type=oneshot
+User=muttmetrics
+Group=muttmetrics
 WorkingDirectory=/opt/muttmetrics
 ExecStart=/opt/muttmetrics/.venv/bin/python ops/backup.py
 ```
@@ -144,7 +149,7 @@ Do this once after any change to the backup, and before anything risky (a migrat
 
 ```bash
 # 1. counts from the live database, to compare against
-docker compose exec db psql -U muttmetrics -d muttmetrics -c "SELECT (SELECT count(*) FROM owner) AS owners, (SELECT count(*) FROM dog) AS dogs, (SELECT count(*) FROM visit) AS visits, (SELECT count(*) FROM photo) AS photos;"
+docker compose exec db psql -U muttmetrics -d muttmetrics -c "SELECT (SELECT count(*) FROM owner) AS owners, (SELECT count(*) FROM pet) AS pets, (SELECT count(*) FROM visit) AS visits, (SELECT count(*) FROM photo) AS photos;"
 
 # 2. a scratch database, and the dump copied into the container
 #    drop it first: restoring into a database that already holds the same data
@@ -158,7 +163,7 @@ docker compose cp C:/muttmetrics-data/backups/db/muttmetrics-<stamp>.dump db:/tm
 docker compose exec db pg_restore -U muttmetrics -d muttmetrics_restore_test /tmp/restore.dump
 
 # 4. same counts, from the restored copy
-docker compose exec db psql -U muttmetrics -d muttmetrics_restore_test -c "SELECT (SELECT count(*) FROM owner) AS owners, (SELECT count(*) FROM dog) AS dogs, (SELECT count(*) FROM visit) AS visits, (SELECT count(*) FROM photo) AS photos;"
+docker compose exec db psql -U muttmetrics -d muttmetrics_restore_test -c "SELECT (SELECT count(*) FROM owner) AS owners, (SELECT count(*) FROM pet) AS pets, (SELECT count(*) FROM visit) AS visits, (SELECT count(*) FROM photo) AS photos;"
 
 # 5. clean up
 docker compose exec db dropdb -U muttmetrics muttmetrics_restore_test

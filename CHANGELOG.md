@@ -16,6 +16,21 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ### Fixed
 
+## [0.6.2] — 2026-11-05
+
+Groundwork for the home server (#93). Nothing changes on the groomer's screen.
+
+### Changed
+
+- `ops/deploy.py --to vX.Y.Z` deploys (or rolls back to) a release tag: backup, then checkout, then read the version. It installs runtime dependencies only, and with `--app-url` it checks that the SPA server's `/api` proxy adds the key
+- The Postgres password comes from `POSTGRES_PASSWORD` in `.env` instead of being written in `docker-compose.yml`
+- The backup timer example runs as an unprivileged `muttmetrics` user
+
+### Fixed
+
+- Deploying from a tag failed at `git pull`, because a checked-out tag isn't on a branch. Deploying from `main` reported a false version mismatch when the pull bumped the version
+- The restore-drill and db-peek count queries still used the `dog` table, which 0.6.0 renamed to `pet`
+
 ## [0.6.1] — 2026-11-03
 
 ### Changed
@@ -45,6 +60,7 @@ baseline the groomer's screen and `/health` can name.
 
 - Insecure / short `API_KEY` values refused at API (and proxy) startup
 
-[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.2
 [0.6.1]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.1
 [0.6.0]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.0
