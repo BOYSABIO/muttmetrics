@@ -35,6 +35,17 @@ MuttMetrics handles real client-adjacent business data for a dog grooming shop i
 
 Photos are sensitive operational data, not marketing assets by default. Since [#30](https://github.com/BOYSABIO/muttmetrics/issues/30) they are stored as files under `PHOTO_ROOT` (outside the repository) with one metadata row per file in the `photo` table. Operational detail: [`ops-photos.md`](../runbooks/photos.md); design rationale: [ADR-002](./adr/002-photo-storage.md).
 
+## Where the data lives (#93)
+
+| Copy | Where | Who can reach it |
+|---|---|---|
+| **Live** database + photos | The home server, a box at the maintainer's home: Postgres on its localhost; photos under `/srv/muttmetrics/photos` (owner-only) | The app, through the API. The groomer reaches the app **only over Tailscale**, on one port. Nothing is exposed to the internet: no port forwarding, Tailscale Funnel off |
+| Nightly backups | Same box, `/srv/muttmetrics/backups` (owner-only files) | The maintainer, over SSH (key only) |
+| Off-site copy | An encrypted (LUKS) drive kept outside the house ([#221](https://github.com/BOYSABIO/muttmetrics/issues/221), pending) | Whoever holds the drive *and* the passphrase |
+| The dev PC | **Synthetic data only**, once [#222](https://github.com/BOYSABIO/muttmetrics/issues/222) is done. Until then it holds a stopped copy from before the move, plus the old data folder as the only copy on another disk | The maintainer |
+
+**Never in a cloud service.** The box's system disk isn't encrypted (it has to reboot unattended); the copy that leaves the house is the one that's encrypted. Real data is looked at on the box, read-only for analysis ([#33](https://github.com/BOYSABIO/muttmetrics/issues/33)), not copied to the dev PC.
+
 ## Git rules
 
 These rules are non-negotiable:
@@ -119,16 +130,16 @@ Telling a client the deletion is instant and total would be false. What is true 
 
 ### Access
 
-Photos are served only through the API and require the shared `X-API-Key`. The browser never holds that key ([#194](https://github.com/BOYSABIO/muttmetrics/issues/194)): Vite's `/api` proxy (and later the box's static server on [#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) adds it when forwarding. Anyone who can open the SPA can still *use* the API through that proxy — access control is the Tailscale ACL, not the key. A public deployment still needs a real auth decision ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)).
+Photos are served only through the API and require the shared `X-API-Key`. The browser never holds that key ([#194](https://github.com/BOYSABIO/muttmetrics/issues/194)): Caddy on the home server ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)), or Vite's `/api` proxy in dev, adds it when forwarding. Anyone who can open the SPA can still *use* the API through that proxy — access control is the Tailscale ACL, not the key. A public deployment still needs a real auth decision ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)).
 
 ### API key (server-side only)
 
-`API_KEY` lives in the repo-root `.env`. The SPA calls relative `/api/…` URLs with **no** `X-API-Key`. Vite `dev` / `preview` read `API_KEY` (never a `VITE_` name — those get baked into `dist/`) and inject the header on the proxy hop. Direct `:8000` callers (curl, `/docs`) still send the header themselves.
+`API_KEY` lives in the repo-root `.env` (on the home server: `/opt/muttmetrics/.env`, mode 600, generated there). The SPA calls relative `/api/…` URLs with **no** `X-API-Key`. Caddy (production) and Vite `dev` / `preview` read `API_KEY` (never a `VITE_` name: those get baked into `dist/`) and **replace** the header on the proxy hop, so a visitor can't supply their own. Direct `:8000` callers (curl, `/docs`) still send the header themselves.
 
 | | Holds the key | Can call the API |
 |---|---|---|
 | Browser / `frontend/dist` | No | Yes, via the proxy (Tailscale ACL is the gate) |
-| Vite preview / later Caddy | Yes | Forwards with the header |
+| Caddy on the home server / Vite in dev | Yes | Forwards with the header |
 | FastAPI process | Yes | Enforces the header |
 
 Rules:
@@ -136,7 +147,7 @@ Rules:
 - **Never put the key in a `VITE_` env var** or anywhere the SPA imports. CI runs `npm run check:no-key-in-dist` after build.
 - **Don't reuse the key** anywhere else. It is a door code for this API, not a password.
 - **Don't ship the example:** the API and the Vite proxy both refuse `dev-change-me` or keys shorter than 24 characters ([#187](https://github.com/BOYSABIO/muttmetrics/issues/187)).
-- **Rotating it:** change `API_KEY` in `.env`, restart the API and `npm run preview` (or `dev`). No SPA rebuild.
+- **Rotating it:** on the box, change `API_KEY` in `.env`, then `sudo systemctl restart muttmetrics-api caddy` (in dev: restart the API and Vite). No SPA rebuild.
 - **Hosting `dist/` alone is not enough:** a static host without a proxy that injects the header cannot talk to a keyed API — and must still stay off the public internet until [#83](https://github.com/BOYSABIO/muttmetrics/issues/83).
 
 ## Client access and erasure (#195)

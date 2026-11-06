@@ -259,7 +259,7 @@ uvicorn muttmetrics.api.app:app --reload --reload-dir src --host 127.0.0.1 --por
 | `http://127.0.0.1:8000/metrics/period` | Dashboard | `GET` any inclusive range up to 366 days (`start`/`end`; week = Mon–Sun, month = calendar month). SPA uses this for both modes ([#170](https://github.com/BOYSABIO/muttmetrics/issues/170), [#187](https://github.com/BOYSABIO/muttmetrics/issues/187)) |
 | `http://127.0.0.1:8000/metrics/week` | Ops / curl | Thin Mon–Sun wrapper + `previous_week` ([#156](https://github.com/BOYSABIO/muttmetrics/issues/156)); same payload shape, period bounds are `start`/`end` |
 | `http://127.0.0.1:8000/docs` | maintainer | OpenAPI test console — **not** the groomer’s UI |
-| `http://127.0.0.1:5173` (dev) / `:5174` (preview) | groomer | React capture SPA in `frontend/` — **only** salon UI ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)–[#72](https://github.com/BOYSABIO/muttmetrics/issues/72)) |
+| `http://127.0.0.1:5173` (dev) / `:5174` (preview); production `https://muttmetrics.<tailnet>` | groomer | React capture SPA in `frontend/` — **only** salon UI ([#69](https://github.com/BOYSABIO/muttmetrics/issues/69)–[#72](https://github.com/BOYSABIO/muttmetrics/issues/72)) |
 
 `GET` / `POST /capture` (old Jinja form) was removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86) — expect **404**.
 
@@ -306,7 +306,7 @@ Never commit real `.env` values. CI sets `API_KEY` as an environment variable in
 
 ### React capture SPA (#69–#72)
 
-**Only** app UI for groomer/maintainer (not `/docs`). Vite + React + TypeScript in `frontend/`. **All API calls live in `src/api.ts`** (headers, error messages, response types) and shared date helpers in `src/dates.ts` ([#180](https://github.com/BOYSABIO/muttmetrics/issues/180)); components import from there and never call `fetch` themselves. Screens: `App.tsx` is the shell (home vs capture); `ThisWeek.tsx` is the dashboard; `Directory.tsx` is the client list, opening `PetProfileView` / `OwnerProfileView`; `Capture.tsx` is search → new client → 3-step visit wizard (then optional back-to-back dog), with the resumable draft in `draft.ts`. Top areas: **This week** | **Clients** ([#138](https://github.com/BOYSABIO/muttmetrics/issues/138)). Capture modes: **search** → **visit**, or **new** client → **visit**, then **after_save** for another dog from the same owner ([#191](https://github.com/BOYSABIO/muttmetrics/issues/191)). Directory: dog/owner profiles + safe PATCH + **Add dog** on the owner ([#139](https://github.com/BOYSABIO/muttmetrics/issues/139), [#140](https://github.com/BOYSABIO/muttmetrics/issues/140), [#191](https://github.com/BOYSABIO/muttmetrics/issues/191)). Jinja `/capture` (stage A, #63) was removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86) — no templates, no unauthenticated write path. Phone trial over Tailscale: [`docs/runbooks/groomer-trial.md`](./docs/runbooks/groomer-trial.md).
+**Only** app UI for groomer/maintainer (not `/docs`). Vite + React + TypeScript in `frontend/`. **All API calls live in `src/api.ts`** (headers, error messages, response types) and shared date helpers in `src/dates.ts` ([#180](https://github.com/BOYSABIO/muttmetrics/issues/180)); components import from there and never call `fetch` themselves. Screens: `App.tsx` is the shell (home vs capture); `ThisWeek.tsx` is the dashboard; `Directory.tsx` is the client list, opening `PetProfileView` / `OwnerProfileView`; `Capture.tsx` is search → new client → 3-step visit wizard (then optional back-to-back dog), with the resumable draft in `draft.ts`. Top areas: **This week** | **Clients** ([#138](https://github.com/BOYSABIO/muttmetrics/issues/138)). Capture modes: **search** → **visit**, or **new** client → **visit**, then **after_save** for another dog from the same owner ([#191](https://github.com/BOYSABIO/muttmetrics/issues/191)). Directory: dog/owner profiles + safe PATCH + **Add dog** on the owner ([#139](https://github.com/BOYSABIO/muttmetrics/issues/139), [#140](https://github.com/BOYSABIO/muttmetrics/issues/140), [#191](https://github.com/BOYSABIO/muttmetrics/issues/191)). Jinja `/capture` (stage A, #63) was removed in [#86](https://github.com/BOYSABIO/muttmetrics/issues/86) — no templates, no unauthenticated write path. Production: the home server ([`docs/runbooks/home-server.md`](./docs/runbooks/home-server.md)).
 
 | Path | API calls |
 |------|-----------|
@@ -350,7 +350,7 @@ npm run dev
 | Piece | Role |
 |-------|------|
 | `http://127.0.0.1:5173` | Vite **dev** server — hot reload, this PC only (`strictPort`) |
-| `http://<pc-ip>:5174` | Vite **preview** server — built `dist/`, network-facing, for the groomer trial |
+| `http://127.0.0.1:5174` | Vite **preview** server: built `dist/`, this PC only (local checks, e2e smoke). Production is the home server ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) |
 | `/api/*` in the SPA | Proxied to `http://127.0.0.1:8000/*`; proxy adds `X-API-Key` from root `API_KEY` ([#194](https://github.com/BOYSABIO/muttmetrics/issues/194)) |
 | `GET /pets?q=` | Directory browse/search — returns `owner_name` + `species` on each row (cap 50) |
 | `GET /owners?q=` | Owner search for capture “Already a client?” (#191) |
@@ -366,9 +366,9 @@ npm run dev
 
 PATCH sends only the fields you change. An explicit `null` clears an optional field (e.g. `phone`), but `null` on a required column (e.g. owner `locale`) is **422** (#177). Dog `weight_kg` must be > 0 and ≤ 150, which catches grams typed into the kg field. The Directory accepts a comma (`7,5` → 7.5) and refuses to save anything that still isn't a number, instead of sending `null` and wiping the weight (#178).
 
-**Auth note:** the browser never holds `API_KEY` ([#194](https://github.com/BOYSABIO/muttmetrics/issues/194)). Vite's proxy injects `X-API-Key`; Tailscale is still who may open the app. Details: [`privacy.md` → API key (server-side only)](./docs/architecture/privacy.md#api-key-server-side-only). Always-on OptiPlex ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) must do the same header injection on its static server when Vite preview goes away; cloud ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)) is iceboxed.
+**Auth note:** the browser never holds `API_KEY` ([#194](https://github.com/BOYSABIO/muttmetrics/issues/194)). Vite's proxy injects `X-API-Key`; Tailscale is still who may open the app. Details: [`privacy.md` → API key (server-side only)](./docs/architecture/privacy.md#api-key-server-side-only). On the home server ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) Caddy does the same header injection ([`ops/server/caddy/Caddyfile`](./ops/server/caddy/Caddyfile)); cloud ([#83](https://github.com/BOYSABIO/muttmetrics/issues/83)) is iceboxed.
 
-**Phone trial (#82):** the dev server stays on `127.0.0.1`; the groomer gets `npm run build && npm run preview` on a fixed `:5174`, reachable over Tailscale only on that one port. Full procedure: [`docs/runbooks/groomer-trial.md`](./docs/runbooks/groomer-trial.md).
+**Dev vs production:** the dev server stays on `127.0.0.1` and runs against a **synthetic** dev database ([#222](https://github.com/BOYSABIO/muttmetrics/issues/222)). The groomer uses the home server, which only ever runs a release tag. From a branch to his phone: [`docs/runbooks/release.md`](./docs/runbooks/release.md). `npm run preview` (`:5174`) is for local checks and the e2e smoke; it no longer serves the groomer.
 
 ### Create-or-get owners & dogs (#21, #187, #191)
 

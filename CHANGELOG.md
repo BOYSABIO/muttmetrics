@@ -12,7 +12,13 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ### Added
 
+- `ops/server/`: reference copies of the home server's config (systemd units, Caddyfile, nftables, SSH hardening, Docker `daemon.json`, sudoers, unattended-upgrades reboot), with placeholders instead of addresses and names. `tests/unit/test_server_files.py` keeps the folder free of private addresses, tailnet names and secrets, and pins the lines the security model relies on
+- Runbooks: `home-server.md` (rebuild from scratch with a check per step, day-to-day jobs, troubleshooting) and `groomer-access.md` (the groomer's phone), replacing the desktop-era `groomer-trial.md`
+
 ### Changed
+
+- `npm run preview` binds to `127.0.0.1`: it no longer serves the groomer, and the dev PC shouldn't listen on the network
+- Docs describe the home server as the host: `release.md` (branch → phone flow, box deploy, the rollback drill done 2026-11-06, the "old deploy script runs once" caveat), `backup.md` (systemd timer, box paths, stdin restore), `privacy.md` (where the data lives), README status, CONTRIBUTING
 
 ### Fixed
 

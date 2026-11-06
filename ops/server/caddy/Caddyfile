@@ -1,0 +1,24 @@
+# /etc/caddy/Caddyfile  (#93)
+# Serves the built SPA and proxies /api/* to the API, adding the key
+# server-side (#194). Localhost only: `tailscale serve` puts HTTPS in front.
+#
+# Any hostname, on purpose: requests arrive as muttmetrics.<tailnet>.ts.net,
+# so a site address with a host would never match.
+
+:8080 {
+	bind 127.0.0.1
+	encode gzip
+
+	handle_path /api/* {
+		reverse_proxy 127.0.0.1:8000 {
+			# Replaces whatever the browser sends: a visitor can't supply a key
+			header_up X-API-Key {env.API_KEY}
+		}
+	}
+
+	handle {
+		root * /opt/muttmetrics/frontend/dist
+		try_files {path} /index.html
+		file_server
+	}
+}
