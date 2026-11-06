@@ -24,6 +24,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import tomllib
 import urllib.error
 import urllib.request
@@ -112,11 +113,50 @@ def get_json(url: str) -> dict:
 
 
 def get_status(url: str) -> int:
+    """HTTP status of a GET; 0 if nothing answered (refused, timeout)."""
     try:
         with urllib.request.urlopen(url, timeout=10) as resp:
             return resp.status
     except urllib.error.HTTPError as exc:
         return exc.code
+    except (urllib.error.URLError, TimeoutError, ConnectionError):
+        return 0
+
+
+def wait_for_health(url: str, expected: str, timeout: float) -> dict:
+    """Poll /health until it reports `expected`, or give up after `timeout` s.
+
+    `systemctl restart` returns as soon as the new process has *started*, not
+    when it's listening, so the first request right after it is usually
+    refused. Retrying also rides out the old process answering for a moment.
+    """
+    deadline = time.monotonic() + timeout
+    last = "no answer yet"
+    while True:
+        try:
+            body = get_json(url)
+            if body.get("version") == expected:
+                return body
+            last = f"version {body.get('version')!r}, want {expected!r}"
+        except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError) as exc:
+            last = str(exc)
+        if time.monotonic() >= deadline:
+            raise SystemExit(
+                f"Health check failed at {url} after {timeout:.0f}s: {last}. "
+                "Check `systemctl status muttmetrics-api` / the journal, "
+                "or fix MUTTMETRICS_RESTART_CMD."
+            )
+        time.sleep(1)
+
+
+def wait_for_status(url: str, want: int, timeout: float) -> int:
+    """Poll until `url` returns `want`; returns the last status seen."""
+    deadline = time.monotonic() + timeout
+    while True:
+        status = get_status(url)
+        if status == want or time.monotonic() >= deadline:
+            return status
+        time.sleep(1)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -141,6 +181,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--health-url",
         default="http://127.0.0.1:8000/health",
         help="API health URL (default: local API)",
+    )
+    p.add_argument(
+        "--health-timeout",
+        type=float,
+        default=30,
+        metavar="SECONDS",
+        help="how long to wait for the restarted services to answer (default: 30)",
     )
     p.add_argument(
         "--app-url",
@@ -238,29 +285,19 @@ def main(argv: list[str] | None = None) -> int:
             log(f"  [dry-run] GET {args.app_url}/api/services → 200 (proxy adds the key)")
         return 0
 
-    try:
-        body = get_json(args.health_url)
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-        raise SystemExit(
-            f"Health check failed at {args.health_url}: {exc}. "
-            "Start/restart the API, then re-check, or fix MUTTMETRICS_RESTART_CMD."
-        ) from exc
+    body = wait_for_health(args.health_url, expected, args.health_timeout)
     log(f"  /health → {body}")
-    if body.get("version") != expected:
-        raise SystemExit(
-            f"Version mismatch: deployed={expected!r} /health.version={body.get('version')!r}. "
-            "Is the old API process still running?"
-        )
 
     if args.app_url:
         # /health needs no key, so it can't prove the proxy works. /services does.
         url = f"{args.app_url.rstrip('/')}/api/services"
-        status = get_status(url)
+        status = wait_for_status(url, 200, args.health_timeout)
         log(f"  {url} → {status}")
         if status != 200:
             raise SystemExit(
-                f"SPA proxy check failed ({status}). 401 = the SPA server isn't adding "
-                "X-API-Key from API_KEY (#194); 502/connection error = it can't reach the API."
+                f"SPA proxy check failed ({status or 'no answer'}). 401 = the SPA server "
+                "isn't adding X-API-Key from API_KEY (#194); 502 or no answer = it isn't "
+                "running or can't reach the API."
             )
     else:
         log("  (no --app-url / MUTTMETRICS_APP_URL: proxy check skipped)")

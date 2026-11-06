@@ -16,6 +16,15 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ### Fixed
 
+## [0.6.3] — 2026-11-06
+
+Found during the first deploy on the home server (#93). Nothing changes on the groomer's screen.
+
+### Fixed
+
+- `ops/deploy.py` checked `/health` the instant `systemctl restart` returned, before the API was listening, so a good deploy failed with "Connection refused". It now waits up to `--health-timeout` (30 s) for the new version to answer, and the proxy check waits the same way instead of crashing when nothing answers
+- `ops/backup.py` wrote dumps and photo copies readable by other local users when run from a login shell; they're now owner-only (umask 077)
+
 ## [0.6.2] — 2026-11-05
 
 Groundwork for the home server (#93). Nothing changes on the groomer's screen.
@@ -60,7 +69,8 @@ baseline the groomer's screen and `/health` can name.
 
 - Insecure / short `API_KEY` values refused at API (and proxy) startup
 
-[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.3
 [0.6.2]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.2
 [0.6.1]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.1
 [0.6.0]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.0

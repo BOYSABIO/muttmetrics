@@ -40,7 +40,7 @@ Steps (stops on first failure):
 7. `npm ci` + `npm run build` in `frontend/`
 8. Restart: if `MUTTMETRICS_RESTART_CMD` is set, run it; otherwise print a manual reminder
 9. Health:
-   - `GET /health`: `"version"` must match step 4.
+   - `GET /health`: `"version"` must match step 4. It retries for up to `--health-timeout` seconds (default 30), because `systemctl restart` returns before the API is listening.
    - If `--app-url` (or `MUTTMETRICS_APP_URL`) is set: `GET <app>/api/services` must return 200. `/health` needs no key, so only a protected route proves the SPA server adds `X-API-Key` (#194).
 
 **Why a tag is checked out, not pulled.** A checked-out tag isn't on a branch, and `git pull` needs one. The box therefore stays on the tag it last deployed, and every release or rollback is the same command: `--to` a tag.
