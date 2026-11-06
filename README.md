@@ -3,7 +3,7 @@
 Duration intelligence for a dog grooming business: structured visit data and P50/P90 duration ranges so the day can be packed against variance — not a booking or CRM system.
 
 **Stack:** Python · Postgres · SQLAlchemy 2.x · Alembic · FastAPI · Vite + React + TS (capture SPA)  
-**Status:** Capture is running on real grooms through the React SPA, the only groomer UI. It has photos, backups and a timer that survives a killed tab. M5 ("First Real Numbers") added the groomer's dashboard: week and month views of grooms, time, take-home, €/hour by coat, timing checks and day load. Every number is read from SQL range functions ([ADR-003](docs/architecture/adr/003-metric-views.md), [#158](https://github.com/BOYSABIO/muttmetrics/issues/158), [#170](https://github.com/BOYSABIO/muttmetrics/issues/170)) and hardened in [#177](https://github.com/BOYSABIO/muttmetrics/issues/177)/[#178](https://github.com/BOYSABIO/muttmetrics/issues/178). Next: the M5 measurement window, which asks whether the dashboard changes logging ([#159](https://github.com/BOYSABIO/muttmetrics/issues/159)). The host is still the maintainer's desktop ([#82](https://github.com/BOYSABIO/muttmetrics/issues/82) runbook); the always-on OptiPlex ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)) is iceboxed until the shop is ready. CSV backfill is deferred.  
+**Status:** Capture runs on real grooms through the React SPA, the only groomer UI, with photos, backups and a timer that survives a killed tab. M5 added the groomer's dashboard (week and month views read from SQL range functions, [ADR-003](docs/architecture/adr/003-metric-views.md)). M6 ("production-ready") made it run for real: versioned releases, a one-command deploy and rollback, GDPR export/erase, cats and other species, add-ons, editing a visit. Since 2026-11 it runs on an **always-on home server** reached only over Tailscale ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93), [home-server runbook](docs/runbooks/home-server.md)). Next: monitoring ([#104](https://github.com/BOYSABIO/muttmetrics/issues/104)) and the encrypted off-site backup ([#221](https://github.com/BOYSABIO/muttmetrics/issues/221)).
 
 ## Documentation
 
@@ -13,8 +13,8 @@ Duration intelligence for a dog grooming business: structured visit data and P50
 |---|---|
 | **Product** | [Case study](docs/product/case-study.md) · [Vision](docs/product/vision.md) |
 | **Architecture** | [Schema](docs/architecture/schema.md) · [Privacy](docs/architecture/privacy.md) · [ADRs](docs/architecture/adr/) · [Rules prior](docs/prior.md) |
-| **Runbooks** | [Groomer trial](docs/runbooks/groomer-trial.md) · [DB peek](docs/runbooks/db-peek.md) · [Enrichment](docs/runbooks/enrichment.md) · [Photos](docs/runbooks/photos.md) · [Backups](docs/runbooks/backup.md) · [Compliance](docs/runbooks/compliance.md) · [Analytics](docs/runbooks/analytics.md) · [Migrations](docs/runbooks/migrations.md) |
-| **Ops** | [Ops map](ops/README.md) — backup, photos, SQL recipes; package CLIs stay in `src/` |
+| **Runbooks** | [Home server](docs/runbooks/home-server.md) · [Groomer access](docs/runbooks/groomer-access.md) · [Release](docs/runbooks/release.md) · [DB peek](docs/runbooks/db-peek.md) · [Enrichment](docs/runbooks/enrichment.md) · [Photos](docs/runbooks/photos.md) · [Backups](docs/runbooks/backup.md) · [Compliance](docs/runbooks/compliance.md) · [Analytics](docs/runbooks/analytics.md) · [Migrations](docs/runbooks/migrations.md) |
+| **Ops** | [Ops map](ops/README.md) — backup, photos, SQL recipes; package CLIs stay in `src/` · [Server config](ops/server/README.md) |
 | **Contributing** | [Setup](#setup) · [CONTRIBUTING](./CONTRIBUTING.md) |
 | **Planning** | [Milestones](https://github.com/BOYSABIO/muttmetrics/milestones) · [Issues](https://github.com/BOYSABIO/muttmetrics/issues) |
 
@@ -63,7 +63,7 @@ copy .env.example .env   # Windows; optional VITE_BUSINESS_NAME only — API_KEY
 npm install
 npm run dev
 # open http://127.0.0.1:5173 (dev server — this PC only, fixed port)
-# groomer trial instead: npm run build && npm run preview → :5174 (docs/runbooks/groomer-trial.md)
+# production runs on the home server, deployed from a tag (docs/runbooks/release.md)
 
 pytest                   # runs against muttmetrics_test, never the dev DB (setup: CONTRIBUTING)
 ruff check .

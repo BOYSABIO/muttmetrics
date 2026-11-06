@@ -68,9 +68,10 @@ export default defineConfig(({ command, mode }) => {
       proxy,
     },
 
-    // npm run build, then npm run preview: what the groomer opens over Tailscale
+    // npm run build, then npm run preview: local checks + the e2e smoke, this PC only.
+    // The groomer uses the home server (Caddy + tailscale serve, #93), not this.
     preview: {
-      host: '0.0.0.0',
+      host: '127.0.0.1',
       port: 5174,
       strictPort: true,
       proxy,

@@ -2,7 +2,7 @@
 
 Operational reference for photo storage ([#30](https://github.com/BOYSABIO/muttmetrics/issues/30)). Design rationale is in [ADR-002](../architecture/adr/002-photo-storage.md); the privacy policy this implements is in [`privacy.md`](../architecture/privacy.md).
 
-Related: [`db-peek.md`](./db-peek.md) (looking at rows), [`enrichment.md`](./enrichment.md) (fixing rows), [`groomer-trial.md`](./groomer-trial.md) (running the stack), [`ops/README.md`](../../ops/README.md) (all maintainer scripts).
+Related: [`db-peek.md`](./db-peek.md) (looking at rows), [`enrichment.md`](./enrichment.md) (fixing rows), [`home-server.md`](./home-server.md) (where the stack runs), [`ops/README.md`](../../ops/README.md) (all maintainer scripts).
 
 ---
 

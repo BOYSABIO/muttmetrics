@@ -12,6 +12,7 @@ Data-filling policy (thin capture vs enrichment): [`docs/prior.md`](../docs/prio
 | **Python ops** | `ops/*.py` | `python ops/<name>.py` (venv on, from repo root) |
 | **SQL recipes** | `ops/sql/*.sql` | Postgres extension, or **encoding-safe** `docker compose cp` + `psql -f` (see below). Never `Get-Content \| docker …` — PowerShell can turn `€` into `?`. |
 | **Package CLIs** | `src/muttmetrics/` | `python -m muttmetrics.<module>` or console scripts from `pyproject.toml` |
+| **Server config** | `ops/server/` | Reference copies of the home server's config files; installed by hand per [`home-server.md`](../docs/runbooks/home-server.md) ([README](./server/README.md)) |
 
 Personal / PII-named SQL: `*.local.sql` under `ops/` (gitignored) — never commit real client names.
 
@@ -35,7 +36,7 @@ Do **not** merge purge+sweep, backup+check, or the metric SQL files into one meg
 | [`backfill_size_band.py`](./backfill_size_band.py) | Recompute `pet.size_band` from `weight_kg` + `species` (#171 / #190) | dry-run default; `--apply` to write |
 | [`client_export.py`](./client_export.py) | Art. 15: export one owner → `data/exports/` (#195) | [`client-requests.md`](../docs/runbooks/client-requests.md) |
 | [`client_erase.py`](./client_erase.py) | Art. 17: anonymise one owner (photos + PII scrub; keep visit facts) (#195) | dry-run default; `--apply`; same runbook |
-| [`deploy.py`](./deploy.py) | Release deploy: backup → pull → migrate → SPA build → health (#197) | [`release.md`](../docs/runbooks/release.md); `--dry-run` |
+| [`deploy.py`](./deploy.py) | Release deploy on the box: `--to vX.Y.Z` → backup → checkout tag → migrate → SPA build → restart → health (#197, #93) | [`release.md`](../docs/runbooks/release.md); `--dry-run` |
 | [`demo_data.py`](./demo_data.py) | Load Syn* fixtures into an **empty** DB (demos, screenshots, Playwright e2e) | refuses if any visit exists; CI calls it |
 
 ## SQL recipes (`ops/sql/`)
