@@ -40,3 +40,57 @@ def test_dry_run_changes_nothing(capsys):
     assert "/api/services" in out
     # backup happens before the code moves
     assert out.index("ops/backup.py") < out.index("git checkout")
+
+
+def test_health_waits_for_the_restarted_api(monkeypatch):
+    # Right after `systemctl restart` the API refuses connections for a moment,
+    # then the old version may answer: neither is a failed deploy (#93).
+    import urllib.error
+
+    import ops.deploy as deploy
+
+    answers = iter(
+        [
+            urllib.error.URLError(ConnectionRefusedError(111, "Connection refused")),
+            {"status": "ok", "version": "0.6.1"},
+            {"status": "ok", "version": "0.6.2"},
+        ]
+    )
+
+    def fake_get_json(url):
+        a = next(answers)
+        if isinstance(a, Exception):
+            raise a
+        return a
+
+    monkeypatch.setattr(deploy, "get_json", fake_get_json)
+    monkeypatch.setattr(deploy.time, "sleep", lambda s: None)
+    assert deploy.wait_for_health("http://x/health", "0.6.2", timeout=30)["version"] == "0.6.2"
+
+
+def test_health_gives_up_after_the_timeout(monkeypatch):
+    import urllib.error
+
+    import ops.deploy as deploy
+
+    def refused(url):
+        raise urllib.error.URLError(ConnectionRefusedError(111, "Connection refused"))
+
+    clock = iter(range(0, 1000, 10))
+    monkeypatch.setattr(deploy, "get_json", refused)
+    monkeypatch.setattr(deploy.time, "sleep", lambda s: None)
+    monkeypatch.setattr(deploy.time, "monotonic", lambda: next(clock))
+    with pytest.raises(SystemExit, match="after 30s"):
+        deploy.wait_for_health("http://x/health", "0.6.2", timeout=30)
+
+
+def test_proxy_check_treats_no_answer_as_zero(monkeypatch):
+    import urllib.error
+
+    import ops.deploy as deploy
+
+    def refused(url, timeout):
+        raise urllib.error.URLError(ConnectionRefusedError(111, "Connection refused"))
+
+    monkeypatch.setattr(deploy.urllib.request, "urlopen", refused)
+    assert deploy.get_status("http://x/api/services") == 0
