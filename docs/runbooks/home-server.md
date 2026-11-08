@@ -28,6 +28,8 @@ maintainer ──SSH, key only──► <admin>@box   (by name over Tailscale; o
 | Data | `/srv/muttmetrics/photos`, `/srv/muttmetrics/backups` (700; files 600) |
 | Listening | LAN: SSH only. Tailscale: 443 (`serve`). Localhost: 8080 (Caddy), 8000 (API), 5432 (Postgres), 2019 (Caddy admin) |
 | URL | `https://muttmetrics.<tailnet>` (full name; the certificate doesn't cover the short name) |
+| Timers | `muttmetrics-backup` (00:30, reports to Healthchecks), `muttmetrics-heartbeat` (every 5 min), unattended-upgrades (reboot 04:30 when needed) |
+| Watching | Healthchecks.io (free; outgoing pings only, no client data) → Telegram. Ping URLs only in `/etc/muttmetrics/healthchecks.env` (root, 600) |
 
 ---
 
@@ -40,7 +42,7 @@ Each step ends in a **check**. Don't start the next step until it passes.
 ```bash
 sudo apt update && sudo apt full-upgrade -y
 sudo apt install -y unattended-upgrades apt-listchanges curl git ca-certificates nftables tcpdump
-sudo dpkg-reconfigure -plow unattended-upgrades                  # answer Yes
+sudo dpkg-reconfigure -plow unattended-upgrades                  # answer Yes (= ops/server/apt/20auto-upgrades)
 sudo install -m 644 52muttmetrics-reboot /etc/apt/apt.conf.d/    # from ops/server/apt/ (copy it over, or paste it)
 sudo timedatectl set-timezone Europe/Berlin
 ```
@@ -85,6 +87,8 @@ sudo systemctl reload ssh
 - **Grant:** `group:<groomer-group>` → `tag:muttmetrics`, `tcp:443`, nothing else.
 - **Test,** typed from the requirement (**not** copied from the rule): accept `tag:muttmetrics:443`; deny `tag:muttmetrics:22`, `:8000`, `:5432`.
 - **The groomer's phone:** disable key expiry on it.
+
+The tag, grant and test are in [`ops/server/tailscale/policy-snippet.hujson`](../../ops/server/tailscale/policy-snippet.hujson), ready to merge into the policy file.
 
 ```bash
 curl -fsSL https://pkgs.tailscale.com/stable/debian/trixie.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
@@ -249,6 +253,35 @@ journalctl -u muttmetrics-backup -n 8 --no-pager     # ends in "OK"
 
 Then run a **restore drill** ([`backup.md`](./backup.md) §5) and log it privately. The encrypted off-site drive is [#221](https://github.com/BOYSABIO/muttmetrics/issues/221).
 
+### A5b. Monitoring (Healthchecks.io, #104)
+
+The box can't report its own death, so an outside service watches for **missing** signals. The box only makes outgoing HTTPS requests: no port opens, and no client data is sent (each ping is empty).
+
+1. **On Healthchecks.io** (free plan), create a project with two checks, and connect Telegram (or Discord) under *Integrations*. Email is added by default; turn it off per check if one push channel is enough:
+   - `muttmetrics-heartbeat`: Simple, period **5 min**, grace **25 min**;
+   - `muttmetrics-backup`: Cron `30 0 * * *`, time zone `Europe/Berlin`, grace **1 hour**.
+2. **The ping URLs are secrets** (anyone who has one can fake "all is well"). Put them only on the box:
+   ```bash
+   sudo install -d -m 755 /etc/muttmetrics
+   sudo install -m 600 /dev/null /etc/muttmetrics/healthchecks.env
+   sudoedit /etc/muttmetrics/healthchecks.env          # format: ops/server/monitoring/healthchecks.env.example
+   ```
+3. **Install** `muttmetrics-heartbeat.{service,timer}` from `ops/server/systemd/` (the backup unit from A5 already reports once the env file exists: its `EnvironmentFile=-…` is optional, so A5 works before A5b), then:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now muttmetrics-heartbeat.timer
+   sudo systemctl start muttmetrics-heartbeat.service muttmetrics-backup.service
+   ```
+
+**What each check covers:**
+
+| Check | The box sends | Alarm when |
+|---|---|---|
+| Heartbeat | every 5 min: a ping if `/api/services` answers through Caddy (Caddy + API + key + Postgres), `/fail` if not | the app is broken (`/fail`, immediately); **or nothing for ~30 min**: power, internet, a frozen box, the USB SSD |
+| Backup | after every run: a ping on success, `/fail` on any failure (`ExecStopPost`) | the backup failed (immediately); **or it didn't run** (no success by ~01:30) |
+
+**Check:** both checks turn green in the Healthchecks dashboard. Stop the API (`sudo systemctl stop muttmetrics-api`), run `sudo systemctl start muttmetrics-heartbeat.service`, and a 🔴 message arrives; start the API again and run the heartbeat once more: ✅.
+
 **Reboot check:** `sudo reboot`, then `systemctl is-active docker muttmetrics-api caddy nftables tailscaled` shows five `active`, and `/health` answers over HTTPS.
 
 ### A6. Moving data in (from another host)
@@ -291,6 +324,7 @@ Do it after hours, with no pending draft on the groomer's phone:
 |---|---|
 | **Deploy / roll back** | As `muttmetrics` in `/opt/muttmetrics`: `.venv/bin/python ops/deploy.py --to vX.Y.Z` ([`release.md`](./release.md)). Never edit, `npm audit fix` or upgrade npm in the checkout; the deploy refuses a dirty tree |
 | **Updates** | Debian packages (incl. Python and Caddy): automatic, reboot at 04:30 when needed. Tailscale: auto-update. **Docker and Node: monthly** `sudo apt update && sudo apt upgrade` |
+| **Alerts** | Healthchecks.io → Telegram (§A5b). Email is turned off per check on purpose; switch it back on there if Telegram ever stops being reliable. Pausing a check during planned work (e.g. a long restore): *Pause* on its page, so it doesn't page you |
 | **Is it healthy?** | `systemctl is-active docker muttmetrics-api caddy nftables tailscaled`; `systemctl --failed`; `curl -s http://127.0.0.1:8000/health` |
 | **Backups OK?** | `systemctl list-timers muttmetrics-backup.timer`; `journalctl -u muttmetrics-backup -n 8`; `sudo -iu muttmetrics sh -c 'cd /opt/muttmetrics && .venv/bin/python ops/backup_check.py'` |
 | **Logs** | API `journalctl -u muttmetrics-api`; Caddy `journalctl -u caddy`; Postgres `docker compose logs db` (as `muttmetrics`); firewall drops `journalctl -k \| grep host_fw`; tailnet rule drops `journalctl -u tailscaled \| grep Drop` |
@@ -313,6 +347,9 @@ Do it after hours, with no pending draft on the groomer's phone:
 | Deploy: "working tree is dirty" | `git status --short` | Something edited the checkout; `git checkout -- .` (code only) and redeploy |
 | `sudo` refuses `muttmetrics`'s password | the prompt | Working as intended: it has no password and no general sudo. `exit` to `<admin>` |
 | SSH from the LAN times out | `journalctl -k \| grep host_fw` | Arriving through a subnet router (shows the router's address). Use `ssh <admin>@muttmetrics` |
+| 🔴 *heartbeat is DOWN, signal did not arrive* | is the box on? `tailscale status` from another device | **Silence:** power, home internet, a frozen box, or the USB SSD. Nothing to do remotely if it's off (#217: press the button) |
+| 🔴 *heartbeat is DOWN, failure signal* | `systemctl is-active muttmetrics-api caddy docker`; `curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/api/services` | **The box is up, the app isn't:** API, Caddy or Postgres down. Restart the failed one; check its log |
+| 🔴 *backup is DOWN* | `journalctl -u muttmetrics-backup -n 30` | **Failure signal:** the backup or its check failed. **No signal:** the timer didn't run (`systemctl list-timers muttmetrics-backup.timer`) |
 | Backup unit failed | `systemctl status muttmetrics-backup`; `journalctl -u muttmetrics-backup` | Docker or Postgres down, or disk full; fix it and `sudo systemctl start muttmetrics-backup.service` |
 
 **Debugging lessons:**

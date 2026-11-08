@@ -1,0 +1,33 @@
+// Tailscale policy: the parts the MuttMetrics home server needs (#93).
+// Merge into the tailnet policy file (admin console → Access controls → JSON editor),
+// then save: the tests run on every save and refuse a policy that breaks them.
+// Placeholder: group:<groomer-group> (the real group and its members live in the
+// policy itself and in the maintainer's private notes, never here).
+{
+	"tagOwners": {
+		// The box joins with --advertise-tags=tag:muttmetrics. Tagged = no owner,
+		// key expiry off, and it can't reach anything by itself.
+		"tag:muttmetrics": ["autogroup:admin"],
+	},
+
+	"grants": [
+		// The groomer's group → the app over HTTPS (tailscale serve), nothing else.
+		{
+			"src": ["group:<groomer-group>"],
+			"dst": ["tag:muttmetrics"],
+			"ip":  ["tcp:443"],
+		},
+		// Admins keep full access through the usual "autogroup:admin → *" grant.
+	],
+
+	"tests": [
+		// Typed from the requirement, NOT copied from the grant above: a copied test
+		// repeats the grant's typo and then protects it (it happened: 433 vs 443).
+		{
+			"src":    "group:<groomer-group>",
+			"accept": ["tag:muttmetrics:443"],
+			"deny":   ["tag:muttmetrics:22", "tag:muttmetrics:8000", "tag:muttmetrics:5432"],
+			"proto":  "tcp",
+		},
+	],
+}

@@ -12,7 +12,12 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ### Added
 
+- Monitoring for the home server ([#104](https://github.com/BOYSABIO/muttmetrics/issues/104)): a heartbeat every 5 minutes (through Caddy to a route that needs the database, so one ping proves the whole chain; `/fail` if it breaks) and a success/failure report after every nightly backup, both to Healthchecks.io. The box only makes outgoing requests and sends no client data. Reference units in `ops/server/systemd/`, the env template in `ops/server/monitoring/`, setup in `home-server.md` §A5b
+- `ops/server/apt/20auto-upgrades` and `ops/server/tailscale/policy-snippet.hujson` (the tag, the groomer's 443 grant and its test, with a placeholder group), so the whole box can be rebuilt from `ops/server/`
+
 ### Changed
+
+- The backup unit's Healthchecks report is optional (`EnvironmentFile=-…`; no URL = no report), so a rebuild works in any order and the backup never depends on monitoring
 
 ### Fixed
 
