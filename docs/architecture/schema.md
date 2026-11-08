@@ -49,6 +49,7 @@ erDiagram
         int predicted_min_p50 "system-computed"
         int condition_score "0 worst - 5 best"
         text status "completed|cancelled|no_show"
+        timestamptz created_at "system: when saved"
     }
 
     BREED {
@@ -139,6 +140,7 @@ erDiagram
 | Techniques | via `visit_add_on` → `add_on` ([#192](https://github.com/BOYSABIO/muttmetrics/issues/192); unused `add_ons[]` dropped) |
 | Qualitative | `what_surprised_me`, `behaviour_this_visit` |
 | Status | `status`, `cancelled_hours_before` |
+| System: when saved | `created_at` (set by Postgres, `DEFAULT now()`; never written by the API). **NULL = saved before 2026-11 ([#224](https://github.com/BOYSABIO/muttmetrics/issues/224)), unknown.** Compare with `visit_date` to tell a visit logged on the day from a backfilled one |
 
 ### `breed` / `service`
 

@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from muttmetrics.models import Breed, Owner, Pet
+from muttmetrics.models import Breed, Owner, Pet, Visit
 from muttmetrics.seed.data import SEED_ADD_ONS
 
 MINIMAL_BASE = {
@@ -535,3 +535,59 @@ def test_patch_visit_replaces_and_clears_add_ons(
     assert minutes_only.status_code == 200
     assert minutes_only.json()["actual_minutes"] == 70
     assert minutes_only.json()["add_ons"][0]["slug"] == "hand_stripping"
+
+
+def test_create_visit_records_when_it_was_saved(
+    client: TestClient,
+    db_session: Session,
+    demo_pet_owner: tuple[int, int],
+    auth_headers: dict[str, str],
+) -> None:
+    # A backfilled visit: dated in the past, saved now. created_at tells them apart (#224).
+    owner_id, pet_id = demo_pet_owner
+    created = client.post(
+        "/visits",
+        json={"pet_id": pet_id, "owner_id": owner_id, **MINIMAL_BASE},
+        headers=auth_headers,
+    )
+    assert created.status_code == 201
+
+    db_session.expire_all()
+    visit = db_session.get(Visit, created.json()["visit_id"])
+    assert visit is not None
+    assert visit.created_at is not None
+    assert visit.created_at.tzinfo is not None
+    assert visit.created_at.date() > visit.visit_date  # saved after the day it happened
+
+
+def test_patch_visit_cannot_set_or_change_created_at(
+    client: TestClient,
+    db_session: Session,
+    demo_pet_owner: tuple[int, int],
+    auth_headers: dict[str, str],
+) -> None:
+    owner_id, pet_id = demo_pet_owner
+    created = client.post(
+        "/visits",
+        json={"pet_id": pet_id, "owner_id": owner_id, **MINIMAL_BASE},
+        headers=auth_headers,
+    )
+    visit_id = created.json()["visit_id"]
+    db_session.expire_all()
+    saved_at = db_session.get(Visit, visit_id).created_at
+
+    forged = client.patch(
+        f"/visits/{visit_id}",
+        json={"created_at": "2020-01-01T00:00:00Z"},
+        headers=auth_headers,
+    )
+    assert forged.status_code == 422
+
+    edited = client.patch(
+        f"/visits/{visit_id}",
+        json={"visit_date": "2026-09-01", "actual_minutes": 80},
+        headers=auth_headers,
+    )
+    assert edited.status_code == 200
+    db_session.expire_all()
+    assert db_session.get(Visit, visit_id).created_at == saved_at

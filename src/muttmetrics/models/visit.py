@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
@@ -10,12 +10,14 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Date,
+    DateTime,
     ForeignKey,
     Index,
     Integer,
     Numeric,
     String,
     Text,
+    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -101,6 +103,13 @@ class Visit(Base):
     # Status
     status: Mapped[str | None] = mapped_column(String, nullable=True)
     cancelled_hours_before: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # When the row was saved (system, set by Postgres): tells a visit logged on the
+    # day from one backfilled weeks later (#224). NULL = saved before this column
+    # existed, so unknown. Never written by the API.
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, server_default=func.now()
+    )
 
     # Relationships
     pet: Mapped[Pet] = relationship(back_populates="visits")

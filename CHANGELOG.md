@@ -12,6 +12,17 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.6.4] — 2026-11-08
+
+One database migration (deploy backs up first). Nothing changes on the groomer's screen.
+
+### Added
+
+- `visit.created_at`: when a visit was saved, set by Postgres, so visits backfilled later (dated in the past) can be told apart from ones logged on the day. Existing visits stay `NULL` (unknown) on purpose: the migration adds the column first and only then the `DEFAULT now()`, so it can't stamp old rows with the migration time. Not used by the compliance SQL yet ([#224](https://github.com/BOYSABIO/muttmetrics/issues/224)); included in the GDPR export
 - `ops/server/`: reference copies of the home server's config (systemd units, Caddyfile, nftables, SSH hardening, Docker `daemon.json`, sudoers, unattended-upgrades reboot), with placeholders instead of addresses and names. `tests/unit/test_server_files.py` keeps the folder free of private addresses, tailnet names and secrets, and pins the lines the security model relies on
 - Runbooks: `home-server.md` (rebuild from scratch with a check per step, day-to-day jobs, troubleshooting) and `groomer-access.md` (the groomer's phone), replacing the desktop-era `groomer-trial.md`
 
@@ -19,8 +30,6 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 - `npm run preview` binds to `127.0.0.1`: it no longer serves the groomer, and the dev PC shouldn't listen on the network
 - Docs describe the home server as the host: `release.md` (branch → phone flow, box deploy, the rollback drill done 2026-11-06, the "old deploy script runs once" caveat), `backup.md` (systemd timer, box paths, stdin restore), `privacy.md` (where the data lives), README status, CONTRIBUTING
-
-### Fixed
 
 ## [0.6.3] — 2026-11-06
 
@@ -75,7 +84,8 @@ baseline the groomer's screen and `/health` can name.
 
 - Insecure / short `API_KEY` values refused at API (and proxy) startup
 
-[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.4
 [0.6.3]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.3
 [0.6.2]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.2
 [0.6.1]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.1
