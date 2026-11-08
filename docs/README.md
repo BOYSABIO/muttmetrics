@@ -27,7 +27,7 @@ Everything written about the project, grouped by what you're trying to do. **Tas
 
 | Runbook | Use it when |
 |---|---|
-| [Home server](runbooks/home-server.md) | Rebuilding the always-on box from scratch (with a check per step), day-to-day jobs, troubleshooting (#93) |
+| [Home server](runbooks/home-server.md) | Rebuilding the always-on box from scratch (with a check per step), monitoring and what each alert means, day-to-day jobs, troubleshooting (#93, #104) |
 | [Groomer access](runbooks/groomer-access.md) | The groomer's phone: setup, his checklist, "the app doesn't work" |
 | [DB peek](runbooks/db-peek.md) | You want to look at the data (editor or `psql`) with starter queries |
 | [Enrichment](runbooks/enrichment.md) | Directory first (M4.75 [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) closed); SQL escape hatch ([#141](https://github.com/BOYSABIO/muttmetrics/issues/141)); follow-ons [#151](https://github.com/BOYSABIO/muttmetrics/issues/151), [#152](https://github.com/BOYSABIO/muttmetrics/issues/152) |

@@ -84,6 +84,8 @@ Ask him first, in this order:
 2. **Did he use the shortcut?** A typed name without `https://` hangs.
 3. **Does he have signal?** No signal = no app. Saves wait as drafts.
 
+Often Owner already knows: if the app itself is broken, Healthchecks sends a 🔴 to Telegram within 5 minutes, and if the box has gone silent, within about 30 ([`home-server.md`](./home-server.md) §A5b).
+
 Then Owner, on the box (details: [`home-server.md`](./home-server.md) Part C):
 
 ```bash

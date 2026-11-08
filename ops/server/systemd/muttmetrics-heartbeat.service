@@ -1,0 +1,15 @@
+# /etc/systemd/system/muttmetrics-heartbeat.service  (#104)
+# Every 5 minutes (timer): "the app works" → ping Healthchecks; otherwise /fail.
+# /api/services through Caddy needs Caddy, the API, the key injection and Postgres,
+# so one request proves the whole chain. (/health alone answers even with the DB down.)
+# If the box is off or offline, no ping arrives at all and Healthchecks raises the alarm.
+[Unit]
+Description=MuttMetrics heartbeat to Healthchecks - #104
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+EnvironmentFile=/etc/muttmetrics/healthchecks.env
+ExecStart=/bin/sh -c 'if curl -fsS -m 10 -o /dev/null http://127.0.0.1:8080/api/services; then curl -fsS -m 10 --retry 3 -o /dev/null "$$HC_HEARTBEAT_URL"; else curl -fsS -m 10 --retry 3 -o /dev/null "$$HC_HEARTBEAT_URL/fail"; fi'

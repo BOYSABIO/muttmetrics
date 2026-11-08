@@ -46,6 +46,7 @@ def test_no_tailnet_names_or_secrets(path):
     text = path.read_text(encoding="utf-8")
     assert not re.search(r"tail[0-9a-f]{4,}\.ts\.net", text), f"{path.name}: real tailnet name"
     assert not re.search(r"tskey-", text), f"{path.name}: Tailscale auth key"
+    assert not re.search(r"hc-ping\.com/[0-9a-f]{8}-", text), f"{path.name}: real ping URL"
     assert not re.search(r"(?m)^\s*(API_KEY|POSTGRES_PASSWORD|DATABASE_URL)\s*=", text), (
         f"{path.name}: secrets belong in the box's .env only"
     )
@@ -92,3 +93,32 @@ def test_restart_command_matches_sudoers():
 def test_postgres_stays_on_localhost():
     compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
     assert '"127.0.0.1:5432:5432"' in compose
+
+
+def test_backup_reports_success_and_failure_to_healthchecks():
+    unit = read("systemd/muttmetrics-backup.service")
+    # optional (leading "-"): the backup must not depend on monitoring being set up
+    assert "EnvironmentFile=-/etc/muttmetrics/healthchecks.env" in unit
+    # ExecStopPost runs whatever happened; $$ leaves the variable to the shell
+    assert '[ -n "$$HC_BACKUP_URL" ] || exit 0' in unit
+    assert 'if [ "$$SERVICE_RESULT" = success ]' in unit
+    assert '"$$HC_BACKUP_URL/fail"' in unit
+
+
+def test_heartbeat_proves_the_whole_chain():
+    unit = read("systemd/muttmetrics-heartbeat.service")
+    # through Caddy (key injection) to a route that needs the database
+    assert "http://127.0.0.1:8080/api/services" in unit
+    assert '"$$HC_HEARTBEAT_URL/fail"' in unit
+    assert "DynamicUser=yes" in unit
+    timer = read("systemd/muttmetrics-heartbeat.timer")
+    assert "OnUnitActiveSec=5min" in timer
+
+
+def test_tailscale_snippet_keeps_the_groomer_to_443():
+    text = read("tailscale/policy-snippet.hujson")
+    assert '"dst": ["tag:muttmetrics"]' in text
+    assert '"ip":  ["tcp:443"]' in text
+    assert '"accept": ["tag:muttmetrics:443"]' in text
+    assert "group:<groomer-group>" in text
+    assert "@" not in text.replace("autogroup:", "")  # no real accounts or emails

@@ -82,6 +82,7 @@ Pruning only ever touches files matching `muttmetrics-*.dump` whose timestamp it
 Installed from [`ops/server/systemd/`](../../ops/server/systemd/) ([`home-server.md`](./home-server.md) A5):
 
 - **`muttmetrics-backup.service`:** runs `ops/backup.py` as `muttmetrics` (needs the `docker` group, which is root-equivalent, so nobody else gets it), then `ops/backup_check.py --max-age-hours 1` as `ExecStartPost`. If the backup *or* the check fails, the unit shows as **failed**, which is what monitoring watches ([#104](https://github.com/BOYSABIO/muttmetrics/issues/104)).
+- **Reporting (#104):** after every run, `ExecStopPost` pings Healthchecks.io: success, or `/fail` on any failure. A run that never starts sends nothing, and Healthchecks alarms on the missing signal (Telegram). Setup: [`home-server.md`](./home-server.md) §A5b.
 - **`muttmetrics-backup.timer`:** `OnCalendar=*-*-* 00:30`, after midnight and before the 04:30 update-reboot window. `Persistent=true` is systemd's "run a missed job": if the box was off, it runs at the next boot.
 
 ```bash

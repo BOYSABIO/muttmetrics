@@ -12,7 +12,7 @@ Data-filling policy (thin capture vs enrichment): [`docs/prior.md`](../docs/prio
 | **Python ops** | `ops/*.py` | `python ops/<name>.py` (venv on, from repo root) |
 | **SQL recipes** | `ops/sql/*.sql` | Postgres extension, or **encoding-safe** `docker compose cp` + `psql -f` (see below). Never `Get-Content \| docker …` — PowerShell can turn `€` into `?`. |
 | **Package CLIs** | `src/muttmetrics/` | `python -m muttmetrics.<module>` or console scripts from `pyproject.toml` |
-| **Server config** | `ops/server/` | Reference copies of the home server's config files; installed by hand per [`home-server.md`](../docs/runbooks/home-server.md) ([README](./server/README.md)) |
+| **Server config** | `ops/server/` | Reference copies of the home server's config files (systemd incl. backup + heartbeat timers, Caddy, nftables, SSH, apt, Docker, sudoers, the Tailscale policy snippet, the monitoring env template); installed by hand per [`home-server.md`](../docs/runbooks/home-server.md) ([README](./server/README.md)) |
 
 Personal / PII-named SQL: `*.local.sql` under `ops/` (gitignored) — never commit real client names.
 

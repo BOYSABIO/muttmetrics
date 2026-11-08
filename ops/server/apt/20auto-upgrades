@@ -1,0 +1,5 @@
+// /etc/apt/apt.conf.d/20auto-upgrades  (#93)
+// What `dpkg-reconfigure -plow unattended-upgrades` → "Yes" writes:
+// refresh the package lists and run unattended-upgrade once a day.
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";

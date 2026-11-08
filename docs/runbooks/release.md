@@ -42,7 +42,7 @@ cd /opt/muttmetrics
 .venv/bin/python ops/deploy.py --to vX.Y.Z              # release (and rollback)
 ```
 
-`--allow-main` deploys the tip of `main` instead of a tag: for a throwaway drill only, never on the box. Deploy **after hours**: the restart takes seconds, and a save in that moment becomes a draft the groomer has to retry.
+`--allow-main` deploys the tip of `main` instead of a tag: for a throwaway drill only, never on the box. Deploy **after hours**: the restart takes seconds, and a save in that moment becomes a draft the groomer has to retry. If the 5-minute heartbeat ([#104](https://github.com/BOYSABIO/muttmetrics/issues/104)) happens to land in those seconds, you get a 🔴 followed by a ✅ the next time it runs. For a long deploy or a restore, **Pause** the checks in Healthchecks first.
 
 Steps (stops on first failure):
 
