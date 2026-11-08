@@ -112,8 +112,6 @@ h1,
 .app-header h1,
 .profile-hero-text h2,
 .this-week-empty-title,
-.headline-value,
-.timing-value,
 section.panel h2 {
   font-family: var(--display);
   font-variation-settings:
@@ -190,19 +188,11 @@ section.panel h2 {
 }
 
 .step-meta,
-.headline-hint,
-.timing-hint,
-.util-nums,
-.eur-bar-n,
 .dir-card-meta {
   color: var(--ink-muted);
 }
 
 .week-nav-range,
-.eur-bar-main,
-.eur-bar-label,
-.util-badge,
-.util-nums,
 .timer-readout {
   font-family: var(--mono);
 }
@@ -332,8 +322,6 @@ section.panel h2 {
 /* Cards                                                                */
 /* ------------------------------------------------------------------ */
 
-.headline-card,
-.this-week-panel,
 .this-week-empty,
 .profile-block,
 .dir-card,
@@ -360,44 +348,6 @@ section.panel h2 {
   font-family: var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-}
-
-/* The number this whole screen exists for. */
-.this-week-headlines > :last-child {
-  background: var(--accent);
-  color: var(--surface);
-}
-
-.this-week-headlines > :last-child .tw-label {
-  color: var(--sun);
-}
-
-.this-week-headlines > :last-child .headline-value,
-.this-week-headlines > :last-child .headline-value-thin {
-  color: var(--surface);
-}
-
-.this-week-headlines > :last-child .headline-hint {
-  color: rgba(255, 250, 240, 0.75);
-}
-
-.headline-value {
-  font-weight: 700;
-}
-
-@media (min-width: 768px) {
-  .headline-value {
-    font-size: 2.4rem;
-  }
-}
-
-.timing-row {
-  border-top-color: var(--line);
-}
-
-.timing-value {
-  font-size: 1.5rem;
-  font-weight: 700;
 }
 
 .this-week-empty {
@@ -707,71 +657,6 @@ input[type='checkbox']:focus-visible {
 }
 
 /* ------------------------------------------------------------------ */
-/* Charts                                                               */
-/* ------------------------------------------------------------------ */
-
-.eur-bar-track,
-.util-bars {
-  background: var(--surface);
-  border: var(--edge);
-}
-
-.eur-bar-track {
-  height: 1rem;
-}
-
-.eur-bar-track-thin {
-  border-style: dashed;
-  border-color: var(--ink-faint);
-}
-
-.eur-bar-fill {
-  border-radius: 999px;
-  background: var(--accent);
-}
-
-.util-bars {
-  height: 1.35rem;
-  border-radius: 999px;
-}
-
-.util-bar {
-  border-radius: 999px;
-}
-
-.util-bar-p90,
-.util-swatch-p90 {
-  background: var(--sun);
-  opacity: 1;
-}
-
-.util-bar-actual,
-.util-swatch-actual {
-  background: var(--accent);
-  opacity: 1;
-}
-
-.util-buffer-mark,
-.util-swatch-cap {
-  background: var(--clay);
-}
-
-.util-buffer-mark {
-  width: 3px;
-}
-
-.util-badge-warn {
-  color: var(--surface);
-  background: var(--clay);
-  padding: 0.05rem 0.45rem;
-  border-radius: 999px;
-}
-
-.util-swatch {
-  border: 1.5px solid var(--ink);
-}
-
-/* ------------------------------------------------------------------ */
 /* Motion                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -782,48 +667,11 @@ input[type='checkbox']:focus-visible {
   }
 }
 
-@keyframes retro-grow {
-  from {
-    transform: scaleX(0);
-  }
-}
-
-@keyframes retro-pop {
-  0% {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  70% {
-    transform: scale(1.03);
-  }
-}
-
 /* Cards rise in, one after another. */
-.headline-card,
-.this-week-panel,
 .this-week-empty,
 .profile-block,
 .dir-card-list > li {
   animation: retro-rise 0.45s var(--ease-out) both;
-}
-
-.this-week-headlines > :nth-child(2) {
-  animation-delay: 0.05s;
-}
-.this-week-headlines > :nth-child(3) {
-  animation-delay: 0.1s;
-}
-.this-week-headlines > :nth-child(4) {
-  animation-delay: 0.15s;
-}
-.this-week-mid > :nth-child(1) {
-  animation-delay: 0.2s;
-}
-.this-week-mid > :nth-child(2) {
-  animation-delay: 0.25s;
-}
-.this-week-body > .this-week-panel {
-  animation-delay: 0.3s;
 }
 
 .dir-card-list > li:nth-child(2) {
@@ -837,22 +685,6 @@ input[type='checkbox']:focus-visible {
 }
 .dir-card-list > li:nth-child(n + 5) {
   animation-delay: 0.16s;
-}
-
-/* The hero number lands with a little bounce. */
-.this-week-headlines > :last-child .headline-value {
-  animation: retro-pop 0.5s var(--ease-spring) 0.25s both;
-}
-
-/* Bars draw from the left. */
-.eur-bar-fill,
-.util-bar {
-  transform-origin: left center;
-  animation: retro-grow 0.8s var(--ease-out) 0.35s both;
-}
-
-.util-bar-actual {
-  animation-delay: 0.5s;
 }
 
 /* Respect "reduce motion" in the OS settings. */

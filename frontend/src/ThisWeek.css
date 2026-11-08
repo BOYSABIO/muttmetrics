@@ -1,0 +1,505 @@
+/* This week screen (0.6.5).
+   Uses the theme tokens; the retro ones (--edge, --pop, --sun, --clay, --display)
+   fall back to plain values when theme-retro.css isn't loaded. */
+
+.tw-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem 1.1rem;
+  background: var(--surface);
+  border: var(--edge, 1px solid var(--line));
+  border-radius: var(--radius);
+  box-shadow: var(--pop, var(--shadow));
+  min-width: 0;
+  animation: tw-rise 0.45s var(--ease-out, ease-out) both;
+}
+
+.tw-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.this-week .tw-card .tw-label {
+  margin: 0;
+}
+
+.tw-card-note {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+  text-align: right;
+}
+
+.tw-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .tw-grid {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+/* ---------------------------------------------------------------- */
+/* Numbers                                                          */
+/* ---------------------------------------------------------------- */
+
+.tw-hero-value,
+.tw-stat-value,
+.tw-big {
+  font-family: var(--display, var(--font));
+  font-variation-settings:
+    'SOFT' 100,
+    'WONK' 1;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.tw-stat {
+  min-width: 0;
+}
+
+.this-week .tw-stat-title {
+  margin: 0 0 0.2rem;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.tw-stat-value {
+  font-size: 1.5rem;
+}
+
+.tw-stat-value-thin {
+  font-family: var(--mono);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  padding-block: 0.25rem;
+}
+
+/* ↑ / ↓ against the previous period */
+.tw-delta {
+  display: inline-block;
+  margin-top: 0.2rem;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tw-delta-up {
+  color: var(--accent);
+}
+
+.tw-delta-down {
+  color: var(--clay, var(--warn));
+}
+
+.tw-delta-same,
+.tw-delta-none,
+.tw-delta-label {
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+
+/* ---------------------------------------------------------------- */
+/* Hero                                                             */
+/* ---------------------------------------------------------------- */
+
+.tw-hero {
+  background: var(--accent);
+  color: var(--surface);
+  gap: 0.35rem;
+}
+
+.this-week .tw-hero .tw-label {
+  color: var(--sun, var(--surface));
+}
+
+.tw-hero-value {
+  font-size: clamp(2.6rem, 13vw, 3.6rem);
+  color: var(--surface);
+  animation: tw-pop 0.5s var(--ease-spring, ease-out) 0.15s both;
+}
+
+.tw-hero-sub {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255, 250, 240, 0.8);
+}
+
+.tw-hero .tw-delta-up {
+  color: var(--sun, #f2b33d);
+}
+
+.tw-hero .tw-delta-down {
+  color: var(--clay-soft, #f6d3c2);
+}
+
+.tw-hero .tw-delta-label,
+.tw-hero .tw-delta-same,
+.tw-hero .tw-delta-none {
+  color: rgba(255, 250, 240, 0.7);
+}
+
+.tw-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0.6rem;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.tw-hero-stats .tw-stat {
+  padding: 0.65rem 0.75rem 0.55rem;
+}
+
+.tw-hero-stats .tw-stat + .tw-stat {
+  border-left: 1px solid rgba(255, 250, 240, 0.18);
+}
+
+.this-week .tw-hero .tw-stat-title {
+  color: rgba(255, 250, 240, 0.72);
+}
+
+.tw-hero .tw-stat-value {
+  color: var(--surface);
+}
+
+.tw-hero .tw-stat-value-thin {
+  color: rgba(255, 250, 240, 0.75);
+}
+
+/* ---------------------------------------------------------------- */
+/* Day / week strip                                                 */
+/* ---------------------------------------------------------------- */
+
+.tw-strip {
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 0.35rem;
+}
+
+.tw-strip-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.tw-strip-amount {
+  min-height: 1rem;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.tw-strip-track {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  height: 6.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+
+/* The day cap: a dashed line through every day's track at the same height. */
+.tw-strip-week .tw-strip-track::after {
+  content: '';
+  position: absolute;
+  left: -0.2rem;
+  right: -0.2rem;
+  bottom: var(--cap, 80%);
+  border-top: 2px dashed var(--clay, var(--warn));
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.tw-strip-bar {
+  display: block;
+  width: 72%;
+  max-width: 2.6rem;
+  border-radius: 6px 6px 3px 3px;
+  background: var(--accent);
+  border: var(--edge, none);
+  border-width: 2px;
+  transform-origin: bottom center;
+  animation: tw-grow-y 0.7s var(--ease-out, ease-out) 0.25s both;
+}
+
+.tw-strip-col.is-over .tw-strip-bar {
+  background: var(--clay, var(--warn));
+}
+
+.tw-strip-label {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.tw-strip-col.is-today .tw-strip-label {
+  color: var(--ink);
+  background: var(--sun, var(--accent-soft));
+  border-radius: 999px;
+  padding: 0 0.4rem;
+}
+
+.tw-strip-col.is-today .tw-strip-track {
+  outline: 2px solid var(--sun, var(--accent));
+  outline-offset: 1px;
+}
+
+.tw-strip-col.is-future {
+  opacity: 0.45;
+}
+
+.tw-strip-n {
+  font-size: 0.66rem;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- */
+/* Last 90 days                                                     */
+/* ---------------------------------------------------------------- */
+
+.tw-recent-rate {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.35rem;
+}
+
+.tw-big {
+  font-size: 2.2rem;
+}
+
+.tw-recent-unit {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.tw-insight {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--sun-soft, var(--accent-soft));
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.tw-coat-list {
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.tw-coat-row {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 6.5rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.tw-coat-label {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  line-height: 1.2;
+}
+
+.tw-coat-track {
+  height: 0.95rem;
+  border-radius: 999px;
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.tw-coat-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transform-origin: left center;
+  animation: tw-grow-x 0.7s var(--ease-out, ease-out) 0.3s both;
+}
+
+.tw-coat-value {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tw-coat-n {
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+.tw-filling {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+}
+
+.tw-filling-title {
+  font-weight: 600;
+}
+
+.tw-chip {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  padding: 0.1rem 0.5rem;
+  border: 1.5px dashed var(--ink-faint);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- */
+/* Pairs and trios of small numbers                                 */
+/* ---------------------------------------------------------------- */
+
+.tw-pair,
+.tw-trio {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tw-pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tw-trio {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* ---------------------------------------------------------------- */
+/* Since day one                                                    */
+/* ---------------------------------------------------------------- */
+
+.tw-milestone {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.tw-milestone-track {
+  height: 0.75rem;
+  border-radius: 999px;
+  background: var(--paper);
+  border: var(--edge, 1px solid var(--line));
+  border-width: 1.5px;
+  overflow: hidden;
+}
+
+.tw-milestone-fill {
+  display: block;
+  height: 100%;
+  background: var(--sun, var(--accent));
+  transform-origin: left center;
+  animation: tw-grow-x 0.9s var(--ease-out, ease-out) 0.4s both;
+}
+
+.tw-milestone-text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.tw-milestone-text strong {
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- */
+/* Motion                                                           */
+/* ---------------------------------------------------------------- */
+
+@keyframes tw-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes tw-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  70% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes tw-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes tw-grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+.this-week-body > .tw-card:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.tw-grid > .tw-card:nth-child(1) {
+  animation-delay: 0.12s;
+}
+
+.tw-grid > .tw-card:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.tw-grid > .tw-card:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tw-card,
+  .tw-hero-value,
+  .tw-strip-bar,
+  .tw-coat-fill,
+  .tw-milestone-fill {
+    animation: none;
+  }
+}

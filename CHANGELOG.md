@@ -10,16 +10,29 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ## [Unreleased]
 
+## [0.6.5] — 2026-11-08
+
+A new This week screen ([#228](https://github.com/BOYSABIO/muttmetrics/issues/228)). No migration: the API passes new date ranges to the same SQL functions.
+
 ### Added
 
+- **This week, rebuilt around what the groomer checks:** take-home as the big number, with grooms, hours and € / hour under it, each with ↑ / ↓ against last week (or last month). While a period is still running it's compared with the same days of the previous one ("at this point"), so a Tuesday isn't measured against a whole week
+- **Day by day:** Mon–Sun bars of actual hours against the day cap, today highlighted, days over the cap marked (week by week in month view)
+- **Last 90 days:** € / hour by coat now uses the last 90 days, whatever week or month is selected: up to 12 coat rows can't fill inside one week. One sentence compares the coats; rows still under 5 grooms show as "filling up" chips with their count
+- **Since day one:** all-time grooms, hours and take-home, with the next milestone (25 → 50 → 100 …)
+- API `/metrics/period` returns `recent` (`RECENT_DAYS` = 90), `all_time` and `previous_is_partial`; the definitions are in `analytics.md`
 - Monitoring for the home server ([#104](https://github.com/BOYSABIO/muttmetrics/issues/104)): a heartbeat every 5 minutes (through Caddy to a route that needs the database, so one ping proves the whole chain; `/fail` if it breaks) and a success/failure report after every nightly backup, both to Healthchecks.io. The box only makes outgoing requests and sends no client data. Reference units in `ops/server/systemd/`, the env template in `ops/server/monitoring/`, setup in `home-server.md` §A5b
 - `ops/server/apt/20auto-upgrades` and `ops/server/tailscale/policy-snippet.hujson` (the tag, the groomer's 443 grant and its test, with a placeholder group), so the whole box can be rebuilt from `ops/server/`
 
 ### Changed
 
 - The backup unit's Healthchecks report is optional (`EnvironmentFile=-…`; no URL = no report), so a rebuild works in any order and the backup never depends on monitoring
+- The timing numbers ("ran long", "past worst case") appear only once visits carry a time estimate, and then over 90 days. None do yet: new clients created at capture have no breed, and the estimate comes from the breed ([#121](https://github.com/BOYSABIO/muttmetrics/issues/121))
+- Docs: the second backup copy ([#221](https://github.com/BOYSABIO/muttmetrics/issues/221)) is no longer an M6 gate; until it exists, losing the box's disk is an accepted risk, written down in `privacy.md` and `backup.md`
 
-### Fixed
+### Removed
+
+- The "Plan changes" row ([#188](https://github.com/BOYSABIO/muttmetrics/issues/188) was decided not planned, so it could only ever say "not captured"), and the Day load list with its planned bars (it judged a day on estimates that don't exist yet)
 
 ## [0.6.4] — 2026-11-08
 

@@ -34,7 +34,7 @@ BACKUP_ROOT=/srv/muttmetrics/backups   # the home server; defaults to ~/muttmetr
 | Theft, fire, ransomware                 | **no**   |
 
 
-The first four are the ones that have nearly happened. The last two need a copy on another disk, outside the house: an encrypted drive as a second `--extra-dest`, not a rewrite ([#221](https://github.com/BOYSABIO/muttmetrics/issues/221)).
+The first four are the ones that have nearly happened. The last two need an encrypted copy on another device (a NAS, or a drive kept outside the house) as a second `--extra-dest`, not a rewrite ([#221](https://github.com/BOYSABIO/muttmetrics/issues/221), high priority after M6; until then they're an accepted risk, decided 2026-11-08).
 
 ## 1. Running a backup
 
@@ -164,7 +164,7 @@ python ops/photo_purge.py --owner-id 42 --apply    # live file + row
 # then remove the same relative keys under <BACKUP_ROOT>/photos/
 ```
 
-Once the off-site drive exists ([#221](https://github.com/BOYSABIO/muttmetrics/issues/221)), remove the same keys from its `photos/` the next time it's plugged in.
+Once the second copy exists ([#221](https://github.com/BOYSABIO/muttmetrics/issues/221)), remove the same keys from its `photos/` the next time it's plugged in.
 
 The key is the same relative path in both places — which is why it is stored relative. Database backups containing that client's rows age out within 14 days; say so rather than claiming instant total erasure (`[privacy.md](../architecture/privacy.md)`).
 
