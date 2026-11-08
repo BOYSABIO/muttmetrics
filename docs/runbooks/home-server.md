@@ -251,7 +251,7 @@ sudo systemctl start muttmetrics-backup.service
 journalctl -u muttmetrics-backup -n 8 --no-pager     # ends in "OK"
 ```
 
-Then run a **restore drill** ([`backup.md`](./backup.md) §5) and log it privately. The encrypted off-site drive is [#221](https://github.com/BOYSABIO/muttmetrics/issues/221).
+Then run a **restore drill** ([`backup.md`](./backup.md) §5) and log it privately. The encrypted second copy on another device is [#221](https://github.com/BOYSABIO/muttmetrics/issues/221) (after M6; an accepted risk until then).
 
 ### A5b. Monitoring (Healthchecks.io, #104)
 

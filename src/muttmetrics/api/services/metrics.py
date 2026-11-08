@@ -16,6 +16,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from muttmetrics.api.schemas.metrics import (
+    AllTimeOut,
     EurPerHourCellOut,
     MetricsPeriodBlock,
     MetricValue,
@@ -31,6 +32,9 @@ from muttmetrics.api.schemas.metrics import (
 DEFAULT_BUFFER_MINUTES = 240
 NOT_ENOUGH = "not_enough_data"
 MAX_RANGE_DAYS = 366
+# Window for the slow questions (€ / hour by coat, estimate accuracy): long
+# enough to fill the rows, short enough that old prices drop out.
+RECENT_DAYS = 90
 
 
 def monday_on_or_before(d: date) -> date:
@@ -73,6 +77,38 @@ def _empty_summary() -> PeriodSummaryOut:
     )
 
 
+def _summary_from_row(row: Any) -> PeriodSummaryOut:
+    if row is None:
+        return _empty_summary()
+    return PeriodSummaryOut(
+        visit_count=int(row["visit_count"]),
+        groomed_minutes=int(row["groomed_minutes"]),
+        revenue_ex_tip=float(row["revenue_ex_tip"]),
+        revenue_inc_tip=float(row["revenue_inc_tip"]),
+        eur_per_hour_n=int(row["eur_per_hour_n"]),
+        eur_per_hour_ex_tip=_metric_value(row["eur_per_hour_ex_tip"]),
+        eur_per_hour_inc_tip=_metric_value(row["eur_per_hour_inc_tip"]),
+    )
+
+
+def _load_summary(session: Session, start: date, end: date) -> PeriodSummaryOut:
+    row = (
+        session.execute(
+            text(
+                """
+                SELECT visit_count, groomed_minutes, revenue_ex_tip, revenue_inc_tip,
+                       eur_per_hour_n, eur_per_hour_ex_tip, eur_per_hour_inc_tip
+                FROM metric_summary(:p_start, :p_end)
+                """
+            ),
+            {"p_start": start, "p_end": end},
+        )
+        .mappings()
+        .first()
+    )
+    return _summary_from_row(row)
+
+
 def _load_min_n(session: Session) -> int:
     """Product MIN_N from metric_constants (SQL), not a Python literal."""
     row = session.execute(text("SELECT min_n FROM metric_constants")).mappings().first()
@@ -104,32 +140,7 @@ def load_period_metrics(
     }
     min_n = _load_min_n(session)
 
-    summary_row = (
-        session.execute(
-            text(
-                """
-                SELECT visit_count, groomed_minutes, revenue_ex_tip, revenue_inc_tip,
-                       eur_per_hour_n, eur_per_hour_ex_tip, eur_per_hour_inc_tip
-                FROM metric_summary(:p_start, :p_end)
-                """
-            ),
-            params,
-        )
-        .mappings()
-        .first()
-    )
-    if summary_row is None:
-        summary = _empty_summary()
-    else:
-        summary = PeriodSummaryOut(
-            visit_count=int(summary_row["visit_count"]),
-            groomed_minutes=int(summary_row["groomed_minutes"]),
-            revenue_ex_tip=float(summary_row["revenue_ex_tip"]),
-            revenue_inc_tip=float(summary_row["revenue_inc_tip"]),
-            eur_per_hour_n=int(summary_row["eur_per_hour_n"]),
-            eur_per_hour_ex_tip=_metric_value(summary_row["eur_per_hour_ex_tip"]),
-            eur_per_hour_inc_tip=_metric_value(summary_row["eur_per_hour_inc_tip"]),
-        )
+    summary = _load_summary(session, period_start, period_end)
 
     eur_rows = (
         session.execute(
@@ -325,3 +336,44 @@ def previous_range(start: date, end: date, kind: PeriodKind) -> tuple[date, date
     span_days = (end - start).days
     prev_end = start - timedelta(days=1)
     return prev_end - timedelta(days=span_days), prev_end
+
+
+def comparison_range(
+    start: date, end: date, kind: PeriodKind, today: date
+) -> tuple[date, date, bool]:
+    """The previous range, clipped to the elapsed days while ``start..end`` is running.
+
+    Returns ``(prev_start, prev_end, partial)``. On a Tuesday, this week
+    (Mon–Tue so far) is compared with last Mon–Tue, not with all of last week.
+    """
+    prev_start, prev_end = previous_range(start, end, kind)
+    if start <= today < end:
+        elapsed = (today - start).days
+        return prev_start, min(prev_start + timedelta(days=elapsed), prev_end), True
+    return prev_start, prev_end, False
+
+
+def recent_range(end: date, today: date) -> tuple[date, date]:
+    """The ``RECENT_DAYS`` window ending at ``end``, or today if ``end`` is later."""
+    recent_end = min(end, today)
+    return recent_end - timedelta(days=RECENT_DAYS - 1), recent_end
+
+
+def load_all_time(session: Session, today: date) -> AllTimeOut | None:
+    """Totals since the first completed visit (glossary rules, via metric_summary)."""
+    first = session.execute(
+        text(
+            """
+            SELECT MIN(visit_date) FROM visit
+            WHERE (status IS NULL OR status = 'completed') AND visit_date <= :today
+            """
+        ),
+        {"today": today},
+    ).scalar()
+    if first is None:
+        return None
+    return AllTimeOut(
+        first_visit_date=first,
+        through=today,
+        summary=_load_summary(session, first, today),
+    )

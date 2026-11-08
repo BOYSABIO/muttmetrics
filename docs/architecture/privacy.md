@@ -41,11 +41,11 @@ Photos are sensitive operational data, not marketing assets by default. Since [#
 |---|---|---|
 | **Live** database + photos | The home server, a box at the maintainer's home: Postgres on its localhost; photos under `/srv/muttmetrics/photos` (owner-only) | The app, through the API. The groomer reaches the app **only over Tailscale**, on one port. Nothing is exposed to the internet: no port forwarding, Tailscale Funnel off |
 | Nightly backups | Same box, `/srv/muttmetrics/backups` (owner-only files) | The maintainer, over SSH (key only) |
-| Off-site copy | An encrypted (LUKS) drive kept outside the house ([#221](https://github.com/BOYSABIO/muttmetrics/issues/221), pending) | Whoever holds the drive *and* the passphrase |
+| Second copy | **Not yet** (decided 2026-11-08, accepted risk): an encrypted (LUKS) copy on another device, a NAS or a drive kept outside the house, is [#221](https://github.com/BOYSABIO/muttmetrics/issues/221), high priority after M6. Until then the dev PC's frozen data folder (below) is the only copy on another disk | Whoever holds the device *and* the passphrase |
 | Monitoring pings | Healthchecks.io (a hosted service run by an EU company) receives an **empty** HTTP request every 5 minutes and after each backup ([#104](https://github.com/BOYSABIO/muttmetrics/issues/104)) | It learns the home's public IP and the timing of the pings. **No client data**, and it can't connect to the box (outgoing requests only) |
-| The dev PC | **Synthetic data only**, once [#222](https://github.com/BOYSABIO/muttmetrics/issues/222) is done. Until then it holds a stopped copy from before the move, plus the old data folder as the only copy on another disk | The maintainer |
+| The dev PC | A **synthetic** dev database once [#222](https://github.com/BOYSABIO/muttmetrics/issues/222) is done (until then, a stopped copy from before the move). The old data folder, frozen at the 2026-11-06 cutover, stays on purpose until #221 | The maintainer |
 
-**Never in a cloud service.** The box's system disk isn't encrypted (it has to reboot unattended); the copy that leaves the house is the one that's encrypted. Real data is looked at on the box, read-only for analysis ([#33](https://github.com/BOYSABIO/muttmetrics/issues/33)), not copied to the dev PC.
+**Never in a cloud service.** The box's system disk isn't encrypted (it has to reboot unattended); the second copy (#221) is the one that's encrypted. Real data is looked at on the box, read-only for analysis ([#33](https://github.com/BOYSABIO/muttmetrics/issues/33)), not copied to the dev PC.
 
 ## Git rules
 

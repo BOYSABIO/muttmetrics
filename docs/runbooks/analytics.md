@@ -29,7 +29,7 @@ docker compose exec -T db psql -U muttmetrics -d muttmetrics -f /tmp/q.sql
 
 Or open the same SQL in the Postgres extension. See [`db-peek.md`](./db-peek.md) and [`ops/README.md`](../../ops/README.md).
 
-API: `GET /metrics/period?start=&end=` (any inclusive range, max 366 days; response bounds are `start` / `end` — [#187](https://github.com/BOYSABIO/muttmetrics/issues/187)). `GET /metrics/week?start=` (Monday) remains a thin Mon–Sun wrapper with `previous_week` for curls/ops.
+API: `GET /metrics/period?start=&end=` (any inclusive range, max 366 days; response bounds are `start` / `end` — [#187](https://github.com/BOYSABIO/muttmetrics/issues/187)). Besides the range itself it returns `previous_period` (clipped to the same elapsed days while the range is still running: `previous_is_partial`), `recent` (the same block for the last `RECENT_DAYS` up to the range end or today) and `all_time` (totals since the first completed visit) — [#228](https://github.com/BOYSABIO/muttmetrics/issues/228). `GET /metrics/week?start=` (Monday) remains a thin Mon–Sun wrapper with `previous_week` for curls/ops.
 
 ## Privacy (public vs private)
 
@@ -70,6 +70,18 @@ A **cell** is one group produced by that metric’s **GROUP BY** — **not** “
 | Utilization (#29) | One `visit_date` inside the range | Visits that day |
 
 **Week vs month:** a week matches the salon’s short pulse (#158). A **month** (#170) is the same formulas on a longer range — useful early on when weekly cells sit under `MIN_N`. Do **not** average weekly averages to get a month; recompute from visit rows for that range.
+
+**The recent window ([#228](https://github.com/BOYSABIO/muttmetrics/issues/228)):** some questions are slow. "Does this kind of coat pay less per hour?" spreads one period's grooms over up to 12 coat × shaved cells, so a week (or even a month) can't fill them. Those numbers use the **last `RECENT_DAYS` (90)** up to the end of the period being viewed (or today, if that's earlier): same functions, same `MIN_N`, a longer range. Ninety days fills the cells while old prices drop out within a quarter.
+
+| Number on the This week screen | Range |
+|---|---|
+| Grooms, hours, take-home, overall €/hour | The selected week or month, compared with the previous one |
+| Day by day (week) / week by week (month) | The selected period |
+| €/hour by coat × shaved, the coat sentence | Last 90 days |
+| Overrun, P90 miss (shown only once visits carry estimates) | Last 90 days |
+| Since day one | First completed visit → today |
+
+**Comparisons:** while a period is still running, the previous one is clipped to the same number of elapsed days (Tuesday is compared with last Monday–Tuesday, not a whole week). A change is shown only when the previous period has grooms; a rate's change only when both rates passed `MIN_N`.
 
 So `MIN_N` is “enough visits **in this bucket** to show a mean/rate,” not “this dog has had 5 appointments.”
 
@@ -139,7 +151,7 @@ We publish **two** named rates so pricing power and take-home are never confused
 | **Pivot rate** | `count(pivoted is true) / n`; `NULL`/`false` count as not pivoted for the numerator; apply `MIN_N` |
 | **Note** | Visits without a stored prediction **still count** here (unlike overrun) |
 
-**Not captured yet (#178 / #188).** Nothing writes `visit.pivoted` today: capture sets booked = actual until booking exists ([#44](https://github.com/BOYSABIO/muttmetrics/issues/44)). Showing 0% would pretend we measured plan changes. The dashboard tile stays **"Not captured yet"**. **Decision ([#188](https://github.com/BOYSABIO/muttmetrics/issues/188), closed not planned):** no one-tap toggle before booking — package swaps are rare here, and capture is in-the-moment only. When #44 lands, derive `pivoted` at write time from `booked_service_id <> actual_service_id`; the SQL function needs no change.
+**Not captured yet (#178 / #188).** Nothing writes `visit.pivoted` today: capture sets booked = actual until booking exists ([#44](https://github.com/BOYSABIO/muttmetrics/issues/44)). Showing 0% would pretend we measured plan changes. Since 0.6.5 the screen has **no plan-changes row** at all ([#228](https://github.com/BOYSABIO/muttmetrics/issues/228)); it comes back with real data. **Decision ([#188](https://github.com/BOYSABIO/muttmetrics/issues/188), closed not planned):** no one-tap toggle before booking — package swaps are rare here, and capture is in-the-moment only. When #44 lands, derive `pivoted` at write time from `booked_service_id <> actual_service_id`; the SQL function needs no change.
 
 **Executable (#28 / #170):** `metric_pivot_rate(p_start, p_end)`, `metric_overrun(…)`, `metric_p90_miss(…)`. Ops peek: [`ops/sql/metric_prediction_health.sql`](../../ops/sql/metric_prediction_health.sql). Capture UI still sets booked = actual until groomer calendar booking exists ([#44](https://github.com/BOYSABIO/muttmetrics/issues/44)); multi-session jobs are [#165](https://github.com/BOYSABIO/muttmetrics/issues/165).
 
@@ -157,6 +169,8 @@ We publish **two** named rates so pricing power and take-home are never confused
 
 **Executable (#29 / #170):** `SELECT * FROM metric_utilization(240, p_start, p_end)`. Ops: [`ops/sql/metric_utilization.sql`](../../ops/sql/metric_utilization.sql). `over_buffer` = `planned_p90 > buffer_minutes`.
 
+**On the screen (0.6.5, [#228](https://github.com/BOYSABIO/muttmetrics/issues/228)):** bars are **actual** minutes (a fact) against the cap line. A day whose actual minutes pass `buffer_minutes` is drawn as over and counted in the card's header. `over_buffer` (the *planned* worst case) is the planning signal for the day packer; it says nothing while visits carry no estimate, so the screen doesn't use it yet.
+
 ### Utilization per week (month view)
 
 | Piece | Definition |
@@ -166,13 +180,14 @@ We publish **two** named rates so pricing power and take-home are never confused
 | **Clipping** | `range_start` / `range_end` are the week clipped to the requested range (April's first week reads Apr 1–5, not Mar 30–Apr 5) |
 | **Over the cap** | `over_buffer_days` = number of that week's days with `over_buffer`. A weekly total is **never** compared with the daily cap |
 
-**Executable (#178):** `SELECT * FROM metric_utilization_weeks(240, p_start, p_end)`. Returned by the API as `utilization_weeks`; the month view draws it without any arithmetic of its own.
+**Executable (#178):** `SELECT * FROM metric_utilization_weeks(240, p_start, p_end)`. Returned by the API as `utilization_weeks`; the month view takes each week's grooms and minutes from it as they are. Only the "days over the cap" count comes from the daily rows (actual minutes, see above).
 
 ## Named constants
 
 | Name | Value | Used by |
 |------|-------|---------|
 | `MIN_N` | `5` | Metric functions + `metric_constants.min_n`; API exposes `min_n` on `/metrics/period` (and `/metrics/week`); UI must not hard-code |
+| `RECENT_DAYS` | `90` | The recent window for slow questions ([#228](https://github.com/BOYSABIO/muttmetrics/issues/228)): `RECENT_DAYS` in `api/services/metrics.py`; API exposes `recent_days`; UI must not hard-code |
 
 When code lands, this value should appear **once** (e.g. a SQL constant table, a migration-seeded setting, or a single module constant imported by API and tests). Amending the number means amending this table and that single implementation site.
 

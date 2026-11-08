@@ -1,10 +1,5 @@
 import { useEffect, useState } from 'react'
-import {
-  errorMessage,
-  fetchMetricsPeriod,
-  type MetricValue,
-  type MetricsPeriodOut,
-} from './api'
+import { errorMessage, fetchMetricsPeriod, type MetricsPeriodOut } from './api'
 import {
   addDays,
   addMonths,
@@ -12,13 +7,16 @@ import {
   formatMonthRange,
   formatMonthTitle,
   formatShortDate,
-  formatWeekday,
   formatWeekRange,
   lastOfMonth,
   mondayOf,
   parseISODate,
   toISODate,
+  todayISODate,
 } from './dates'
+import './ThisWeek.css'
+import { AllTimeCard, DayStrip, HeroCard, RecentCard, TimingCard } from './ThisWeekCards'
+import { monthColumns, weekColumns } from './thisWeekModel'
 
 const DEFAULT_BUFFER_MINUTES = 240
 const MODE_STORAGE_KEY = 'muttmetrics.metricsMode'
@@ -51,90 +49,6 @@ function Chevron({ dir }: { dir: 'left' | 'right' }) {
   )
 }
 
-function formatMoney(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(n)
-}
-
-function formatMoneyExact(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 2,
-  }).format(n)
-}
-
-function formatHours(minutes: number): string {
-  const h = minutes / 60
-  return `${h.toFixed(h >= 10 ? 0 : 1)}h`
-}
-
-function formatMinutesAsHours(minutes: number): string {
-  if (minutes < 60) return `${minutes} min`
-  const h = minutes / 60
-  return `${Number(h.toFixed(1))}h`
-}
-
-function thinAvgCopy(n: number, minN: number): string {
-  if (n === 0) return '—'
-  return `${n}/${minN} grooms`
-}
-
-function formatPct(
-  mv: MetricValue,
-  n: number,
-  minN: number,
-): { main: string; thin: boolean } {
-  if (mv.value === null) {
-    return { main: thinAvgCopy(n, minN), thin: n > 0 }
-  }
-  return { main: `${(mv.value * 100).toFixed(0)}%`, thin: false }
-}
-
-function formatOverrun(
-  mv: MetricValue,
-  n: number,
-  minN: number,
-): { main: string; thin: boolean } {
-  if (mv.value === null) {
-    return { main: thinAvgCopy(n, minN), thin: n > 0 }
-  }
-  const sign = mv.value > 0 ? '+' : ''
-  return { main: `${sign}${Math.round(mv.value)} min`, thin: false }
-}
-
-function formatEurCell(
-  mv: MetricValue,
-  n: number,
-  minN: number,
-): { main: string; thin: boolean } {
-  if (mv.value === null) {
-    return { main: thinAvgCopy(n, minN), thin: n > 0 }
-  }
-  return { main: formatMoneyExact(mv.value), thin: false }
-}
-
-/** Display only — rates come from the API (SQL MIN_N). */
-function formatHeadlineEur(
-  mv: MetricValue,
-  n: number,
-  minN: number,
-): { text: string; thin: boolean } {
-  if (mv.value === null) {
-    return { text: thinAvgCopy(n, minN), thin: n > 0 }
-  }
-  return { text: formatMoneyExact(mv.value), thin: false }
-}
-
-function coatCellLabel(score: number, shaved: boolean): string {
-  const base =
-    score === 0 ? 'Worst' : score === 5 ? 'Best' : `Coat ${score}`
-  return shaved ? `${base} · shaved` : base
-}
-
 function readStoredMode(): PeriodMode {
   try {
     const raw = localStorage.getItem(MODE_STORAGE_KEY)
@@ -151,48 +65,6 @@ function writeStoredMode(mode: PeriodMode): void {
   } catch {
     /* ignore */
   }
-}
-
-function TimingRow({
-  label,
-  value,
-  hint,
-  thin,
-}: {
-  label: string
-  value: string
-  hint: string
-  thin?: boolean
-}) {
-  return (
-    <div className="timing-row">
-      <span className="timing-label">{label}</span>
-      <span className={thin ? 'timing-value thin' : 'timing-value'}>{value}</span>
-      <span className="timing-hint">{hint}</span>
-    </div>
-  )
-}
-
-function StatCard({
-  title,
-  value,
-  hint,
-  thin,
-}: {
-  title: string
-  value: string
-  hint: string
-  thin?: boolean
-}) {
-  return (
-    <article className="headline-card">
-      <h2 className="tw-label">{title}</h2>
-      <p className={thin ? 'headline-value headline-value-thin' : 'headline-value'}>
-        {value}
-      </p>
-      <p className="step-meta headline-hint">{hint}</p>
-    </article>
-  )
 }
 
 export function ThisWeek({ onLogVisit }: ThisWeekProps) {
@@ -326,173 +198,31 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
   const summary = data?.summary
   const empty = summary !== undefined && summary.visit_count === 0
   const minN = data?.min_n
-  const headlineEur =
-    summary !== undefined && minN !== undefined
-      ? formatHeadlineEur(
-          summary.eur_per_hour_inc_tip,
-          summary.eur_per_hour_n,
-          minN,
-        )
-      : null
+  const today = todayISODate()
+  const capMinutes = data?.buffer_minutes ?? DEFAULT_BUFFER_MINUTES
+  const recent = data?.recent ?? null
+  const recentDays = data?.recent_days ?? null
+  const hasEstimates =
+    recent !== null && (recent.overrun.n > 0 || recent.p90_miss.n > 0)
+  const showRecent = recent !== null && recentDays !== null
 
-  const coatCells = data?.eur_per_hour ?? []
-  const barMax = Math.max(
-    0,
-    ...coatCells
-      .map((c) => c.eur_per_hour_inc_tip.value)
-      .filter((v): v is number => v !== null),
-  )
-
-  const dayCapMinutes = data?.buffer_minutes ?? DEFAULT_BUFFER_MINUTES
-  // Weekly rows come from the API (#178). The cap is per day, so month mode
-  // scales bars to the biggest week and draws no cap line against them.
-  const weeks = data?.utilization_weeks ?? []
-  const utilMax =
-    mode === 'month'
-      ? Math.max(1, ...weeks.flatMap((w) => [w.planned_p90, w.actual_minutes]))
-      : Math.max(
-          1,
-          dayCapMinutes,
-          ...(data?.utilization.flatMap((d) => [
-            d.planned_p90,
-            d.actual_minutes,
-          ]) ?? [1]),
-        )
-  const overrun =
-    data && minN !== undefined
-      ? formatOverrun(data.overrun.avg_minutes, data.overrun.n, minN)
-      : null
-  const p90 =
-    data && minN !== undefined
-      ? formatPct(data.p90_miss.rate, data.p90_miss.n, minN)
-      : null
+  const columns =
+    data === null
+      ? []
+      : mode === 'week'
+        ? weekColumns(data.start, data.utilization, capMinutes, today)
+        : monthColumns(
+            data.start,
+            data.end,
+            data.utilization_weeks,
+            data.utilization,
+            capMinutes,
+            today,
+          )
 
   const showJumpCurrent = mode === 'week' ? weeksBack > 0 : monthsBack > 0
   const canGoNext = mode === 'week' ? canGoNextWeek : canGoNextMonth
   const periodKey = data?.start ?? (mode === 'week' ? weekStart : monthStart)
-
-  const coatPanel =
-    minN === undefined ? null : (
-    <section
-      className="panel this-week-panel this-week-coat"
-      aria-label="Euro per hour by coat condition"
-    >
-      <h2 className="tw-label">€ / hour by coat</h2>
-      <p className="step-meta">
-        0 = worst, 5 = best. Shaved-down jobs are their own rows.
-      </p>
-      {coatCells.length === 0 ? (
-        <p className="step-meta this-week-soft-empty">
-          No coat scores yet — add condition when you save a visit.
-        </p>
-      ) : (
-        <ul className="eur-bar-list">
-          {coatCells
-            .slice()
-            .sort(
-              (a, b) =>
-                a.condition_score - b.condition_score ||
-                Number(a.shaved_down) - Number(b.shaved_down),
-            )
-            .map((cell) => {
-              const shown = formatEurCell(
-                cell.eur_per_hour_inc_tip,
-                cell.n,
-                minN,
-              )
-              const v = cell.eur_per_hour_inc_tip.value
-              const widthPct =
-                v !== null && barMax > 0 ? (v / barMax) * 100 : 0
-              const label = coatCellLabel(
-                cell.condition_score,
-                cell.shaved_down,
-              )
-              return (
-                <li key={`${cell.condition_score}-${cell.shaved_down}`}>
-                  <div className="eur-bar-row">
-                    <span className="eur-bar-label">{label}</span>
-                    <div
-                      className={
-                        v === null
-                          ? 'eur-bar-track eur-bar-track-thin'
-                          : 'eur-bar-track'
-                      }
-                      aria-hidden
-                    >
-                      {v !== null ? (
-                        <div
-                          className="eur-bar-fill"
-                          style={{ width: `${widthPct}%` }}
-                        />
-                      ) : null}
-                    </div>
-                    <div className="eur-bar-value">
-                      <span
-                        className={
-                          shown.thin ? 'eur-bar-main thin' : 'eur-bar-main'
-                        }
-                      >
-                        {shown.thin ? 'Not yet' : shown.main}
-                      </span>
-                      <span className="eur-bar-n">
-                        {shown.thin
-                          ? `${cell.n}/${minN} grooms`
-                          : `${cell.n} ${cell.n === 1 ? 'groom' : 'grooms'}`}
-                      </span>
-                    </div>
-                  </div>
-                </li>
-              )
-            })}
-        </ul>
-      )}
-    </section>
-    )
-
-  const timingPanel =
-    minN === undefined ? null : (
-    <section
-      className="panel this-week-panel this-week-timing"
-      aria-label="Timing checks"
-    >
-      <h2 className="tw-label">Timing</h2>
-      <p className="step-meta">Did jobs stay on plan, or run long?</p>
-      <div className="timing-list">
-        {/* Pivot isn't recorded yet (#178): capture sets booked = actual until
-            booking exists (#44), so any rate here would be a made-up 0%. */}
-        <TimingRow
-          label="Plan changes"
-          value="Not captured yet"
-          hint="The app doesn't record plan changes yet"
-          thin
-        />
-        <TimingRow
-          label="Ran long"
-          value={overrun?.main ?? '—'}
-          hint={
-            overrun?.thin
-              ? `Need ${minN} for an average`
-              : data
-                ? `vs typical estimate · ${data.overrun.n} grooms`
-                : ''
-          }
-          thin={overrun?.thin}
-        />
-        <TimingRow
-          label="Past worst case"
-          value={p90?.main ?? '—'}
-          hint={
-            p90?.thin
-              ? `Need ${minN} for a rate`
-              : data
-                ? `${data.p90_miss.miss_count} of ${data.p90_miss.n} grooms`
-                : ''
-          }
-          thin={p90?.thin}
-        />
-      </div>
-    </section>
-    )
 
   return (
     <div className="this-week">
@@ -560,9 +290,7 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
         <div className="this-week-meta-row">
           <p className="step-meta">
             {mode === 'week' ? 'Monday–Sunday' : 'Calendar month'}
-            {minN !== undefined
-              ? `. Averages unlock at ${minN} grooms.`
-              : '.'}
+            {minN !== undefined ? ` · rates need ${minN} grooms` : ''}
           </p>
           {showJumpCurrent && (
             <button
@@ -588,210 +316,39 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
         </p>
       )}
 
-      {!loading && empty && (
-        <section className="panel this-week-empty" aria-label="Empty period">
-          <p className="this-week-empty-title">
-            {mode === 'week'
-              ? 'No grooms logged this week'
-              : 'No grooms logged this month'}
-          </p>
-          <p className="step-meta">
-            Log a visit and this screen fills in.
-          </p>
-          <button type="button" className="primary" onClick={onLogVisit}>
-            Log a visit
-          </button>
-        </section>
-      )}
-
-      {data !== null && !empty && summary !== undefined && (
+      {data !== null && summary !== undefined && minN !== undefined && (
         <div className="this-week-body" key={periodKey}>
-          <section
-            className="this-week-headlines"
-            aria-label={mode === 'week' ? 'Week headlines' : 'Month headlines'}
-          >
-            <StatCard
-              title="Grooms"
-              value={String(summary.visit_count)}
-              hint="completed"
-            />
-            <StatCard
-              title="Time"
-              value={formatHours(summary.groomed_minutes)}
-              hint={`${summary.groomed_minutes} min`}
-            />
-            <StatCard
-              title="Take-home"
-              value={formatMoney(summary.revenue_inc_tip)}
-              hint={`${formatMoney(summary.revenue_ex_tip)} + tips`}
-            />
-            <StatCard
-              title="€ / hour"
-              value={headlineEur?.text ?? '—'}
-              hint={
-                headlineEur?.thin
-                  ? `Need ${minN} for an average`
-                  : 'incl. tips'
-              }
-              thin={headlineEur?.thin}
-            />
-          </section>
-
-          <div className="this-week-mid">
-            {coatPanel}
-            {timingPanel}
-          </div>
-
-          <section
-            className="panel this-week-panel"
-            aria-label={mode === 'week' ? 'Day load' : 'Week load'}
-          >
-            <h2 className="tw-label">
-              {mode === 'week' ? 'Day load' : 'Week load'}
-            </h2>
-            <p className="step-meta">
-              {mode === 'week'
-                ? `Does the day fit before closing? Cap: ${formatMinutesAsHours(dayCapMinutes)}.`
-                : `Totals per week. The ${formatMinutesAsHours(dayCapMinutes)} cap is per day, so each week shows how many days went over.`}
-            </p>
-            <div className="util-legend" aria-hidden>
-              <span className="util-legend-item">
-                <span className="util-swatch util-swatch-p90" /> If every dog runs long
-              </span>
-              <span className="util-legend-item">
-                <span className="util-swatch util-swatch-actual" /> Actual time
-              </span>
-              {mode === 'week' && (
-                <span className="util-legend-item">
-                  <span className="util-swatch util-swatch-cap" /> Day cap
-                </span>
-              )}
-            </div>
-            {mode === 'month' ? (
-              weeks.length === 0 ? (
-                <p className="step-meta">No days with visits.</p>
-              ) : (
-                <ul className="util-list">
-                  {weeks.map((week) => {
-                    const p90Pct = Math.min(
-                      100,
-                      (week.planned_p90 / utilMax) * 100,
-                    )
-                    const actPct = Math.min(
-                      100,
-                      (week.actual_minutes / utilMax) * 100,
-                    )
-                    const over = week.over_buffer_days
-                    return (
-                      <li key={week.week_start}>
-                        <div className="util-row-head">
-                          <span className="util-date">
-                            {formatWeekRange(week.range_start, week.range_end)}
-                          </span>
-                          <span
-                            className={
-                              over > 0
-                                ? 'util-badge util-badge-warn'
-                                : 'util-badge'
-                            }
-                          >
-                            {over > 0
-                              ? `${over} ${over === 1 ? 'day' : 'days'} over`
-                              : 'Days fit'}
-                            {' · '}
-                            {week.n} {week.n === 1 ? 'groom' : 'grooms'}
-                            {' · '}
-                            {week.day_count}{' '}
-                            {week.day_count === 1 ? 'day' : 'days'}
-                          </span>
-                        </div>
-                        <div className="util-bars" aria-hidden>
-                          <div
-                            className="util-bar util-bar-p90"
-                            style={{ width: `${p90Pct}%` }}
-                          />
-                          <div
-                            className="util-bar util-bar-actual"
-                            style={{ width: `${actPct}%` }}
-                          />
-                        </div>
-                        <p className="step-meta util-nums">
-                          If long {formatMinutesAsHours(week.planned_p90)}
-                          {' · '}
-                          Actual {formatMinutesAsHours(week.actual_minutes)}
-                          {week.missing_prediction > 0
-                            ? ` · ${week.missing_prediction} without estimate`
-                            : ''}
-                        </p>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )
-            ) : data.utilization.length === 0 ? (
-              <p className="step-meta">No days with visits.</p>
-            ) : (
-              <ul className="util-list">
-                {data.utilization.map((day) => {
-                  const p90Pct = Math.min(
-                    100,
-                    (day.planned_p90 / utilMax) * 100,
-                  )
-                  const actPct = Math.min(
-                    100,
-                    (day.actual_minutes / utilMax) * 100,
-                  )
-                  const bufPct = Math.min(
-                    100,
-                    (dayCapMinutes / utilMax) * 100,
-                  )
-                  return (
-                    <li key={day.visit_date}>
-                      <div className="util-row-head">
-                        <span className="util-date">
-                          {formatWeekday(day.visit_date)}{' '}
-                          {formatShortDate(day.visit_date)}
-                        </span>
-                        <span
-                          className={
-                            day.over_buffer
-                              ? 'util-badge util-badge-warn'
-                              : 'util-badge'
-                          }
-                        >
-                          {day.over_buffer ? 'Over capacity' : 'Fits'}
-                          {' · '}
-                          {day.n} {day.n === 1 ? 'groom' : 'grooms'}
-                        </span>
-                      </div>
-                      <div className="util-bars" aria-hidden>
-                        <div
-                          className="util-buffer-mark"
-                          style={{ left: `${bufPct}%` }}
-                        />
-                        <div
-                          className="util-bar util-bar-p90"
-                          style={{ width: `${p90Pct}%` }}
-                        />
-                        <div
-                          className="util-bar util-bar-actual"
-                          style={{ width: `${actPct}%` }}
-                        />
-                      </div>
-                      <p className="step-meta util-nums">
-                        If long {formatMinutesAsHours(day.planned_p90)}
-                        {' · '}
-                        Actual {formatMinutesAsHours(day.actual_minutes)}
-                        {day.missing_prediction > 0
-                          ? ` · ${day.missing_prediction} without estimate`
-                          : ''}
-                      </p>
-                    </li>
-                  )
-                })}
-              </ul>
+          {empty ? (
+            <section className="tw-card this-week-empty" aria-label="Empty period">
+              <p className="this-week-empty-title">
+                {mode === 'week'
+                  ? 'No grooms logged this week'
+                  : 'No grooms logged this month'}
+              </p>
+              <p className="step-meta">Log a visit and this screen fills in.</p>
+              <button type="button" className="primary" onClick={onLogVisit}>
+                Log a visit
+              </button>
+            </section>
+          ) : (
+            <>
+              <HeroCard
+                mode={mode}
+                summary={summary}
+                previous={data.previous_period?.summary ?? null}
+                partial={data.previous_is_partial ?? false}
+                minN={minN}
+              />
+              <DayStrip mode={mode} columns={columns} capMinutes={capMinutes} />
+            </>
+          )}
+          <div className="tw-grid">
+            {showRecent && recent.summary.visit_count > 0 && (
+              <RecentCard recent={recent} days={recentDays} />
             )}
-          </section>
+            {showRecent && hasEstimates && <TimingCard recent={recent} days={recentDays} />}
+            {data.all_time && <AllTimeCard allTime={data.all_time} />}
+          </div>
         </div>
       )}
     </div>
