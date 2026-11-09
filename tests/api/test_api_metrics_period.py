@@ -168,3 +168,54 @@ def test_previous_window_for_january_is_last_december(
     prev = res.json()["previous_period"]
     assert (prev["start"], prev["end"]) == ("2025-12-01", "2025-12-31")
     assert prev["period"] == "month"
+
+
+# --- 0.6.5: recent window and all-time totals ----------------------------------
+
+
+def test_period_includes_a_recent_window_ending_at_the_range_end(
+    client: TestClient, auth_headers: dict[str, str], metric_month: dict
+) -> None:
+    res = client.get(
+        "/metrics/period",
+        headers=auth_headers,
+        params={"start": str(MONTH_START), "end": str(MONTH_END)},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["recent_days"] == 90
+    recent = data["recent"]
+    assert recent["end"] == str(MONTH_END)
+    assert recent["start"] == str(MONTH_END - timedelta(days=89))
+    # April's six plus the Mar 31 visit just before it; the cancelled one never counts
+    assert recent["summary"]["visit_count"] == EXPECTED["summary"]["visit_count"] + 1
+    cells = {(c["condition_score"], c["shaved_down"]): c for c in recent["eur_per_hour"]}
+    assert cells[(0, True)]["n"] == 7
+    assert cells[(0, True)]["eur_per_hour_inc_tip"]["value"] == pytest.approx(60.0)
+    # A finished month is compared with the whole previous month
+    assert data["previous_is_partial"] is False
+
+
+def test_period_includes_all_time_totals(
+    client: TestClient, auth_headers: dict[str, str], metric_month: dict
+) -> None:
+    res = client.get(
+        "/metrics/period",
+        headers=auth_headers,
+        params={"start": str(MONTH_START), "end": str(MONTH_END)},
+    )
+    all_time = res.json()["all_time"]
+    assert all_time["first_visit_date"] == str(EXPECTED["leak_date"])  # Mar 31
+    assert all_time["through"] == str(date.today())
+    assert all_time["summary"]["visit_count"] == 7
+    assert all_time["summary"]["groomed_minutes"] == 420
+
+
+def test_all_time_is_null_without_visits(client: TestClient, auth_headers: dict[str, str]) -> None:
+    res = client.get(
+        "/metrics/period",
+        headers=auth_headers,
+        params={"start": "2026-01-05", "end": "2026-01-11"},
+    )
+    assert res.status_code == 200
+    assert res.json()["all_time"] is None

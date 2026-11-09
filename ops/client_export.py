@@ -56,6 +56,7 @@ def owner_payload(owner: Owner) -> dict[str, Any]:
                     "pet_id": visit.pet_id,
                     "owner_id": visit.owner_id,
                     "visit_date": _jsonable(visit.visit_date),
+                    "created_at": _jsonable(visit.created_at),
                     "booked_service_id": visit.booked_service_id,
                     "actual_service_id": visit.actual_service_id,
                     "actual_minutes": visit.actual_minutes,

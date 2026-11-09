@@ -17,6 +17,8 @@ Schema / peek: [`db-peek.md`](./db-peek.md). Numerator SQL: [`ops/sql/compliance
 
 Formal measurement starts with the week of **Monday 2026-10-05** (see #22). Earlier rows can exist; they are not the start of this ritual.
 
+**Backfilled visits.** The groomer can date a visit in the past (missed grooms added later). They count in the week they happened, like any other visit, so re-running the SQL for a week that's already closed can give a higher number than the one recorded. Keep the recorded numbers. Since 0.6.4, `visit.created_at` records when each row was saved (NULL = before that), so on-time and late entries can be told apart. The SQL above **doesn't use it yet**; that's a separate decision ([#224](https://github.com/BOYSABIO/muttmetrics/issues/224)).
+
 **Used by the M5 experiment ([#159](https://github.com/BOYSABIO/muttmetrics/issues/159)):** the same weekly number is the before/after measure for "does the dashboard change logging?". Which weeks count as before, transition and after is decided on #159, not here.
 
 ## Privacy (public repo)

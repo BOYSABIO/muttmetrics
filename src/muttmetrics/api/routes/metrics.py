@@ -20,10 +20,13 @@ from muttmetrics.api.deps import get_db, require_api_key
 from muttmetrics.api.schemas.metrics import MetricsPeriodOut, MetricsWeekOut
 from muttmetrics.api.services.metrics import (
     DEFAULT_BUFFER_MINUTES,
+    RECENT_DAYS,
+    comparison_range,
+    load_all_time,
     load_period_metrics,
     load_week_metrics,
     monday_on_or_before,
-    previous_range,
+    recent_range,
 )
 
 router = APIRouter(tags=["metrics"])
@@ -77,12 +80,28 @@ def get_metrics_period(
     Prefer this over inventing a month-only twin: week is ``start`` Monday and
     ``end`` = Monday+6; a calendar month is the 1st through the last day.
     Previous for a calendar month is the prior calendar month; otherwise the
-    equal-length window ending the day before ``start``.
+    equal-length window ending the day before ``start``. While the range is
+    still running, previous is clipped to the same elapsed days.
+
+    Also returns ``recent`` (the last RECENT_DAYS up to the range end) for the
+    slow questions, and ``all_time`` totals.
     """
     try:
         current = load_period_metrics(session, start, end, buffer_minutes)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    prev_start, prev_end = previous_range(start, end, current.period)
-    previous = load_period_metrics(session, prev_start, prev_end, buffer_minutes)
-    return MetricsPeriodOut(**current.model_dump(), previous_period=previous)
+    today = date.today()
+    prev_start, prev_end, partial = comparison_range(start, end, current.period, today)
+    previous = load_period_metrics(
+        session, prev_start, prev_end, buffer_minutes, period=current.period
+    )
+    recent_start, recent_end = recent_range(end, today)
+    recent = load_period_metrics(session, recent_start, recent_end, buffer_minutes, period="custom")
+    return MetricsPeriodOut(
+        **current.model_dump(),
+        previous_period=previous,
+        previous_is_partial=partial,
+        recent_days=RECENT_DAYS,
+        recent=recent,
+        all_time=load_all_time(session, today),
+    )

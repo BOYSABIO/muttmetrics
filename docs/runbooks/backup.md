@@ -16,10 +16,12 @@ Operational reference for [#95](https://github.com/BOYSABIO/muttmetrics/issues/9
 
 
 ```env
-BACKUP_ROOT=C:/muttmetrics-data/backups   # defaults to ~/muttmetrics-data/backups
+BACKUP_ROOT=/srv/muttmetrics/backups   # the home server; defaults to ~/muttmetrics-data/backups
 ```
 
-**Be honest about the threat model.** Today every destination is on the same physical disk as the live data.
+**Where it runs:** the home server ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93), [`home-server.md`](./home-server.md)), nightly, as the `muttmetrics` account. The dev PC doesn't back up: its database holds synthetic data only ([#222](https://github.com/BOYSABIO/muttmetrics/issues/222)).
+
+**Be honest about the threat model.** Every destination on the box is on the same physical disk as the live data (one SSD).
 
 
 | Failure                                 | Covered? |
@@ -32,7 +34,7 @@ BACKUP_ROOT=C:/muttmetrics-data/backups   # defaults to ~/muttmetrics-data/backu
 | Theft, fire, ransomware                 | **no**   |
 
 
-The first four are the ones that have nearly happened. The rest needs a second machine, which arrives with the home server ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)): an encrypted drive kept outside the house is a second `--extra-dest`, not a rewrite.
+The first four are the ones that have nearly happened. The last two need an encrypted copy on another device (a NAS, or a drive kept outside the house) as a second `--extra-dest`, not a rewrite ([#221](https://github.com/BOYSABIO/muttmetrics/issues/221), high priority after M6; until then they're an accepted risk, decided 2026-11-08).
 
 ## 1. Running a backup
 
@@ -44,9 +46,9 @@ Options: `--extra-dest PATH` (repeatable, for a second destination), `--skip-pho
 
 Every run: dumps the database, **verifies the archive is readable before writing it** (`pg_restore --list`), writes the dump, copies any new photos, prunes old dumps, and updates `last-backup.json` and `backup.log`.
 
-The script runs `docker compose` with the repo as its working directory regardless of where it is called from — so a scheduler that starts in `C:\Windows\System32` still works.
+The script runs `docker compose` with the repo as its working directory regardless of where it is called from, so a scheduler still works. Everything it writes is owner-only (umask 077), whoever runs it.
 
-**Current practice:** run by hand, roughly daily. Fine at about one groom a day; **schedule it before volume picks up** (§4), because "I'll remember" is how backups die.
+**Current practice:** the systemd timer runs it every night at 00:30 (§4), and `ops/deploy.py` runs it before every deploy. By hand on the box: `sudo systemctl start muttmetrics-backup.service`.
 
 ## 2. Checking that backups are still happening
 
@@ -75,79 +77,34 @@ Photos are never pruned because a mirror would propagate an accidental deletion 
 
 Pruning only ever touches files matching `muttmetrics-*.dump` whose timestamp it can parse. Anything else in the folder — a manual `.sql` snapshot, say — is left alone by design.
 
-## 4. Scheduling it (not yet enabled — do this before the salon opens)
+## 4. Scheduling it (home server)
 
+Installed from [`ops/server/systemd/`](../../ops/server/systemd/) ([`home-server.md`](./home-server.md) A5):
 
-
-### Windows (current host)
-
-```powershell
-# Resolve absolute paths once on the host (Task Scheduler needs them; don't paste a personal path into the repo):
-#   $py   = (Resolve-Path .\.venv\Scripts\python.exe).Path
-#   $script = (Resolve-Path .\scripts\backup.py).Path
-schtasks /Create /TN "MuttMetrics backup" /SC DAILY /ST 21:00 /F `
-  /TR "`"$py`" `"$script`""
-```
-
-Then open Task Scheduler and set two things the command line cannot:
-
-- **Settings → "Run task as soon as possible after a scheduled start is missed."** Without it, a PC that is off at 21:00 skips that day silently, forever.
-- **General → "Run only when user is logged on" — keep this ON.** This is the opposite of the usual advice, and it is correct here: Docker Desktop only runs inside the logged-in session, so a task running without a login would find no Docker and fail every night.
-
-Verify it as the scheduler, not as yourself:
-
-```powershell
-schtasks /Run /TN "MuttMetrics backup"
-Get-Content C:\muttmetrics-data\backups\backup.log -Tail 10
-python ops/backup_check.py
-```
-
-The log file is the proof it ran unattended.
-
-### Linux (home server, #93)
-
-Same script, no changes. It runs as the unprivileged `muttmetrics` user that owns the checkout, not as root. That user needs to be in the `docker` group, because the script calls `docker compose exec`. Be aware that the `docker` group is root-equivalent on that machine, so don't add anyone else to it.
-
-```ini
-# /etc/systemd/system/muttmetrics-backup.service
-[Unit]
-Description=MuttMetrics backup (DB dump + photos)
-
-[Service]
-Type=oneshot
-User=muttmetrics
-Group=muttmetrics
-WorkingDirectory=/opt/muttmetrics
-ExecStart=/opt/muttmetrics/.venv/bin/python ops/backup.py
-```
-
-```ini
-# /etc/systemd/system/muttmetrics-backup.timer
-[Unit]
-Description=Daily MuttMetrics backup
-
-[Timer]
-OnCalendar=daily
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-```
+- **`muttmetrics-backup.service`:** runs `ops/backup.py` as `muttmetrics` (needs the `docker` group, which is root-equivalent, so nobody else gets it), then `ops/backup_check.py --max-age-hours 1` as `ExecStartPost`. If the backup *or* the check fails, the unit shows as **failed**, which is what monitoring watches ([#104](https://github.com/BOYSABIO/muttmetrics/issues/104)).
+- **Reporting (#104):** after every run, `ExecStopPost` pings Healthchecks.io: success, or `/fail` on any failure. A run that never starts sends nothing, and Healthchecks alarms on the missing signal (Telegram). Setup: [`home-server.md`](./home-server.md) §A5b.
+- **`muttmetrics-backup.timer`:** `OnCalendar=*-*-* 00:30`, after midnight and before the 04:30 update-reboot window. `Persistent=true` is systemd's "run a missed job": if the box was off, it runs at the next boot.
 
 ```bash
 sudo systemctl enable --now muttmetrics-backup.timer
-systemctl list-timers muttmetrics-backup
+systemctl list-timers muttmetrics-backup.timer --no-pager      # next run
+journalctl -u muttmetrics-backup -n 8 --no-pager               # last run, ends in "OK"
 ```
 
-`Persistent=true` is the systemd version of "run a missed job": if the box was off, it runs on the next boot.
+*History:* before #93 the capture host was a Windows desktop with a Task Scheduler entry. That path is retired.
 
 ## 5. Restoring — the drill, and the real thing
 
 Do this once after any change to the backup, and before anything risky (a migration, [#98](https://github.com/BOYSABIO/muttmetrics/issues/98)).
 
+On the box, as `muttmetrics` in `/opt/muttmetrics` (`sudo -iu muttmetrics`, `cd /opt/muttmetrics`). The dump is fed to `pg_restore` on **stdin**, so nothing needs copying into the container.
+
 ### Drill: restore into a scratch database
 
 ```bash
+# 0. the newest dump
+latest=$(ls -t /srv/muttmetrics/backups/db/muttmetrics-*.dump | head -1); echo "$latest"
+
 # 1. counts from the live database, to compare against
 docker compose exec db psql -U muttmetrics -d muttmetrics -c "SELECT (SELECT count(*) FROM owner) AS owners, (SELECT count(*) FROM pet) AS pets, (SELECT count(*) FROM visit) AS visits, (SELECT count(*) FROM photo) AS photos;"
 
@@ -155,18 +112,20 @@ docker compose exec db psql -U muttmetrics -d muttmetrics -c "SELECT (SELECT cou
 #    drop it first: restoring into a database that already holds the same data
 #    would make the counts match without the restore doing anything - a pass for
 #    the wrong reason.
-docker compose exec db dropdb -U muttmetrics --if-exists muttmetrics_restore_test
-docker compose exec db createdb -U muttmetrics muttmetrics_restore_test
-docker compose cp C:/muttmetrics-data/backups/db/muttmetrics-<stamp>.dump db:/tmp/restore.dump
+docker compose exec -T db dropdb -U muttmetrics --if-exists muttmetrics_restore_test
+docker compose exec -T db createdb -U muttmetrics muttmetrics_restore_test
 
 # 3. restore into it
-docker compose exec db pg_restore -U muttmetrics -d muttmetrics_restore_test /tmp/restore.dump
+docker compose exec -T db pg_restore -U muttmetrics -d muttmetrics_restore_test < "$latest"
 
 # 4. same counts, from the restored copy
 docker compose exec db psql -U muttmetrics -d muttmetrics_restore_test -c "SELECT (SELECT count(*) FROM owner) AS owners, (SELECT count(*) FROM pet) AS pets, (SELECT count(*) FROM visit) AS visits, (SELECT count(*) FROM photo) AS photos;"
 
 # 5. clean up
-docker compose exec db dropdb -U muttmetrics muttmetrics_restore_test
+docker compose exec -T db dropdb -U muttmetrics muttmetrics_restore_test
+
+# 6. the photo backup is byte-for-byte the live photos
+diff -r /srv/muttmetrics/photos /srv/muttmetrics/backups/photos && echo "photo backup identical"
 ```
 
 The numbers should match (allowing for rows added since the dump). **Record the result in the drill log** (below).
@@ -174,12 +133,15 @@ The numbers should match (allowing for rows added since the dump). **Record the 
 ### The real thing: restoring over the live database
 
 ```bash
-python ops/backup.py            # dump the current state first, whatever state it is in
-docker compose exec db dropdb -U muttmetrics muttmetrics
-docker compose exec db createdb -U muttmetrics muttmetrics
-docker compose cp <dump> db:/tmp/restore.dump
-docker compose exec db pg_restore -U muttmetrics -d muttmetrics /tmp/restore.dump
-alembic current                     # confirm the schema version matches the code
+sudo systemctl stop muttmetrics-api          # as <admin>: nothing may write while you restore
+# then as muttmetrics, in /opt/muttmetrics:
+.venv/bin/python ops/backup.py                 # dump the current state first, whatever state it is in
+docker compose exec -T db dropdb -U muttmetrics muttmetrics
+docker compose exec -T db createdb -U muttmetrics muttmetrics
+docker compose exec -T db pg_restore -U muttmetrics -d muttmetrics < <dump>
+.venv/bin/alembic current                      # confirm the schema version matches the code
+# as <admin> again:
+sudo systemctl start muttmetrics-api
 ```
 
 **Photos restore by copying** `<BACKUP_ROOT>/photos/` back over `PHOTO_ROOT` — the keys in the database are relative, so nothing in the rows needs changing.
@@ -202,6 +164,8 @@ python ops/photo_purge.py --owner-id 42 --apply    # live file + row
 # then remove the same relative keys under <BACKUP_ROOT>/photos/
 ```
 
+Once the second copy exists ([#221](https://github.com/BOYSABIO/muttmetrics/issues/221)), remove the same keys from its `photos/` the next time it's plugged in.
+
 The key is the same relative path in both places — which is why it is stored relative. Database backups containing that client's rows age out within 14 days; say so rather than claiming instant total erasure (`[privacy.md](../architecture/privacy.md)`).
 
 ## 7. Troubleshooting
@@ -209,11 +173,12 @@ The key is the same relative path in both places — which is why it is stored r
 
 | Symptom                                            | Cause                                                                         | Fix                                                          |
 | -------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `ERROR: docker not found on PATH`                  | Docker Desktop not running, or the task runs without a login                  | Start Docker; keep "run only when user is logged on"         |
+| `ERROR: docker not found on PATH` / permission denied on the Docker socket | Docker not running, or the account isn't in the `docker` group | `systemctl is-active docker`; `id muttmetrics` shows `docker` |
 | `ERROR: pg_dump failed`                            | The db container is down                                                      | `docker compose ps`, then `docker compose up -d`             |
 | `ERROR: dump is not readable`                      | The archive is truncated — **the run wrote nothing, by design**               | Check disk space; re-run                                     |
 | `backup_check` says no status file                 | The backup has never run against this destination                             | Run it once                                                  |
-| `backup_check` FAILs on age                        | It has stopped — scheduled task disabled, machine off, venv broken            | Fix the cause, run it, re-check                              |
+| `backup_check` FAILs on age                        | It has stopped: timer disabled, machine off, venv broken                     | `systemctl list-timers muttmetrics-backup.timer`; `journalctl -u muttmetrics-backup`; fix, run, re-check |
+| `muttmetrics-backup.service` shows **failed**        | The backup or the check right after it failed                                 | `journalctl -u muttmetrics-backup -n 30`; fix; `sudo systemctl start muttmetrics-backup.service` |
 | Dumps pile up                                      | `--no-prune` in the scheduled command                                         | Remove the flag                                              |
 | A dump has a date that does not match its contents | Someone copied a file to fake a name (this happened while testing the pruner) | Delete it — a backup whose name lies is worse than no backup |
 

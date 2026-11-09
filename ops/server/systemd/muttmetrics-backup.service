@@ -1,0 +1,21 @@
+# /etc/systemd/system/muttmetrics-backup.service  (#93, docs/runbooks/backup.md)
+# One backup run (DB dump + additive photo copy), then a check of what it wrote.
+# Afterwards (ExecStopPost, whatever happened) it reports to Healthchecks (#104):
+# success → ping, any failure → /fail. A backup that never runs sends nothing,
+# and Healthchecks alarms on the missing signal (check: cron 30 0 * * *, grace 1 h).
+[Unit]
+Description=MuttMetrics backup (DB dump + photos) - #93
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+User=muttmetrics
+Group=muttmetrics
+WorkingDirectory=/opt/muttmetrics
+ExecStart=/opt/muttmetrics/.venv/bin/python ops/backup.py
+ExecStartPost=/opt/muttmetrics/.venv/bin/python ops/backup_check.py --max-age-hours 1
+# The leading '-' makes the file optional: the backup works before monitoring is set up
+# (or if it's removed); without a URL the report step does nothing.
+EnvironmentFile=-/etc/muttmetrics/healthchecks.env
+ExecStopPost=/bin/sh -c '[ -n "$$HC_BACKUP_URL" ] || exit 0; if [ "$$SERVICE_RESULT" = success ]; then curl -fsS -m 10 --retry 3 -o /dev/null "$$HC_BACKUP_URL"; else curl -fsS -m 10 --retry 3 -o /dev/null "$$HC_BACKUP_URL/fail"; fi'

@@ -117,7 +117,29 @@ class MetricsWeekOut(MetricsPeriodBlock):
     previous_week: MetricsPeriodBlock | None = None
 
 
+class AllTimeOut(BaseModel):
+    """Totals from the first completed visit through ``through`` (today)."""
+
+    first_visit_date: date
+    through: date
+    summary: PeriodSummaryOut
+
+
 class MetricsPeriodOut(MetricsPeriodBlock):
-    """Arbitrary range plus the immediately preceding equal-length range."""
+    """Arbitrary range plus the preceding range, a recent window and all-time totals.
+
+    ``previous_period`` is the immediately preceding range. While the requested
+    range is still running (today inside it), it is clipped to the same number
+    of elapsed days, so Tuesday isn't compared with a whole week
+    (``previous_is_partial``).
+
+    ``recent`` is the ``recent_days`` window ending at the range end (or today,
+    whichever is earlier), for slow questions that a week can't answer:
+    € / hour by coat, how good the time estimates are.
+    """
 
     previous_period: MetricsPeriodBlock | None = None
+    previous_is_partial: bool = False
+    recent_days: int | None = None
+    recent: MetricsPeriodBlock | None = None
+    all_time: AllTimeOut | None = None

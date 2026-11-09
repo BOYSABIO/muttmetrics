@@ -269,6 +269,19 @@ export type MetricsPeriodOut = MetricsPeriodBlock & {
   previous_week?: MetricsPeriodBlock | null
   /** Present on /metrics/period (what the SPA uses). */
   previous_period?: MetricsPeriodBlock | null
+  /** True while the range is running: previous is clipped to the same elapsed days. */
+  previous_is_partial?: boolean
+  /** The last `recent_days` up to the range end (or today): coat €/hour, estimates. */
+  recent_days?: number | null
+  recent?: MetricsPeriodBlock | null
+  /** Totals since the first completed visit; null before any. */
+  all_time?: AllTimeOut | null
+}
+
+export type AllTimeOut = {
+  first_visit_date: string
+  through: string
+  summary: PeriodSummary
 }
 
 // ---------------------------------------------------------------------------

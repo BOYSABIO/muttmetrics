@@ -1,10 +1,21 @@
 # Releases and deploy (#197)
 
-How to ship a numbered build, put it on the capture host, and get back if something breaks.
+How to ship a numbered build, put it on the home server ([#93](https://github.com/BOYSABIO/muttmetrics/issues/93)), and get back if something breaks.
 
-**Not** auto-deploy on merge. CI stays the quality gate; **you** (or later the box) run `ops/deploy.py` on purpose. The OptiPlex (#93) is not required to start this ritual on the desktop.
+**Not** auto-deploy on merge. CI is the quality gate; **you** run `ops/deploy.py` on purpose. Merging changes nothing on the box: only a tag you deploy does.
 
-Related: [`backup.md`](./backup.md), [`migrations.md`](./migrations.md), [`groomer-trial.md`](./groomer-trial.md), [`privacy.md`](../architecture/privacy.md) (API key on the proxy).
+## From a branch to the groomer's phone
+
+| Step | Where | What |
+|---|---|---|
+| 1. Branch, build, try | dev PC | Feature branch; the dev database holds **synthetic data only** ([#222](https://github.com/BOYSABIO/muttmetrics/issues/222)) |
+| 2. Test | dev PC | `pytest` (on `muttmetrics_test`, guarded), `ruff`, `npm run lint` / `build` |
+| 3. PR → merge | GitHub | CI: tests, migration round-trip, end-to-end smoke, audits. Several PRs can be merged before a release |
+| 4. Release | dev PC | Bump + changelog + tag + GitHub release (below) |
+| 5. Deploy | home server | `ops/deploy.py --to vX.Y.Z` (below), after hours |
+| 6. Check | phone | The footer shows `vX.Y.Z` |
+
+Related: [`backup.md`](./backup.md), [`migrations.md`](./migrations.md), [`home-server.md`](./home-server.md) (the host), [`privacy.md`](../architecture/privacy.md) (API key on the proxy).
 
 ## What “a release” is
 
@@ -21,13 +32,17 @@ The groomer’s screen shows `vX.Y.Z`; `GET /health` returns the same `"version"
 
 ## Deploy
 
-From the repo root, venv on, env loaded (`.env` with `API_KEY`, `DATABASE_URL`, …):
+On the home server, as the app account, from the checkout:
 
 ```bash
-python ops/deploy.py --to vX.Y.Z --dry-run    # see the plan
-python ops/deploy.py --to vX.Y.Z              # salon release (and rollback)
-python ops/deploy.py --allow-main             # desktop drill from main only
+ssh <admin>@muttmetrics
+sudo -iu muttmetrics                          # MUTTMETRICS_RESTART_CMD / _APP_URL come from its ~/.profile
+cd /opt/muttmetrics
+.venv/bin/python ops/deploy.py --to vX.Y.Z --dry-run    # see the plan
+.venv/bin/python ops/deploy.py --to vX.Y.Z              # release (and rollback)
 ```
+
+`--allow-main` deploys the tip of `main` instead of a tag: for a throwaway drill only, never on the box. Deploy **after hours**: the restart takes seconds, and a save in that moment becomes a draft the groomer has to retry. If the 5-minute heartbeat ([#104](https://github.com/BOYSABIO/muttmetrics/issues/104)) happens to land in those seconds, you get a 🔴 followed by a ✅ the next time it runs. For a long deploy or a restore, **Pause** the checks in Healthchecks first.
 
 Steps (stops on first failure):
 
@@ -40,31 +55,19 @@ Steps (stops on first failure):
 7. `npm ci` + `npm run build` in `frontend/`
 8. Restart: if `MUTTMETRICS_RESTART_CMD` is set, run it; otherwise print a manual reminder
 9. Health:
-   - `GET /health`: `"version"` must match step 4.
+   - `GET /health`: `"version"` must match step 4. It retries for up to `--health-timeout` seconds (default 30), because `systemctl restart` returns before the API is listening.
    - If `--app-url` (or `MUTTMETRICS_APP_URL`) is set: `GET <app>/api/services` must return 200. `/health` needs no key, so only a protected route proves the SPA server adds `X-API-Key` (#194).
 
 **Why a tag is checked out, not pulled.** A checked-out tag isn't on a branch, and `git pull` needs one. The box therefore stays on the tag it last deployed, and every release or rollback is the same command: `--to` a tag.
 
-### Desktop today
+**A release that changes `deploy.py` itself runs the *old* script once.** Python has already loaded the old version when step 3 checks out the new code, so that one deploy uses the old logic. If it stumbles on something the new version fixes (as the 0.6.2 → 0.6.3 deploy did: "Connection refused" at step 9), **re-run `--to` the same tag**. It's safe: another backup, the same checkout, the same build.
 
-Leave `MUTTMETRICS_RESTART_CMD` unset. After deploy finishes the build:
+**Box wiring** (files in [`ops/server/`](../../ops/server/README.md)):
 
-1. Restart the API (`muttmetrics-api` / uvicorn)
-2. Restart preview (`npm run preview` on `:5174`) so it serves the new `dist/` and still injects `API_KEY` (#194)
+- **Step 8** runs `MUTTMETRICS_RESTART_CMD="sudo systemctl restart muttmetrics-api caddy"`. The sudoers file lets `muttmetrics` run exactly that, without a password, and nothing else.
+- **Step 9** checks the proxy at `MUTTMETRICS_APP_URL=http://127.0.0.1:8080` (Caddy), which injects `X-API-Key` the way Vite does in dev (#194).
 
-### Box later (#93)
-
-Point the same script at systemd (example only — exact unit names live in #93):
-
-```bash
-export MUTTMETRICS_RESTART_CMD="sudo systemctl restart muttmetrics-api caddy"
-export MUTTMETRICS_APP_URL="http://127.0.0.1:8080"
-python ops/deploy.py --to vX.Y.Z
-```
-
-`sudo` here must not prompt (deploy runs unattended). Allow exactly that one command for the deploy user in `/etc/sudoers.d/`, nothing broader.
-
-Caddy (or nginx) must inject `X-API-Key` on `/api/*` the same way Vite preview does (#194).
+Never edit, `npm audit fix` or upgrade npm inside `/opt/muttmetrics`: the box builds exactly what a tag says, and step 1 refuses a dirty tree.
 
 ## Rollback
 
@@ -87,18 +90,14 @@ python ops/deploy.py --to vPREVIOUS
 3. Check out the previous tag; reinstall; rebuild SPA; start services
 4. Confirm `/health` version and a Directory smoke
 
-### Rollback drill (do once before trusting this)
+### Rollback drill
 
-Date of first desktop drill: **_YYYY-MM-DD_** (fill in when you run it).
+Done on the home server on **2026-11-06**: `--to v0.6.2` (code-only rollback, `Deploy OK.`), then `--to v0.6.3` forward again. That forward run stumbled once at step 9 on the old script and passed on the re-run, exactly as described above. Restoring a dump (type B) is drilled through [`backup.md`](./backup.md) §5 (also 2026-11-06).
 
-Procedure:
-
-1. Deploy (or dry-run then a real drill) against a **throwaway** database, not salon `muttmetrics`
-2. Practice restore of the dump taken at deploy step 2 into that scratch DB
-3. Note the date above
+Re-drill after a change to `deploy.py`, and before a release whose migration touches existing data.
 
 ## Acceptance checklist
 
 - [ ] SPA `v…` matches `/health.version` and the latest tag
 - [ ] Release = bump + changelog + tag + `ops/deploy` (no steps from memory)
-- [ ] One rollback drill done; date filled in above
+- [x] One rollback drill done (2026-11-06)

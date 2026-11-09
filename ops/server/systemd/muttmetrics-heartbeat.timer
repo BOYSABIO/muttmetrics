@@ -1,0 +1,12 @@
+# /etc/systemd/system/muttmetrics-heartbeat.timer  (#104)
+# Healthchecks check: period 5 min, grace 25 min → an alarm ~30 min after silence.
+[Unit]
+Description=MuttMetrics heartbeat every 5 minutes - #104
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

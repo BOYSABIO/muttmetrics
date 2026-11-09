@@ -15,14 +15,12 @@ test('dashboard: fixture week shows hand-computed Grooms', async ({ page }) => {
   const rangeLabel = page.locator('.week-nav-range')
 
   const grooms = headlines
-    .locator('.headline-card')
+    .locator('.tw-stat')
     .filter({ has: page.getByRole('heading', { name: 'Grooms', exact: true }) })
-    .locator('.headline-value')
+    .locator('.tw-stat-value')
 
-  const takeHome = headlines
-    .locator('.headline-card')
-    .filter({ has: page.getByRole('heading', { name: 'Take-home', exact: true }) })
-    .locator('.headline-value')
+  // The hero card: its heading is "Take-home", the big number is the value.
+  const takeHome = headlines.locator('.tw-hero-value')
 
   // Walk back to the Syn* week (2026-03-02). Empty weeks have no headlines.
   let found = false

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -171,6 +172,11 @@ def main() -> int:
     """Main entry point."""
     args = parse_args()
     settings = get_settings()
+
+    # Dumps and photo copies are client data: owner-only, whatever umask the
+    # caller had (a login shell's 002 made them group/world-readable on #93).
+    # No effect on Windows, where permissions come from the folder's ACL.
+    os.umask(0o077)
 
     destinations = [settings.backup_root.expanduser().resolve()]
     destinations += [Path(p).expanduser().resolve() for p in args.extra_dest]

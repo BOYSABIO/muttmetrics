@@ -1,0 +1,5 @@
+// /etc/apt/apt.conf.d/52muttmetrics-reboot  (#93)
+// unattended-upgrades reboots when a kernel update needs it, at a quiet time:
+// after the 00:30 backup, before the salon opens.
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-Time "04:30";

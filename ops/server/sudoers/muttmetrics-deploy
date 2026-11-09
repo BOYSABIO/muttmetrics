@@ -1,0 +1,4 @@
+# /etc/sudoers.d/muttmetrics-deploy  (#93, mode 440, check with: visudo -cf <file>)
+# The app account may restart exactly these two services (ops/deploy.py step 8),
+# and nothing else as root.
+muttmetrics ALL=(root) NOPASSWD: /usr/bin/systemctl restart muttmetrics-api caddy
