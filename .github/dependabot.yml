@@ -14,6 +14,10 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    # typescript-eslint still peers typescript <6.1.0; keep majors out of the group bump
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       frontend:
         patterns:
