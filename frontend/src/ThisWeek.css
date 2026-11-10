@@ -39,12 +39,21 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   min-width: 0;
+  align-items: stretch;
+}
+
+.tw-grid > .tw-card {
+  height: 100%;
+}
+
+/* One card alone (e.g. Last 90 days under All time) stays readable, not stretched thin. */
+.tw-grid > .tw-card:only-child {
+  max-width: 36rem;
 }
 
 @media (min-width: 768px) {
   .tw-grid {
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-    align-items: start;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -183,6 +192,23 @@
 
 .tw-hero .tw-stat-value-thin {
   color: rgba(255, 250, 240, 0.75);
+}
+
+.tw-hero-milestone {
+  margin-top: 0.55rem;
+}
+
+.tw-hero .tw-milestone-track {
+  background: rgba(0, 0, 0, 0.22);
+  border-color: rgba(255, 250, 240, 0.25);
+}
+
+.tw-hero .tw-milestone-text {
+  color: rgba(255, 250, 240, 0.75);
+}
+
+.tw-hero .tw-milestone-text strong {
+  color: var(--surface);
 }
 
 /* ---------------------------------------------------------------- */
@@ -412,10 +438,16 @@
 /* Since day one                                                    */
 /* ---------------------------------------------------------------- */
 
+.tw-alltime .tw-trio {
+  flex: 1;
+}
+
 .tw-milestone {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  margin-top: auto;
+  padding-top: 0.35rem;
 }
 
 .tw-milestone-track {

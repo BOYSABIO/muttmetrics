@@ -59,32 +59,43 @@ export function HeroCard({
   previous,
   partial,
   minN,
+  sinceDate,
+  milestone,
 }: {
-  mode: 'week' | 'month'
+  mode: 'week' | 'month' | 'all'
   summary: PeriodSummary
   previous: PeriodSummary | null
   /** The previous period is clipped to the same elapsed days. */
   partial: boolean
   minN: number
+  /** First visit date — all-time mode only. */
+  sinceDate?: string
+  /** Progress toward the next groom milestone — all-time mode only. */
+  milestone?: { toGo: number; next: number; progress: number }
 }) {
-  const deltas = summaryDeltas(summary, previous)
+  const deltas = mode === 'all' ? null : summaryDeltas(summary, previous)
   const tips = summary.revenue_inc_tip - summary.revenue_ex_tip
   const rate = rateText(summary.eur_per_hour_inc_tip)
+  const aria =
+    mode === 'week' ? 'Week headlines' : mode === 'month' ? 'Month headlines' : 'All-time headlines'
   return (
-    <section
-      className="tw-card tw-hero"
-      aria-label={mode === 'week' ? 'Week headlines' : 'Month headlines'}
-    >
+    <section className="tw-card tw-hero" aria-label={aria}>
       <h2 className="tw-label">Take-home</h2>
       <p className="tw-hero-value">{formatMoney(summary.revenue_inc_tip)}</p>
       <p className="tw-hero-sub">
-        {tips > 0 ? `${formatMoney(summary.revenue_ex_tip)} + ${formatMoney(tips)} tips` : 'incl. tips'}
-        {deltas ? (
+        {mode === 'all' && sinceDate ? (
+          <>since {formatShortDate(sinceDate)}</>
+        ) : tips > 0 ? (
+          `${formatMoney(summary.revenue_ex_tip)} + ${formatMoney(tips)} tips`
+        ) : (
+          'incl. tips'
+        )}
+        {mode !== 'all' && deltas ? (
           <>
             {' · '}
             <DeltaTag delta={deltas.takeHome} label={comparisonLabel(mode, partial)} />
           </>
-        ) : previous ? (
+        ) : mode !== 'all' && previous ? (
           <span className="tw-delta-label">
             {' · '}none last {mode}
             {partial ? ' by now' : ''}
@@ -101,6 +112,17 @@ export function HeroCard({
           thin={rate === null}
         />
       </div>
+      {milestone ? (
+        <div className="tw-milestone tw-hero-milestone">
+          <div className="tw-milestone-track" aria-hidden>
+            <span className="tw-milestone-fill" style={{ width: `${milestone.progress * 100}%` }} />
+          </div>
+          <p className="tw-milestone-text">
+            <strong>{milestone.toGo}</strong> more {milestone.toGo === 1 ? 'groom' : 'grooms'} to{' '}
+            <strong>{milestone.next}</strong>
+          </p>
+        </div>
+      ) : null}
     </section>
   )
 }

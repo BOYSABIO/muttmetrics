@@ -1232,8 +1232,8 @@ main.app-home:has(.profile-panel) .fab {
   min-width: 0;
 }
 
-/* Week|Month toggle and the date capsule are one control:
-   [ WEEK  MONTH | <  Oct 12–18  > ]. A thumb slides behind the active mode. */
+/* Week|Month|All toggle and the date capsule are one control:
+   [ WEEK  MONTH  ALL | <  Oct 12–18  > ]. A thumb slides behind the active mode. */
 .period-picker {
   display: inline-flex;
   align-items: stretch;
@@ -1248,7 +1248,7 @@ main.app-home:has(.profile-panel) .fab {
 /* Two classes: beats .week-nav's align-items: center further down. */
 .week-nav.period-picker {
   align-items: stretch;
-  align-self: flex-start;
+  align-self: center;
   flex-wrap: nowrap;
   gap: 0;
   max-width: 100%;
@@ -1261,6 +1261,11 @@ main.app-home:has(.profile-panel) .fab {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.period-picker .week-nav-pill-static {
+  align-items: center;
+  padding: 0 0.85rem;
 }
 
 .period-mode {
@@ -1277,7 +1282,7 @@ main.app-home:has(.profile-panel) .fab {
   top: 3px;
   bottom: 3px;
   left: 3px;
-  width: calc(50% - 3px);
+  width: calc((100% - 6px) / 3);
   border-radius: 999px;
   background: var(--accent-soft);
   transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1287,10 +1292,14 @@ main.app-home:has(.profile-panel) .fab {
   transform: translateX(100%);
 }
 
+.period-mode[data-mode='all']::before {
+  transform: translateX(200%);
+}
+
 .period-mode-btn {
   position: relative;
   z-index: 1;
-  width: 3.7rem;
+  width: 3.15rem;
   min-height: 0;
   height: auto;
   padding: 0;

@@ -10,6 +10,19 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ## [Unreleased]
 
+## [0.6.6] — 2026-11-10
+
+This week screen polish and tooling bumps. No migration.
+
+### Added
+
+- **All time** on the period toggle (Week · Month · All): lifetime take-home, grooms, hours and € / hour in the hero, with the next groom milestone. The date capsule shows first groom → today; the separate "Since day one" card is folded into this mode so it isn't shown twice
+
+### Changed
+
+- Bottom cards on This week stretch to equal height and equal width so Last 90 days and Since day one line up
+- Dev tooling: ruff 0.17.4 (pyproject + pre-commit lockstep), Playwright 1.65.0, Vite 8.3.6
+
 ## [0.6.5] — 2026-11-08
 
 A new This week screen ([#228](https://github.com/BOYSABIO/muttmetrics/issues/228)). No migration: the API passes new date ranges to the same SQL functions.
@@ -102,7 +115,9 @@ baseline the groomer's screen and `/health` can name.
 
 - Insecure / short `API_KEY` values refused at API (and proxy) startup
 
-[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.6.6...HEAD
+[0.6.6]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.6
+[0.6.5]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.5
 [0.6.4]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.4
 [0.6.3]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.3
 [0.6.2]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.2
