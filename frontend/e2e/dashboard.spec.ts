@@ -3,6 +3,9 @@ import { expect, test } from '@playwright/test'
 test('dashboard: fixture week shows hand-computed Grooms', async ({ page }) => {
   await page.goto('/')
 
+  // Land on week mode even if a prior session left All/Month selected.
+  await page.getByRole('button', { name: 'Week', exact: true }).click()
+
   // Reset if a prior session left us off "this week"
   const backToThis = page.getByRole('button', { name: 'Back to this week' })
   if (await backToThis.isVisible()) {
@@ -45,4 +48,20 @@ test('dashboard: fixture week shows hand-computed Grooms', async ({ page }) => {
   expect(found, 'never reached fixture week with Grooms=11').toBe(true)
   await expect(grooms).toHaveText('11')
   await expect(takeHome).toContainText('633')
+})
+
+test('dashboard: All time mode shows lifetime headlines', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'All time' }).click()
+
+  const headlines = page.getByRole('region', { name: 'All-time headlines' })
+  const empty = page.getByRole('region', { name: 'Empty period' })
+  await expect(headlines.or(empty)).toBeVisible({ timeout: 15_000 })
+
+  if (await headlines.isVisible()) {
+    await expect(page.getByRole('heading', { name: 'All time' })).toBeVisible()
+    await expect(headlines.locator('.tw-hero-value')).not.toHaveText('')
+    // The side "Since day one" card is folded into the hero in this mode.
+    await expect(page.getByRole('region', { name: 'Since day one' })).toHaveCount(0)
+  }
 })
