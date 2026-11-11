@@ -46,9 +46,16 @@
   height: 100%;
 }
 
-/* One card alone (e.g. Last 90 days under All time) stays readable, not stretched thin. */
+/* One card alone (Last 90 days, until the timing card appears) takes the
+   full row like the cards above it, instead of leaving half the row empty.
+   Its coat rows keep a readable width. */
 .tw-grid > .tw-card:only-child {
-  max-width: 36rem;
+  grid-column: 1 / -1;
+}
+
+.tw-grid > .tw-card:only-child .tw-coat-list,
+.tw-grid > .tw-card:only-child .tw-insight {
+  max-width: 44rem;
 }
 
 @media (min-width: 768px) {
@@ -420,26 +427,74 @@
 /* Pairs and trios of small numbers                                 */
 /* ---------------------------------------------------------------- */
 
-.tw-pair,
-.tw-trio {
+.tw-pair {
   display: grid;
   gap: 0.75rem;
-}
-
-.tw-pair {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.tw-trio {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+/* ---------------------------------------------------------------- */
+/* Milestones: the All time hero, and the one-line link in week/month */
+/* ---------------------------------------------------------------- */
+
+.tw-alltime-link {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem 1rem;
+  overflow: hidden;
+  text-align: left;
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+  background: var(--surface);
+  border: var(--edge, 1px solid var(--line));
+  border-radius: var(--radius);
+  box-shadow: var(--pop-sm, var(--shadow));
+  cursor: pointer;
+  animation: tw-rise 0.45s var(--ease-out, ease-out) 0.3s both;
 }
 
-/* ---------------------------------------------------------------- */
-/* Since day one                                                    */
-/* ---------------------------------------------------------------- */
+.tw-alltime-link:hover {
+  background: var(--sun-soft, var(--accent-soft));
+}
 
-.tw-alltime .tw-trio {
-  flex: 1;
+.tw-alltime-link:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.tw-alltime-link strong {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.tw-alltime-link-go {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* The milestone as a thin line along the bottom edge. */
+.tw-alltime-link-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0.3rem;
+  background: var(--paper);
+}
+
+.tw-alltime-link-track .tw-milestone-fill {
+  height: 100%;
 }
 
 .tw-milestone {

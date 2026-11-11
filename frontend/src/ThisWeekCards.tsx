@@ -59,7 +59,6 @@ export function HeroCard({
   previous,
   partial,
   minN,
-  sinceDate,
   milestone,
 }: {
   mode: 'week' | 'month' | 'all'
@@ -68,8 +67,6 @@ export function HeroCard({
   /** The previous period is clipped to the same elapsed days. */
   partial: boolean
   minN: number
-  /** First visit date — all-time mode only. */
-  sinceDate?: string
   /** Progress toward the next groom milestone — all-time mode only. */
   milestone?: { toGo: number; next: number; progress: number }
 }) {
@@ -83,9 +80,7 @@ export function HeroCard({
       <h2 className="tw-label">Take-home</h2>
       <p className="tw-hero-value">{formatMoney(summary.revenue_inc_tip)}</p>
       <p className="tw-hero-sub">
-        {mode === 'all' && sinceDate ? (
-          <>since {formatShortDate(sinceDate)}</>
-        ) : tips > 0 ? (
+        {tips > 0 ? (
           `${formatMoney(summary.revenue_ex_tip)} + ${formatMoney(tips)} tips`
         ) : (
           'incl. tips'
@@ -286,38 +281,35 @@ export function TimingCard({ recent, days }: { recent: MetricsPeriodBlock; days:
 
 // ---------------------------------------------------------------------------
 
-export function AllTimeCard({ allTime }: { allTime: AllTimeOut }) {
+/**
+ * Week and month views: one line pointing at the All time view, so the
+ * lifetime numbers live in one place (the All time hero) and aren't repeated.
+ */
+export function AllTimeLink({
+  allTime,
+  onOpen,
+}: {
+  allTime: AllTimeOut
+  onOpen: () => void
+}) {
   const s = allTime.summary
   const m = nextMilestone(s.visit_count)
   return (
-    <section className="tw-card tw-alltime" aria-label="Since day one">
-      <div className="tw-card-head">
-        <h2 className="tw-label">Since day one</h2>
-        <span className="tw-card-note">since {formatShortDate(allTime.first_visit_date)}</span>
-      </div>
-      <div className="tw-trio">
-        <article className="tw-stat">
-          <h3 className="tw-stat-title">Grooms</h3>
-          <p className="tw-stat-value">{s.visit_count}</p>
-        </article>
-        <article className="tw-stat">
-          <h3 className="tw-stat-title">Hours</h3>
-          <p className="tw-stat-value">{formatHours(s.groomed_minutes)}</p>
-        </article>
-        <article className="tw-stat">
-          <h3 className="tw-stat-title">Take-home</h3>
-          <p className="tw-stat-value">{formatMoney(s.revenue_inc_tip)}</p>
-        </article>
-      </div>
-      <div className="tw-milestone">
-        <div className="tw-milestone-track" aria-hidden>
-          <span className="tw-milestone-fill" style={{ width: `${m.progress * 100}%` }} />
-        </div>
-        <p className="tw-milestone-text">
-          <strong>{m.toGo}</strong> more {m.toGo === 1 ? 'groom' : 'grooms'} to{' '}
-          <strong>{m.next}</strong>
-        </p>
-      </div>
-    </section>
+    <button type="button" className="tw-alltime-link" onClick={onOpen}>
+      <span className="tw-alltime-link-text">
+        <strong>{s.visit_count}</strong> {s.visit_count === 1 ? 'groom' : 'grooms'} since{' '}
+        {formatShortDate(allTime.first_visit_date)}
+        <span className="tw-alltime-link-sep" aria-hidden>
+          {' · '}
+        </span>
+        <strong>{m.toGo}</strong> to {m.next}
+      </span>
+      <span className="tw-alltime-link-go">
+        All time <span aria-hidden>→</span>
+      </span>
+      <span className="tw-alltime-link-track" aria-hidden>
+        <span className="tw-milestone-fill" style={{ width: `${m.progress * 100}%` }} />
+      </span>
+    </button>
   )
 }

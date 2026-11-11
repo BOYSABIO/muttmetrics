@@ -1263,9 +1263,15 @@ main.app-home:has(.profile-panel) .fab {
   box-shadow: none;
 }
 
+/* All time has no arrows. The label takes their room, so the control keeps
+   the same width as in week/month and nothing jumps when switching. */
 .period-picker .week-nav-pill-static {
   align-items: center;
-  padding: 0 0.85rem;
+}
+
+.period-picker .week-nav-pill-static .week-nav-range {
+  width: calc(13ch + 2 * 2.3rem);
+  border-inline: none;
 }
 
 .period-mode {
