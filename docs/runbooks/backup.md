@@ -156,13 +156,14 @@ Run a drill after any change to `ops/backup.py`, before a migration that touches
 
 ## 6. Deleting a client's photos, including from backups
 
-`ops/photo_purge.py` removes the live file and the row. The backup copy is additive and has to be removed too:
+The photo backup is additive, so a deletion has to reach it explicitly. Since 0.6.7, `ops/photo_purge.py` and `ops/client_erase.py` do that themselves: for each photo, the live file, then the copy under `<BACKUP_ROOT>/photos/` (same relative key), then the row. On the box, as `muttmetrics` in `/opt/muttmetrics`:
 
 ```bash
-python ops/photo_purge.py --owner-id 42            # review
-python ops/photo_purge.py --owner-id 42 --apply    # live file + row
-# then remove the same relative keys under <BACKUP_ROOT>/photos/
+.venv/bin/python ops/photo_purge.py --owner-id 42            # review: lists the keys
+.venv/bin/python ops/photo_purge.py --owner-id 42 --apply    # live file + backup copy + row
 ```
+
+Both print the keys they removed. Keep them (private log) until any other copy is cleaned: after `--apply` the rows are gone, and the keys are the only way to find those files.
 
 Once the second copy exists ([#221](https://github.com/BOYSABIO/muttmetrics/issues/221)), remove the same keys from its `photos/` the next time it's plugged in.
 

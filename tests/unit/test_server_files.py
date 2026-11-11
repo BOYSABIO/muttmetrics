@@ -59,6 +59,8 @@ def test_api_listens_on_localhost_and_is_sandboxed():
     assert "ProtectSystem=strict" in unit
     assert "ReadWritePaths=/srv/muttmetrics" in unit
     assert "Restart=always" in unit
+    # photos it writes are owner-only (backup.py copies their mode into the backups)
+    assert "UMask=0077" in unit
 
 
 def test_caddy_is_localhost_only_and_replaces_the_key():

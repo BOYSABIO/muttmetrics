@@ -12,6 +12,8 @@ WorkingDirectory=/opt/muttmetrics
 ExecStart=/opt/muttmetrics/.venv/bin/uvicorn muttmetrics.api.app:app --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=3
+# Photos the API writes are client data: owner-only (600), not the default 644.
+UMask=0077
 
 # Sandboxing: the API can write to its data folder and nothing else
 NoNewPrivileges=true

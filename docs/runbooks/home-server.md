@@ -195,7 +195,7 @@ sudo systemctl daemon-reload && sudo systemctl enable --now muttmetrics-api
 curl -s http://127.0.0.1:8000/health; echo
 ```
 
-**Check:** `/health` is OK. Then `sudo systemctl kill muttmetrics-api`, and 5 s later `systemctl show -p NRestarts muttmetrics-api` is ≥ 1 and `/health` answers again.
+**Check:** `/health` is OK. Then `sudo systemctl kill muttmetrics-api`, and 5 s later `systemctl show -p NRestarts muttmetrics-api` is ≥ 1 and `/health` answers again. `systemctl show -p UMask muttmetrics-api` is `0077`: photos it writes are owner-only (`600`), and so are their backup copies.
 
 **Caddy:**
 

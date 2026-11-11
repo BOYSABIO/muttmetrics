@@ -124,7 +124,7 @@ Files are removed first, then rows.
 |------|--------------|
 | The file under `PHOTO_ROOT` and its `photo` row | immediately, when the purge runs |
 | Database backup copies ([#95](https://github.com/BOYSABIO/muttmetrics/issues/95)) | **within 14 days** (daily tier), or **within 8 weeks** if the row was in a retained Sunday dump |
-| Photo backup copies | **immediately**, as a step of the purge procedure — the photo backup is additive and never expires on its own ([`backup.md`](../runbooks/backup.md) §6) |
+| Photo backup copies | **immediately**: `photo_purge` / `client_erase` remove the copy under `BACKUP_ROOT` together with the live file (0.6.7). The photo backup is additive and never expires on its own; a second copy on another device ([#221](https://github.com/BOYSABIO/muttmetrics/issues/221)) is cleaned by hand with the printed keys ([`backup.md`](../runbooks/backup.md) §6) |
 | A browser cache on a device that displayed the photo | within one hour (`Cache-Control: private, max-age=3600`) |
 
 Telling a client the deletion is instant and total would be false. What is true and defensible: the live copy and the photo backup go immediately, and any database backup still holding their rows is gone within 14 days (8 weeks at the outside, if a retained Sunday dump is involved).
@@ -160,7 +160,7 @@ Under the GDPR a client can ask **what you hold** (Art. 15) and ask for it to be
 | Access / export | `python ops/client_export.py --owner-id N` | [`client-requests.md`](../runbooks/client-requests.md) |
 | Erasure | `python ops/client_erase.py --owner-id N` then `--apply` | same |
 
-Exports land under gitignored `data/exports/` — never commit them.
+Exports land under gitignored `data/exports/`, owner-only (folder `700`, files `600`) — never commit them. On the home server they're created there and handed over without staying on the dev PC ([`client-requests.md`](../runbooks/client-requests.md) §2).
 
 ### Erasure decision: anonymise, do not hard-delete
 
@@ -177,7 +177,7 @@ Exports land under gitignored `data/exports/` — never commit them.
 
 **Order:** photos first (files then rows), then DB scrub in one transaction. Idempotent: a second erase is a safe no-op.
 
-**Backups:** database dumps still hold the pre-erase PII until they age out of the retention window (daily ≤14 days, retained Sundays ≤8 weeks). Photo backup copies under `BACKUP_ROOT` must be removed as part of the photo purge procedure ([`backup.md`](../runbooks/backup.md) §6). Do not rewrite old dumps. Tell the client the live copy is gone; residual backup copies expire on that schedule.
+**Backups:** database dumps still hold the pre-erase PII until they age out of the retention window (daily ≤14 days, retained Sundays ≤8 weeks). Photo backup copies under `BACKUP_ROOT` are removed by the same run (0.6.7); copies on another device need the printed keys ([`backup.md`](../runbooks/backup.md) §6). Do not rewrite old dumps. Tell the client the live copy is gone; residual backup copies expire on that schedule.
 
 ## Public-site follow-up
 
