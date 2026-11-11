@@ -183,7 +183,7 @@ Autogenerate diffs two schema *states*; it does not know what you *meant*. A ren
 
 `ops/backup.py` writes a `pg_dump -Fc` archive plus an **additive** photo copy under `BACKUP_ROOT` (outside the repo); `ops/backup_check.py` reports how stale the last run is and exits non-zero when it is too old. Retention: 14 daily dumps, Sundays for 8 weeks, photos never auto-pruned.
 
-Run it by hand for now — **scheduling is documented but not enabled yet** ([`docs/runbooks/backup.md`](./docs/runbooks/backup.md) §4). Everything about restoring, including the drill that proves a dump is real, is in that runbook.
+The home server runs it every night from a systemd timer and reports to Healthchecks ([`docs/runbooks/backup.md`](./docs/runbooks/backup.md) §4); on the dev PC (synthetic data) you rarely need it. Everything about restoring, including the drill that proves a dump is real, is in that runbook.
 
 ```bash
 python ops/backup.py
@@ -209,7 +209,7 @@ BACKUP_ROOT=C:/Users/<you>/…/MuttMetrics/data/dev/backups
 | `src/muttmetrics/media/images.py` | bytes ↔ bytes: decode, EXIF strip, downscale, re-encode JPEG |
 | `src/muttmetrics/api/routes/photos.py` | upload / list / serve |
 | `photo` table | `pet_id`, optional `visit_id`, `kind`, relative `storage_key`, size, sha256, `created_at` |
-| `ops/photo_purge.py` | delete a client's photos (files first, then rows) — dry run by default |
+| `ops/photo_purge.py` | delete a client's photos (file, backup copy, then row) — dry run by default |
 | `ops/photo_sweep.py` | find files with no row (crash leftovers) — dry run by default |
 
 Deps: `pillow` (decode/encode), `pillow-heif` (iPhone HEIC), `python-multipart` (upload bodies).

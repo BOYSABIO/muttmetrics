@@ -1,7 +1,9 @@
 """Art. 17 erasure for one owner — anonymise, do not hard-delete (#195).
 
-Photos go first (reuse photo_purge), then owner/pet/visit free-text is scrubbed
-in place so visit facts remain for bookkeeping and M7. Dry run unless --apply.
+Photos go first (reuse photo_purge: live file, its copy under <BACKUP_ROOT>/photos/,
+then the row), then owner/pet/visit free-text is scrubbed in place so visit facts
+remain for bookkeeping and M7. Dry run unless --apply. The photo keys are printed,
+because after --apply they are the only record of copies on another device (#221).
 
     python ops/client_erase.py --owner-id 42
     python ops/client_erase.py --owner-id 42 --apply
@@ -23,7 +25,7 @@ from sqlalchemy.orm import Session, selectinload
 # `python ops/client_erase.py` puts ops/ on sys.path; tests use the repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ops.photo_purge import photos_for_owner, purge_photos  # noqa: E402
+from ops.photo_purge import default_backup_root, photos_for_owner, purge_photos  # noqa: E402
 
 from muttmetrics.db.session import session_scope  # noqa: E402
 from muttmetrics.models import Owner, Pet, Visit  # noqa: E402
@@ -47,8 +49,10 @@ class EraseReport:
     owner_found: bool = False
     already_erased: bool = False
     photo_count: int = 0
+    photo_keys: list[str] = field(default_factory=list)
     photos_files_deleted: int = 0
     photos_rows_deleted: int = 0
+    backup_copies_deleted: int = 0
     owner_fields_cleared: list[str] = field(default_factory=list)
     pets_renamed: list[int] = field(default_factory=list)
     visits_scrubbed: list[int] = field(default_factory=list)
@@ -99,8 +103,10 @@ def load_owner_for_erase(session: Session, owner_id: int) -> Owner | None:
     return session.scalars(stmt).first()
 
 
-def erase_owner(session: Session, owner_id: int, *, apply: bool) -> EraseReport:
-    """Anonymise one owner. Photos purged when apply=True.
+def erase_owner(
+    session: Session, owner_id: int, *, apply: bool, backup_root: Path | None = None
+) -> EraseReport:
+    """Anonymise one owner. Photos (and their backup copies) purged when apply=True.
 
     Raises LookupError if the owner id does not exist.
     """
@@ -112,6 +118,7 @@ def erase_owner(session: Session, owner_id: int, *, apply: bool) -> EraseReport:
 
     photos = photos_for_owner(session, owner_id)
     report.photo_count = len(photos)
+    report.photo_keys = [p.storage_key for p in photos]
 
     pets_need = [p for p in owner.pets if _pet_needs_scrub(p)]
     visits_need = [v for p in owner.pets for v in p.visits if _visit_needs_scrub(v)]
@@ -137,9 +144,10 @@ def erase_owner(session: Session, owner_id: int, *, apply: bool) -> EraseReport:
         return report
 
     # 1) Photos first — files then rows (RESTRICT FKs + no orphan bytes).
-    files_n, rows_n = purge_photos(session, photos, apply=True)
-    report.photos_files_deleted = files_n
-    report.photos_rows_deleted = rows_n
+    purged = purge_photos(session, photos, apply=True, backup_root=backup_root)
+    report.photos_files_deleted = purged.files_deleted
+    report.photos_rows_deleted = purged.rows_deleted
+    report.backup_copies_deleted = purged.backup_copies_deleted
     session.flush()
 
     # 2) Scrub free text on visits, then pets, then owner (same transaction).
@@ -194,7 +202,8 @@ def main() -> int:
     args = parse_args()
     try:
         with session_scope() as session:
-            report = erase_owner(session, args.owner_id, apply=args.apply)
+            backup_root = default_backup_root()
+            report = erase_owner(session, args.owner_id, apply=args.apply, backup_root=backup_root)
     except LookupError as exc:
         print(exc)
         return 1
@@ -205,6 +214,8 @@ def main() -> int:
         return 0
 
     print(f"photos matching: {report.photo_count}")
+    for key in report.photo_keys:
+        print(f"  {key}")
     if report.owner_fields_cleared:
         print(f"owner fields to clear: {', '.join(report.owner_fields_cleared)}")
     if report.pets_renamed:
@@ -218,10 +229,13 @@ def main() -> int:
 
     print(
         f"\nApplied: photos files={report.photos_files_deleted} "
-        f"rows={report.photos_rows_deleted}; "
+        f"rows={report.photos_rows_deleted} "
+        f"backup copies={report.backup_copies_deleted} (under {backup_root / 'photos'}); "
         f"pets={len(report.pets_renamed)}; visits={len(report.visits_scrubbed)}."
     )
-    print("Live PII cleared. DB backups still age out — see privacy.md.")
+    print("Live PII cleared. DB dumps still age out — see privacy.md.")
+    if report.photo_keys:
+        print("Remove the keys listed above from any other backup copy too (#221).")
     return 0
 
 

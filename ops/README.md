@@ -31,7 +31,7 @@ Do **not** merge purge+sweep, backup+check, or the metric SQL files into one meg
 |--------|----------|---------|
 | [`backup.py`](./backup.py) | Dump DB (+ additive photo copy) | [`backup.md`](../docs/runbooks/backup.md) |
 | [`backup_check.py`](./backup_check.py) | Staleness check (non-zero if stale) — pair with backup, not a duplicate | same |
-| [`photo_purge.py`](./photo_purge.py) | Delete a client's photo **files then rows** (dry run default) | [`photos.md`](../docs/runbooks/photos.md) |
+| [`photo_purge.py`](./photo_purge.py) | Delete a client's photo **files (live + backup copy) then rows** (dry run default) | [`photos.md`](../docs/runbooks/photos.md) |
 | [`photo_sweep.py`](./photo_sweep.py) | Orphan **files** under `PHOTO_ROOT` with no DB row (opposite of purge) | same |
 | [`backfill_size_band.py`](./backfill_size_band.py) | Recompute `pet.size_band` from `weight_kg` + `species` (#171 / #190) | dry-run default; `--apply` to write |
 | [`client_export.py`](./client_export.py) | Art. 15: export one owner → `data/exports/` (#195) | [`client-requests.md`](../docs/runbooks/client-requests.md) |

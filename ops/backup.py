@@ -125,7 +125,9 @@ def copy_new_photos(photo_root: Path, dest: Path) -> tuple[int, int]:
             continue
 
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, target)  # copy2 keeps the modification time
+        shutil.copy2(src, target)  # copy2 keeps the modification time...
+        # ...and the source's permission bits, which the umask can't override.
+        target.chmod(0o600)
         copied += 1
 
     return copied, skipped

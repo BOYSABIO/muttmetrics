@@ -148,12 +148,17 @@ def export_owner(
     dest.mkdir(parents=True, exist_ok=False)
     photos_dir = dest / "photos"
     photos_dir.mkdir()
+    # Client data: owner-only whatever the caller's umask (no effect on Windows,
+    # where the folder's ACL decides).
+    dest.chmod(0o700)
+    photos_dir.chmod(0o700)
 
     payload = owner_payload(owner)
     (dest / "owner.json").write_text(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+    (dest / "owner.json").chmod(0o600)
 
     missing: list[str] = []
     copied = 0
@@ -167,6 +172,7 @@ def export_owner(
                     missing.append(photo.storage_key)
                     continue
                 shutil.copy2(src, target)
+                target.chmod(0o600)  # copy2 also copies the source's mode
                 copied += 1
             except (OSError, ValueError, FileNotFoundError):
                 missing.append(photo.storage_key)
@@ -181,6 +187,7 @@ def export_owner(
         json.dumps(manifest, indent=2) + "\n",
         encoding="utf-8",
     )
+    (dest / "manifest.json").chmod(0o600)
     return dest
 
 

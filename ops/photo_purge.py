@@ -6,17 +6,22 @@ left pointing at bytes that are gone. Dry run unless --apply is given.
     python ops/photo_purge.py --owner-id 42
     python ops/photo_purge.py --owner-id 42 --apply
 
-Backups still hold copies until the retention window in docs/architecture/privacy.md
-passes. See docs/runbooks/photos.md for the full deletion procedure.
+The additive photo copies under <BACKUP_ROOT>/photos/ are removed too (same
+relative key). Database dumps still age out on their own schedule; a second copy
+on another device (#221) needs the printed keys removed by hand. See
+docs/runbooks/backup.md §6 and docs/architecture/privacy.md.
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import dataclass, field
+from pathlib import Path
 
 from sqlalchemy import Select, select
 
+from muttmetrics.config import get_settings
 from muttmetrics.db.session import session_scope
 from muttmetrics.media import storage
 from muttmetrics.models import Pet, Photo
@@ -63,26 +68,59 @@ def photos_for_owner(session, owner_id: int) -> list[Photo]:
     return list(session.scalars(stmt))
 
 
-def purge_photos(session, photos: list[Photo], *, apply: bool) -> tuple[int, int]:
-    """Delete photo files then rows. Returns (files_deleted, rows_deleted).
+@dataclass
+class PurgeResult:
+    files_deleted: int = 0
+    rows_deleted: int = 0
+    backup_copies_deleted: int = 0
+    # Keys whose rows are gone: the only record of where other copies live.
+    deleted_keys: list[str] = field(default_factory=list)
 
-    Dry run (apply=False) deletes nothing. On file errors the row is left so
-    the bytes stay findable — same rule as the CLI.
+
+def backup_copy_path(backup_root: Path, key: str) -> Path:
+    """Where backup.py put this photo: <backup_root>/photos/<key>, never outside it."""
+    base = (backup_root / "photos").resolve()
+    candidate = (base / key).resolve()
+    if base not in candidate.parents:
+        raise ValueError(f"key escapes the backup photo folder: {key!r}")
+    return candidate
+
+
+def purge_photos(
+    session, photos: list[Photo], *, apply: bool, backup_root: Path | None = None
+) -> PurgeResult:
+    """Delete photo files, their backup copies, then rows.
+
+    Dry run (apply=False) deletes nothing. On a live-file error the row is
+    left so the bytes stay findable — same rule as the CLI. ``backup_root``
+    None skips the backup copies (tests, or a machine without backups).
     """
+    result = PurgeResult()
     if not apply:
-        return 0, 0
-    files_deleted = 0
-    rows_deleted = 0
+        return result
     for photo in photos:
         try:
             if storage.delete(photo.storage_key):
-                files_deleted += 1
+                result.files_deleted += 1
         except (OSError, ValueError) as exc:
             print(f"  ! could not delete file for photo_id={photo.photo_id}: {exc}")
             continue
+        if backup_root is not None:
+            try:
+                copy = backup_copy_path(backup_root, photo.storage_key)
+                if copy.is_file():
+                    copy.unlink()
+                    result.backup_copies_deleted += 1
+            except (OSError, ValueError) as exc:
+                print(f"  ! could not delete backup copy for photo_id={photo.photo_id}: {exc}")
+        result.deleted_keys.append(photo.storage_key)
         session.delete(photo)
-        rows_deleted += 1
-    return files_deleted, rows_deleted
+        result.rows_deleted += 1
+    return result
+
+
+def default_backup_root() -> Path:
+    return get_settings().backup_root.expanduser().resolve()
 
 
 def main() -> int:
@@ -107,10 +145,17 @@ def main() -> int:
             print("\nDry run - nothing deleted. Re-run with --apply to delete.")
             return 0
 
-        files_deleted, rows_deleted = purge_photos(session, photos, apply=True)
+        backup_root = default_backup_root()
+        result = purge_photos(session, photos, apply=True, backup_root=backup_root)
 
-        print(f"\nDeleted {files_deleted} file(s) and {rows_deleted} row(s).")
-        print("Backups still contain copies - see docs/architecture/privacy.md.")
+        print(
+            f"\nDeleted {result.files_deleted} file(s), {result.rows_deleted} row(s) and "
+            f"{result.backup_copies_deleted} backup cop(ies) under {backup_root / 'photos'}."
+        )
+        print("Keys (remove the same ones from any other backup copy, e.g. #221):")
+        for key in result.deleted_keys:
+            print(f"  {key}")
+        print("Database dumps still age out - see docs/architecture/privacy.md.")
 
     return 0
 

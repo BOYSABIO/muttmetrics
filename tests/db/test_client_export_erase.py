@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import stat
 from datetime import date
 from pathlib import Path
 
@@ -177,3 +179,73 @@ def test_erase_is_idempotent(db_session: Session) -> None:
 def test_erase_missing_owner(db_session: Session) -> None:
     with pytest.raises(LookupError, match="No owner"):
         erase_owner(db_session, 9_999_999, apply=False)
+
+
+# --- 0.6.7: backup copies and owner-only files --------------------------------
+
+posix_only = pytest.mark.skipif(os.name != "posix", reason="file modes are POSIX-only")
+
+
+def _backup_copy(backup_root: Path, key: str) -> Path:
+    """What ops/backup.py leaves behind: the same relative key under photos/."""
+    copy = backup_root / "photos" / key
+    copy.parent.mkdir(parents=True, exist_ok=True)
+    copy.write_bytes(b"fake-jpeg-bytes")
+    return copy
+
+
+def test_erase_also_removes_the_backup_copies(db_session: Session, tmp_path: Path) -> None:
+    a, pet_a, _ = _owner_tree(db_session, name="Syn Bk A", pet_name="Syn Bk Dog", with_photo=True)
+    b, pet_b, _ = _owner_tree(db_session, name="Syn Bk B", pet_name="Syn Bk Keep", with_photo=True)
+    backup_root = tmp_path / "backups"
+    key_a = pet_a.photos[0].storage_key
+    key_b = pet_b.photos[0].storage_key
+    copy_a = _backup_copy(backup_root, key_a)
+    copy_b = _backup_copy(backup_root, key_b)
+
+    dry = erase_owner(db_session, a.owner_id, apply=False, backup_root=backup_root)
+    assert dry.photo_keys == [key_a]  # listed before anything is deleted
+    assert copy_a.exists()
+
+    report = erase_owner(db_session, a.owner_id, apply=True, backup_root=backup_root)
+    assert report.photo_keys == [key_a]
+    assert report.backup_copies_deleted == 1
+    assert not copy_a.exists()
+    assert copy_b.exists()  # another client's copy is untouched
+
+
+def test_erase_without_a_backup_copy_still_succeeds(db_session: Session, tmp_path: Path) -> None:
+    owner, _, _ = _owner_tree(
+        db_session, name="Syn No Bk", pet_name="Syn No Bk Dog", with_photo=True
+    )
+    report = erase_owner(db_session, owner.owner_id, apply=True, backup_root=tmp_path / "none")
+    assert report.photos_rows_deleted == 1
+    assert report.backup_copies_deleted == 0
+
+
+def test_backup_copy_path_refuses_to_leave_the_folder(tmp_path: Path) -> None:
+    from ops.photo_purge import backup_copy_path
+
+    assert (
+        backup_copy_path(tmp_path, "2026/11/abc.jpg")
+        == (tmp_path / "photos" / "2026" / "11" / "abc.jpg").resolve()
+    )
+    with pytest.raises(ValueError, match="escapes"):
+        backup_copy_path(tmp_path, "../dumps/x.dump")
+
+
+@posix_only
+def test_export_is_owner_only(db_session: Session, tmp_path: Path, photo_root: Path) -> None:
+    owner, pet, _ = _owner_tree(
+        db_session, name="Syn Mode", pet_name="Syn Mode Dog", with_photo=True
+    )
+    # A photo written world-readable, as the API did before UMask=0077
+    storage.key_to_path(pet.photos[0].storage_key).chmod(0o644)
+
+    dest = export_owner(db_session, owner.owner_id, export_root=tmp_path / "exports")
+
+    assert stat.S_IMODE(dest.stat().st_mode) == 0o700
+    assert stat.S_IMODE((dest / "photos").stat().st_mode) == 0o700
+    for f in dest.rglob("*"):
+        if f.is_file():
+            assert stat.S_IMODE(f.stat().st_mode) == 0o600, f.name

@@ -105,9 +105,9 @@ python ops/photo_purge.py --owner-id 42
 python ops/photo_purge.py --owner-id 42 --apply
 ```
 
-The script deletes **files first, then rows** — the reverse of the write order, for the same reason: never leave a row pointing at bytes that are gone.
+The script deletes **files first, then rows** — the reverse of the write order, for the same reason: never leave a row pointing at bytes that are gone. With each live file it also removes that photo's copy under `<BACKUP_ROOT>/photos/` (0.6.7), and it prints the keys for any other backup copy ([`backup.md`](./backup.md) §6). On the home server, run it there as `muttmetrics` ([`client-requests.md`](./client-requests.md)).
 
-3. **Backups still contain the photos** until the retention window in [`privacy.md`](../architecture/privacy.md) passes. Tell the client that; do not claim an instant total erase.
+3. **Database dumps still contain the photo rows** until the retention window in [`privacy.md`](../architecture/privacy.md) passes. Tell the client that; do not claim an instant total erase.
 
 A browser that displayed a photo may also keep it in its cache for up to an hour (`Cache-Control: private, max-age=3600`).
 

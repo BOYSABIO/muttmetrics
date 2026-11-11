@@ -10,12 +10,23 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ## [Unreleased]
 
+## [0.6.7] — 2026-11-11
+
+Owner-only files everywhere, and an erase that reaches the photo backups. No migration. **On the box, once:** reinstall `muttmetrics-api.service` (it gains `UMask=0077`) — see the release notes.
+
+### Security
+
+- **Photos are owner-only (`600`), and so are their backup copies.** The API service had no `UMask`, so new photos were written `644`, and `ops/backup.py` copied that mode into the backups (`shutil.copy2` copies permission bits; the umask from 0.6.3 didn't apply). The folders were all `700`, so nothing was readable by another account; the files now match. `UMask=0077` in `ops/server/systemd/muttmetrics-api.service` (pinned by `test_server_files.py`), and `backup.py` sets `600` on every copy
+- **Client exports are owner-only** (folder `700`, files `600`) instead of following the caller's umask
+
 ### Changed
 
 - The dev PC no longer holds real client data ([#222](https://github.com/BOYSABIO/muttmetrics/issues/222)): its database was recreated from synthetic fixtures, and dev photos/backups go to the repo's gitignored `data/dev/`. `privacy.md`, CONTRIBUTING, `photos.md` and `db-peek.md` say so. The pre-move data folder stays frozen as the second copy until [#221](https://github.com/BOYSABIO/muttmetrics/issues/221)
 
 ### Fixed
 
+- **Erasing a client now removes their photo backup copies too** (found in the export/erase dry run, #198). `client_erase.py --apply` and `photo_purge.py --apply` delete each photo's copy under `<BACKUP_ROOT>/photos/` with the live file, report how many, and print the keys, which are the only record left for cleaning another copy (#221). Before, the runbook said to remove them by hand, but `client_erase` never showed the keys, and after `--apply` they were gone
+- `client-requests.md` describes a real request on the home server: where to run it, how the export reaches the client without staying on the dev PC, and what to log
 - Lifetime numbers were shown twice: week and month still had the "Since day one" card next to the new **All** mode. That card is gone; week and month end with a one-line link instead (grooms so far, how many to the next milestone, and "All time →", with the milestone as a thin bar) that switches to All
 - All mode's date capsule was cut off ("Sep 22 – Nov…") and kept the dividers of the missing arrows. It now reads "Since Sep 22" and has the same width as in week and month, so the control doesn't jump when switching
 - The All time hero repeated "since …" under the total; it now shows the tips split like the other modes (the capsule says since when)
