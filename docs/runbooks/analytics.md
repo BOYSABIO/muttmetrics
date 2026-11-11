@@ -79,7 +79,7 @@ A **cell** is one group produced by that metric’s **GROUP BY** — **not** “
 | Day by day (week) / week by week (month) | The selected period |
 | €/hour by coat × shaved, the coat sentence | Last 90 days |
 | Overrun, P90 miss (shown only once visits carry estimates) | Last 90 days |
-| Since day one | First completed visit → today |
+| All time: the hero in **All** mode; in week and month only a one-line link to it (grooms so far, next milestone) | First completed visit → today |
 
 **Comparisons:** while a period is still running, the previous one is clipped to the same number of elapsed days (Tuesday is compared with last Monday–Tuesday, not a whole week). A change is shown only when the previous period has grooms; a rate's change only when both rates passed `MIN_N`.
 

@@ -15,7 +15,7 @@ import {
   todayISODate,
 } from './dates'
 import './ThisWeek.css'
-import { AllTimeCard, DayStrip, HeroCard, RecentCard, TimingCard } from './ThisWeekCards'
+import { AllTimeLink, DayStrip, HeroCard, RecentCard, TimingCard } from './ThisWeekCards'
 import { monthColumns, nextMilestone, weekColumns } from './thisWeekModel'
 
 const DEFAULT_BUFFER_MINUTES = 240
@@ -167,7 +167,7 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
   const rangeLabel =
     mode === 'all'
       ? allTime
-        ? `${formatShortDate(allTime.first_visit_date)} – ${formatShortDate(allTime.through)}`
+        ? `Since ${formatShortDate(allTime.first_visit_date)}`
         : 'Since day one'
       : mode === 'week'
         ? formatWeekRange(
@@ -334,7 +334,7 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
         <div className="this-week-meta-row">
           <p className="step-meta">
             {mode === 'all'
-              ? 'Since the first groom'
+              ? 'Every groom so far'
               : mode === 'week'
                 ? 'Monday–Sunday'
                 : 'Calendar month'}
@@ -392,7 +392,6 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
                 previous={mode === 'all' ? null : (data.previous_period?.summary ?? null)}
                 partial={mode === 'all' ? false : (data.previous_is_partial ?? false)}
                 minN={minN}
-                sinceDate={mode === 'all' ? allTime?.first_visit_date : undefined}
                 milestone={
                   mode === 'all' && allTime
                     ? nextMilestone(allTime.summary.visit_count)
@@ -409,8 +408,10 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
               <RecentCard recent={recent} days={recentDays} />
             )}
             {showRecent && hasEstimates && <TimingCard recent={recent} days={recentDays} />}
-            {mode !== 'all' && data.all_time && <AllTimeCard allTime={data.all_time} />}
           </div>
+          {mode !== 'all' && allTime && (
+            <AllTimeLink allTime={allTime} onOpen={() => switchMode('all')} />
+          )}
         </div>
       )}
     </div>

@@ -10,6 +10,13 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ## [Unreleased]
 
+### Fixed
+
+- Lifetime numbers were shown twice: week and month still had the "Since day one" card next to the new **All** mode. That card is gone; week and month end with a one-line link instead (grooms so far, how many to the next milestone, and "All time →", with the milestone as a thin bar) that switches to All
+- All mode's date capsule was cut off ("Sep 22 – Nov…") and kept the dividers of the missing arrows. It now reads "Since Sep 22" and has the same width as in week and month, so the control doesn't jump when switching
+- The All time hero repeated "since …" under the total; it now shows the tips split like the other modes (the capsule says since when)
+- On a wide screen, Last 90 days alone took half the row and left the other half empty; a card on its own now spans the row (its coat rows keep a readable width)
+
 ## [0.6.6] — 2026-11-10
 
 This week screen polish and tooling bumps. No migration.

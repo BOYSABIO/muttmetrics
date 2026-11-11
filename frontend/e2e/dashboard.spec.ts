@@ -52,7 +52,8 @@ test('dashboard: fixture week shows hand-computed Grooms', async ({ page }) => {
 
 test('dashboard: All time mode shows lifetime headlines', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'All time' }).click()
+  // exact: the week view's "… All time →" link is a button too
+  await page.getByRole('button', { name: 'All time', exact: true }).click()
 
   const headlines = page.getByRole('region', { name: 'All-time headlines' })
   const empty = page.getByRole('region', { name: 'Empty period' })
@@ -61,7 +62,20 @@ test('dashboard: All time mode shows lifetime headlines', async ({ page }) => {
   if (await headlines.isVisible()) {
     await expect(page.getByRole('heading', { name: 'All time' })).toBeVisible()
     await expect(headlines.locator('.tw-hero-value')).not.toHaveText('')
-    // The side "Since day one" card is folded into the hero in this mode.
-    await expect(page.getByRole('region', { name: 'Since day one' })).toHaveCount(0)
+    // Lifetime numbers live only in this hero: no link back to itself.
+    await expect(page.locator('.tw-alltime-link')).toHaveCount(0)
   }
+})
+
+test('dashboard: the week view links to All time instead of repeating it', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Week', exact: true }).click()
+
+  const link = page.locator('.tw-alltime-link')
+  await expect(link).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('region', { name: 'Since day one' })).toHaveCount(0)
+
+  await link.click()
+  await expect(page.getByRole('heading', { name: 'All time' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'All-time headlines' })).toBeVisible()
 })
