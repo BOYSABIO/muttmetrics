@@ -10,6 +10,10 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ## [Unreleased]
 
+### Changed
+
+- The dev PC no longer holds real client data ([#222](https://github.com/BOYSABIO/muttmetrics/issues/222)): its database was recreated from synthetic fixtures, and dev photos/backups go to the repo's gitignored `data/dev/`. `privacy.md`, CONTRIBUTING, `photos.md` and `db-peek.md` say so. The pre-move data folder stays frozen as the second copy until [#221](https://github.com/BOYSABIO/muttmetrics/issues/221)
+
 ### Fixed
 
 - Lifetime numbers were shown twice: week and month still had the "Since day one" card next to the new **All** mode. That card is gone; week and month end with a one-line link instead (grooms so far, how many to the next milestone, and "All time →", with the milestone as a thin bar) that switches to All

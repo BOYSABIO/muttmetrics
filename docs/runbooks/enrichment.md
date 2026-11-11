@@ -140,5 +140,5 @@ HTTP `PATCH` for pet/owner obeys the same safe vs forbidden columns as this play
 
 - Epic (closed): [#117](https://github.com/BOYSABIO/muttmetrics/issues/117) — M4.75 Visits vs Directory
 - Follow-ons: [#151](https://github.com/BOYSABIO/muttmetrics/issues/151) wide desk layout; [#152](https://github.com/BOYSABIO/muttmetrics/issues/152) select-or-create vocabularies
-- Synthetic junk cleanup: `ops/sql/cleanup_synthetic_clients.local.sql` *(local only, gitignored: it names real rows to protect)*
+- Test rows in the dev database: recreate it from synthetic fixtures ([#222](https://github.com/BOYSABIO/muttmetrics/issues/222)); the old local cleanup script is retired
 - Peek starters: [`ops-db-peek.md`](./db-peek.md)
