@@ -22,7 +22,8 @@ Files and rows are two systems with no shared transaction. Everything below foll
 
 ```env
 # .env — outside the repo on purpose
-PHOTO_ROOT=C:/muttmetrics-data/photos
+PHOTO_ROOT=/srv/muttmetrics/photos      # the home server
+# dev PC: <repo>/data/dev/photos as an absolute path (gitignored; synthetic only, #222)
 ```
 
 Unset, it defaults to `~/muttmetrics-data/photos`. The directory is created on first write; nothing needs to exist beforehand.

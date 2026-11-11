@@ -78,7 +78,7 @@ Prefer Directory for one-offs. Open these for bulk / offline / API-down work.
 | [`update_pet.sql`](./sql/update_pet.sql) | Enrich pet coat / handling / weight | enrichment |
 | [`update_visit.sql`](./sql/update_visit.sql) | Fix visit event facts (`condition_score`: 0 worst … 5 best) | enrichment |
 
-Cleanup of synthetic clients: `ops/sql/cleanup_synthetic_clients.local.sql` (local only; gitignored when matched). Preview with `ROLLBACK`, then `COMMIT` when sure — see file header. Real photo files: `photo_purge.py` before deleting rows.
+Test rows in the dev database: since [#222](https://github.com/BOYSABIO/muttmetrics/issues/222) it's synthetic only, so recreate it (`docker compose down -v`, then the setup in CONTRIBUTING) instead of deleting rows by hand. The old local cleanup script, which had to name real rows to protect them, is retired.
 
 ## Package CLIs
 

@@ -195,7 +195,12 @@ python ops/backup_check.py
 Photo **bytes** live on disk under `PHOTO_ROOT`, deliberately **outside the repo**; photo **metadata** lives in the `photo` table. Rationale: [ADR-002](./docs/architecture/adr/002-photo-storage.md). Operations: [`docs/runbooks/photos.md`](./docs/runbooks/photos.md). Privacy: [`docs/architecture/privacy.md`](./docs/architecture/privacy.md).
 
 ```env
-PHOTO_ROOT=C:/muttmetrics-data/photos   # optional; defaults to ~/muttmetrics-data/photos
+# dev PC: inside the repo's gitignored data/dev/, as an absolute path (a relative one
+# depends on the folder you start the API from)
+PHOTO_ROOT=C:/Users/<you>/…/MuttMetrics/data/dev/photos
+BACKUP_ROOT=C:/Users/<you>/…/MuttMetrics/data/dev/backups
+# Unset, they default to ~/muttmetrics-data/…. Never point them at C:/muttmetrics-data:
+# that's the frozen copy of real data from before the home server (#222, #221).
 ```
 
 | Piece | Role |

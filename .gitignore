@@ -32,6 +32,8 @@ htmlcov/
 data/private/
 data/exports/
 data/backups/
+# dev PC: synthetic photos and backups (PHOTO_ROOT / BACKUP_ROOT), #222
+data/dev/
 
 # IDE / OS
 .idea/

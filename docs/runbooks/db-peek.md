@@ -130,9 +130,7 @@ WHERE o.name ILIKE '%Capture%'
 ORDER BY o.name, d.name;
 ```
 
-This is **read-only**. To delete synthetic rows safely (preview + FK-ordered deletes, keeps real rows), use:
-
-`ops/sql/cleanup_synthetic_clients.local.sql` *(local only, gitignored: it names real rows to protect)*
+This is **read-only**. Since [#222](https://github.com/BOYSABIO/muttmetrics/issues/222) (2026-11-11) the dev database holds synthetic data only, so a stray test row there needs no surgery: recreate the dev DB (`docker compose down -v`, then the setup in CONTRIBUTING). Real data is looked at on the box only, read-only ([`home-server.md`](./home-server.md)).
 
 ## Enrichment (UPDATE after thin capture)
 
@@ -142,7 +140,7 @@ Breed, phone, notes, visit fixes — Owner’s job, not the SPA. Playbook + reci
 
 ## Pytest and this database
 
-Tests never touch this database: they run on `muttmetrics_test` and refuse anything else (#177, setup in CONTRIBUTING). Synthetic owners like `Test Owner` / `Flow Owner` in the dev DB are leftovers from before that; find them with query 3 above and remove them with the cleanup script.
+Tests never touch this database: they run on `muttmetrics_test` and refuse anything else (#177, setup in CONTRIBUTING). Synthetic owners like `Test Owner` / `Flow Owner` in an old dev DB were leftovers from before that; the dev DB was recreated from `ops/demo_data.py` in #222.
 
 ## Nuclear wipe (local only)
 
