@@ -27,9 +27,9 @@ def test_eur_per_hour_show_and_hide_cells(db_session: Session, metric_week: dict
 
     by_cell = {(r["condition_score"], r["shaved_down"]): r for r in rows}
 
-    show = by_cell[(0, True)]
-    expected_show = EXPECTED["eur_per_hour"][(0, True)]
-    assert show["n"] == expected_show["n"] == 5
+    show = by_cell[(None, True)]  # every shave-down, one cell
+    expected_show = EXPECTED["eur_per_hour"][(None, True)]
+    assert show["n"] == expected_show["n"] == 6
     assert float(show["revenue_ex_tip"]) == pytest.approx(expected_show["revenue_ex_tip"])
     assert float(show["revenue_inc_tip"]) == pytest.approx(expected_show["revenue_inc_tip"])
     assert float(show["hours"]) == pytest.approx(expected_show["hours"])
@@ -38,8 +38,8 @@ def test_eur_per_hour_show_and_hide_cells(db_session: Session, metric_week: dict
         expected_show["eur_per_hour_inc_tip"]
     )
 
-    hide = by_cell[(4, True)]
-    expected_hide = EXPECTED["eur_per_hour"][(4, True)]
+    hide = by_cell[(4, False)]
+    expected_hide = EXPECTED["eur_per_hour"][(4, False)]
     assert hide["n"] == expected_hide["n"] == 1
     assert hide["n"] < MIN_N
     assert hide["eur_per_hour_ex_tip"] is None

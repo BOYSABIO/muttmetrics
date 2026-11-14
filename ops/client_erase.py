@@ -81,6 +81,8 @@ def _pet_needs_scrub(pet: Pet) -> bool:
         value not in (None, "", [])
         for value in (
             pet.temperament_notes,
+            pet.usual_cut,
+            pet.health_notes,
             pet.mobility_notes,
             pet.vet_notes,
             pet.fear_triggers,
@@ -160,6 +162,8 @@ def erase_owner(
         if _pet_needs_scrub(pet):
             pet.name = erased_pet_name(pet.pet_id)
             pet.temperament_notes = None
+            pet.usual_cut = None
+            pet.health_notes = None
             pet.mobility_notes = None
             pet.vet_notes = None
             pet.fear_triggers = None

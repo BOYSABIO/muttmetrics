@@ -12,7 +12,10 @@ type SpeciesChipsProps = {
   name?: string
 }
 
-/** Dog / cat picker. Default is dog (ADR-004). */
+/**
+ * Dog / cat picker. Default is dog (ADR-004). Same chips as every other
+ * fixed list (ChoiceChips), but one is always selected: species is required.
+ */
 export function SpeciesChips({
   value,
   onChange,
@@ -21,23 +24,32 @@ export function SpeciesChips({
 }: SpeciesChipsProps) {
   return (
     <div className="field">
-      <span id={`${name}-label`}>Species</span>
-      <div className="chip-row" role="radiogroup" aria-labelledby={`${name}-label`}>
-        {OPTIONS.map((opt) => (
-          <label
-            key={opt.value}
-            className={`chip ${value === opt.value ? 'chip-on' : ''}`}
-          >
-            <input
-              type="radio"
-              name={name}
-              checked={value === opt.value}
+      <span id={`${name}-label`} className="field-label">
+        Species
+      </span>
+      <div
+        className="chip-row choice-chips choice-chips-2"
+        role="radiogroup"
+        aria-labelledby={`${name}-label`}
+      >
+        {OPTIONS.map((opt) => {
+          const on = value === opt.value
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              className={`chip ${on ? 'chip-on' : ''}`}
               disabled={disabled}
-              onChange={() => onChange(opt.value)}
-            />
-            {opt.label}
-          </label>
-        ))}
+              onClick={() => {
+                if (!on) onChange(opt.value)
+              }}
+            >
+              {opt.label}
+            </button>
+          )
+        })}
       </div>
     </div>
   )

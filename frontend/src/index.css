@@ -22,6 +22,7 @@
   --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
   --phone-max: 28rem;
   --page-max: 72rem;
+  --capture-desk-max: 60rem;
   --bp-desk: 768px;
 
   color: var(--ink);
@@ -76,8 +77,10 @@ body {
     border-inline: none;
   }
 
+  /* Capture on a computer: a wider centred column (the client list gets
+     columns, the visit form two fields per row), not the phone strip. */
   #root:has(.app-capture) {
-    max-width: var(--phone-max);
+    max-width: var(--capture-desk-max);
     margin: 0 auto;
     background: var(--surface);
     box-shadow: var(--shadow);

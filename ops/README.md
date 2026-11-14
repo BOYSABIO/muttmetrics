@@ -37,7 +37,7 @@ Do **not** merge purge+sweep, backup+check, or the metric SQL files into one meg
 | [`client_export.py`](./client_export.py) | Art. 15: export one owner → `data/exports/` (#195) | [`client-requests.md`](../docs/runbooks/client-requests.md) |
 | [`client_erase.py`](./client_erase.py) | Art. 17: anonymise one owner (photos + PII scrub; keep visit facts) (#195) | dry-run default; `--apply`; same runbook |
 | [`deploy.py`](./deploy.py) | Release deploy on the box: `--to vX.Y.Z` → backup → checkout tag → migrate → SPA build → restart → health (#197, #93) | [`release.md`](../docs/runbooks/release.md); `--dry-run` |
-| [`demo_data.py`](./demo_data.py) | Load Syn* fixtures into an **empty** DB (demos, screenshots, Playwright e2e) | refuses if any visit exists; CI calls it |
+| [`demo_data.py`](./demo_data.py) | Load Syn* fixtures into an **empty** DB (demos, screenshots, Playwright e2e); `--recent` adds ~12 weeks of synthetic visits ending today ([`demo_recent.py`](./demo_recent.py)) so the dashboard shows something now | refuses if any visit exists; CI calls it without `--recent` |
 
 ## SQL recipes (`ops/sql/`)
 
@@ -85,7 +85,8 @@ Test rows in the dev database: since [#222](https://github.com/BOYSABIO/muttmetr
 | Command | Use when | More |
 |---------|----------|------|
 | `python -m muttmetrics.priors --pet-id N` | Preview P50/P90 without creating a visit | [`prior.md`](../docs/prior.md) |
-| `python -m muttmetrics.seed` | Seed breeds / services | [`CONTRIBUTING.md`](../CONTRIBUTING.md) |
+| `python -m muttmetrics.seed` | Seed breeds / services / add-ons (dev, CI) | [`CONTRIBUTING.md`](../CONTRIBUTING.md) |
+| `python -m muttmetrics.seed --breeds-only` | Update just the breed catalog (**the one to run on the server**) | [`pet-data.md`](../docs/architecture/pet-data.md) |
 | `muttmetrics-api` / `python -m muttmetrics.api` | Run the API | same |
 
 Same prior logic as `POST /visits`.

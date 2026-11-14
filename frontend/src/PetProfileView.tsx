@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   errorMessage,
   fetchPetProfile,
@@ -13,43 +13,19 @@ import { PetAvatar } from './PetAvatar'
 import type { SelectedPet } from './draft'
 import { SpeciesChips } from './SpeciesChips'
 import { VisitEditView } from './VisitEditView'
-
-const SEX_OPTIONS = [
-  { value: '', label: '—' },
-  { value: 'female', label: 'Female' },
-  { value: 'male', label: 'Male' },
-  { value: 'unknown', label: 'Unknown' },
-] as const
-
-const HAIR_OR_FUR_OPTIONS = [
-  { value: '', label: '—' },
-  { value: 'hair', label: 'Hair' },
-  { value: 'fur', label: 'Fur' },
-] as const
-
-const COAT_TYPE_OPTIONS = [
-  { value: '', label: '—' },
-  { value: 'smooth', label: 'Smooth' },
-  { value: 'double', label: 'Double' },
-  { value: 'curly', label: 'Curly' },
-  { value: 'single', label: 'Single' },
-] as const
-
-const COAT_DENSITY_OPTIONS = [
-  { value: '', label: '—' },
-  { value: 'light', label: 'Light' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'dense', label: 'Dense' },
-] as const
-
-const HANDLING_OPTIONS = [
-  { value: '', label: '—' },
-  { value: '1', label: '1 — easy' },
-  { value: '2', label: '2' },
-  { value: '3', label: '3 — neutral' },
-  { value: '4', label: '4' },
-  { value: '5', label: '5 — difficult' },
-] as const
+import { conditionWord } from './condition'
+import { PageBack } from './PageBack'
+import { ChoiceChips, YesNo } from './ChoiceChips'
+import {
+  COAT_THICKNESS,
+  COAT_TYPES,
+  HANDLING,
+  SEXES,
+  SIZES,
+  coatTypeLabel,
+  handlingLabel,
+  sizeLabel,
+} from './petVocab'
 
 /**
  * Weight field → kg for the API. A German keypad types "7,5", and
@@ -63,7 +39,10 @@ function parseWeightKg(raw: string): number | null | 'invalid' {
   return Number.isFinite(kg) && kg > 0 ? kg : 'invalid'
 }
 
-/** Editable fields, as the inputs hold them (strings for selects/text). */
+/**
+ * Editable fields, as the inputs hold them (strings for selects/text).
+ * Yes/no fields keep null ("nobody checked") until someone taps them.
+ */
 type DogForm = {
   name: string
   species: Species
@@ -71,18 +50,16 @@ type DogForm = {
   breedSecondaryId: string
   sex: string
   weightKg: string
+  sizeBand: string
   coatType: string
-  hairOrFur: string
-  coatDensity: string
-  undercoat: boolean
-  sheds: boolean
+  coatThickness: string
+  usualCut: string
   handlingScore: string
-  muzzleRequired: boolean
-  twoPersonJob: boolean
+  muzzleRequired: boolean | null
+  twoPersonJob: boolean | null
   temperamentNotes: string
-  seniorFlag: boolean
-  mobilityNotes: string
-  vetNotes: string
+  seniorFlag: boolean | null
+  healthNotes: string
 }
 
 function formFromProfile(p: PetProfile): DogForm {
@@ -93,18 +70,16 @@ function formFromProfile(p: PetProfile): DogForm {
     breedSecondaryId: p.breed_secondary_id !== null ? String(p.breed_secondary_id) : '',
     sex: p.sex ?? '',
     weightKg: p.weight_kg != null ? String(p.weight_kg) : '',
+    sizeBand: p.size_band ?? '',
     coatType: p.coat_type ?? '',
-    hairOrFur: p.hair_or_fur ?? '',
-    coatDensity: p.coat_density ?? '',
-    undercoat: p.undercoat === true,
-    sheds: p.sheds === true,
+    coatThickness: p.coat_thickness !== null ? String(p.coat_thickness) : '',
+    usualCut: p.usual_cut ?? '',
     handlingScore: p.handling_score !== null ? String(p.handling_score) : '',
-    muzzleRequired: p.muzzle_required === true,
-    twoPersonJob: p.two_person_job === true,
+    muzzleRequired: p.muzzle_required,
+    twoPersonJob: p.two_person_job,
     temperamentNotes: p.temperament_notes ?? '',
-    seniorFlag: p.senior_flag === true,
-    mobilityNotes: p.mobility_notes ?? '',
-    vetNotes: p.vet_notes ?? '',
+    seniorFlag: p.senior_flag,
+    healthNotes: p.health_notes ?? '',
   }
 }
 
@@ -116,6 +91,48 @@ function textOrNull(s: string): string | null {
 
 function numberOrNull(s: string): number | null {
   return s.trim() === '' ? null : Number(s)
+}
+
+/** The PATCH body a form stands for (weight already parsed). */
+function payloadFromForm(f: DogForm, weightKg: number | null): Record<string, unknown> {
+  return {
+    name: f.name.trim(),
+    species: f.species,
+    breed_id: numberOrNull(f.breedId),
+    breed_secondary_id: numberOrNull(f.breedSecondaryId),
+    sex: textOrNull(f.sex),
+    weight_kg: weightKg,
+    size_band: textOrNull(f.sizeBand),
+    coat_type: textOrNull(f.coatType),
+    coat_thickness: numberOrNull(f.coatThickness),
+    usual_cut: textOrNull(f.usualCut),
+    handling_score: numberOrNull(f.handlingScore),
+    muzzle_required: f.muzzleRequired,
+    two_person_job: f.twoPersonJob,
+    temperament_notes: textOrNull(f.temperamentNotes),
+    senior_flag: f.seniorFlag,
+    health_notes: textOrNull(f.healthNotes),
+  }
+}
+
+/**
+ * Only the fields that differ from what was loaded. Saving one field never
+ * rewrites the others, so blank stays blank and the change log only gets
+ * real changes (docs/architecture/pet-data.md).
+ */
+function changedFields(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(after)) {
+    if (before[key] !== value) out[key] = value
+  }
+  return out
+}
+
+function weightOf(p: PetProfile): number | null {
+  return p.weight_kg != null ? Number(p.weight_kg) : null
 }
 
 /** "16 Oct 2026" — readable on the profile list (ISO stays in the API). */
@@ -136,8 +153,26 @@ function formatVisitStatus(status: string | null): string {
 }
 
 function formatCoatCondition(score: number | null): string {
-  if (score === null) return 'Coat —'
-  return `Coat ${score}`
+  return score === null ? '—' : conditionWord(score)
+}
+
+/** "2 visits · last 3 wk ago" */
+function visitsLine(count: number, last: string | null): string {
+  const visits = `${count} ${count === 1 ? 'visit' : 'visits'}`
+  if (last === null) return visits
+  const [y, m, d] = last.split('-').map(Number)
+  const days = Math.round((Date.now() - new Date(y, m - 1, d).getTime()) / 86_400_000)
+  const ago =
+    days <= 0
+      ? 'today'
+      : days === 1
+        ? 'yesterday'
+        : days < 14
+          ? `${days} days ago`
+          : days < 60
+            ? `${Math.round(days / 7)} wk ago`
+            : `${Math.round(days / 30)} mo ago`
+  return `${visits} · last ${ago}`
 }
 
 type PetProfileViewProps = {
@@ -148,6 +183,8 @@ type PetProfileViewProps = {
   onStartVisit?: (dog: SelectedPet) => void
   /** After a save, so the client list can refresh names. */
   onSaved: () => void
+  /** Add a breed the catalog lacks; the parent keeps the breed list. */
+  onAddBreed?: (species: Species, name: string) => Promise<BreedListItem>
 }
 
 /** One dog's profile: read, safe PATCH (#131/#132), avatar upload. */
@@ -158,16 +195,36 @@ export function PetProfileView({
   onOpenOwner,
   onStartVisit,
   onSaved,
+  onAddBreed,
 }: PetProfileViewProps) {
   const [profile, setProfile] = useState(initial)
   const [form, setForm] = useState(() => formFromProfile(initial))
   const [isBusy, setIsBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [editingVisitId, setEditingVisitId] = useState<number | null>(null)
+  const moreRef = useRef<HTMLDetailsElement>(null)
 
   function set<K extends keyof DogForm>(key: K, value: DogForm[K]): void {
     setForm((f) => ({ ...f, [key]: value }))
   }
+
+  const addBreed =
+    onAddBreed === undefined
+      ? undefined
+      : async (name: string): Promise<BreedListItem> => {
+          try {
+            const breed = await onAddBreed(form.species, name)
+            setMessage(
+              breed.source === 'salon' && breed.name_en !== null
+                ? `Added ${breed.name_en}. Save to keep it on ${form.name || 'this pet'}.`
+                : `Picked ${breed.name_en ?? 'the existing breed'}. Save to keep it.`,
+            )
+            return breed
+          } catch (error) {
+            setMessage(errorMessage(error))
+            throw error
+          }
+        }
 
   function show(updated: PetProfile): void {
     setProfile(updated)
@@ -212,28 +269,15 @@ export function PetProfileView({
     setIsBusy(true)
     setMessage('Saving…')
     try {
-      show(
-        await patchPet(profile.pet_id, {
-          name: form.name.trim(),
-          species: form.species,
-          breed_id: numberOrNull(form.breedId),
-          breed_secondary_id: numberOrNull(form.breedSecondaryId),
-          sex: textOrNull(form.sex),
-          weight_kg: weightKg,
-          coat_type: textOrNull(form.coatType),
-          hair_or_fur: textOrNull(form.hairOrFur),
-          coat_density: textOrNull(form.coatDensity),
-          undercoat: form.undercoat,
-          sheds: form.sheds,
-          handling_score: numberOrNull(form.handlingScore),
-          muzzle_required: form.muzzleRequired,
-          two_person_job: form.twoPersonJob,
-          temperament_notes: textOrNull(form.temperamentNotes),
-          senior_flag: form.seniorFlag,
-          mobility_notes: textOrNull(form.mobilityNotes),
-          vet_notes: textOrNull(form.vetNotes),
-        }),
+      const changes = changedFields(
+        payloadFromForm(formFromProfile(profile), weightOf(profile)),
+        payloadFromForm(form, weightKg),
       )
+      if (Object.keys(changes).length === 0) {
+        setMessage('Nothing changed')
+        return
+      }
+      show(await patchPet(profile.pet_id, changes))
       setMessage('Saved')
       onSaved()
     } catch (error) {
@@ -260,6 +304,60 @@ export function PetProfileView({
     }
   }
 
+  const weightTyped = form.weightKg.trim() !== ''
+  const parsedWeight = parseWeightKg(form.weightKg)
+  const dirty =
+    parsedWeight === 'invalid' ||
+    Object.keys(
+      changedFields(
+        payloadFromForm(formFromProfile(profile), weightOf(profile)),
+        payloadFromForm(form, parsedWeight),
+      ),
+    ).length > 0
+
+  // The four facts the estimate (and later the model) leans on most.
+  const basicsFilled = [
+    form.breedId !== '',
+    weightTyped || form.sizeBand !== '',
+    form.coatType !== '',
+    form.handlingScore !== '',
+  ].filter(Boolean).length
+
+  const breedName =
+    breeds.find((b) => String(b.breed_id) === String(profile.breed_id ?? ''))?.name_en ?? null
+  const summary = [
+    breedName,
+    sizeLabel(profile.size_band),
+    coatTypeLabel(profile.species, profile.coat_type),
+    handlingLabel(profile.handling_score),
+  ].filter((x): x is string => x !== null)
+  const flags = [
+    profile.muzzle_required === true ? 'Muzzle' : null,
+    profile.two_person_job === true ? 'Two people' : null,
+    profile.senior_flag === true ? 'Senior' : null,
+    profile.health_notes ? 'Health note' : null,
+  ].filter((x): x is string => x !== null)
+
+  const coatHint = COAT_TYPES[form.species].find((o) => o.value === form.coatType)?.hint
+
+  const weightChanged =
+    weightTyped && (parsedWeight === 'invalid' || parsedWeight !== weightOf(profile))
+
+  /** "Change" next to a size from the weight: open More details at the weight. */
+  function openWeight(): void {
+    if (moreRef.current) moreRef.current.open = true
+    requestAnimationFrame(() => {
+      const input = document.getElementById('dir_weight')
+      input?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      input?.focus({ preventScroll: true })
+    })
+  }
+
+  function leave(): void {
+    if (dirty && !window.confirm('Leave without saving your changes?')) return
+    onBack()
+  }
+
   return (
     <>
       {message !== '' && (
@@ -268,6 +366,7 @@ export function PetProfileView({
         </p>
       )}
       <section className="panel profile-panel">
+        <PageBack onClick={leave} disabled={isBusy} />
         <header className="profile-hero">
           <PetAvatar
             photoId={profile.avatar_photo_id}
@@ -289,317 +388,26 @@ export function PetProfileView({
               }}
             >
               {profile.owner.name}
-              {profile.owner.phone
-                ? ` · ${profile.owner.phone}`
-                : ''}
+              {profile.owner.phone ? ` · ${profile.owner.phone}` : ''}
             </button>
-            <p className="step-meta">
-              {profile.size_band ?? '—'} size
-              {' · '}
-              {profile.visit_count ?? 0}{' '}
-              {(profile.visit_count ?? 0) === 1 ? 'visit' : 'visits'}
-              {profile.last_visit_date
-                ? ` · last ${profile.last_visit_date}`
-                : ''}
+            <p className="profile-summary">
+              {summary.length > 0 ? summary.join(' · ') : 'No basics yet'}
             </p>
-          </div>
-        </header>
-
-        <form
-          id="dog-profile-form"
-          className="section-grid profile-sections"
-          onSubmit={(e) => {
-            e.preventDefault()
-            void save()
-          }}
-        >
-        <div className="profile-block">
-          <h3 className="profile-section">Identity</h3>
-          <div className="field-stack">
-            <div className="field">
-              <label htmlFor="dir_name">Name</label>
-              <input
-                id="dir_name"
-                type="text"
-                value={form.name}
-                onChange={(e) => set('name', e.target.value)}
-              />
-            </div>
-            <SpeciesChips
-              name="dir_species"
-              value={form.species}
-              disabled={isBusy}
-              onChange={(next) => {
-                setForm((f) => {
-                  const breedOk = breeds.some(
-                    (b) => String(b.breed_id) === f.breedId && b.species === next,
-                  )
-                  const secondaryOk = breeds.some(
-                    (b) =>
-                      String(b.breed_id) === f.breedSecondaryId && b.species === next,
-                  )
-                  return {
-                    ...f,
-                    species: next,
-                    breedId: breedOk ? f.breedId : '',
-                    breedSecondaryId: secondaryOk ? f.breedSecondaryId : '',
-                  }
-                })
-              }}
-            />
-            <BreedPicker
-              id="dir_breed"
-              label="Breed"
-              breeds={breeds.filter((b) => b.species === form.species)}
-              value={form.breedId}
-              onChange={(v) => set('breedId', v)}
-              disabled={isBusy}
-            />
-            <BreedPicker
-              id="dir_breed_secondary"
-              label="Secondary breed (optional)"
-              breeds={breeds.filter((b) => b.species === form.species)}
-              value={form.breedSecondaryId}
-              onChange={(v) => set('breedSecondaryId', v)}
-              disabled={isBusy}
-            />
-            <div className="field-grid field-grid-compact">
-              <div className="field">
-                <label htmlFor="dir_sex">Sex</label>
-                <select
-                  id="dir_sex"
-                  value={form.sex}
-                  onChange={(e) => set('sex', e.target.value)}
-                >
-                  {SEX_OPTIONS.map((o) => (
-                    <option key={o.value || 'empty'} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="dir_weight">Weight (kg)</label>
-                <input
-                  id="dir_weight"
-                  type="text"
-                  inputMode="decimal"
-                  value={form.weightKg}
-                  onChange={(e) => set('weightKg', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="profile-block">
-          <h3 className="profile-section">Coat</h3>
-          <div className="field-stack">
-          <div className="field-grid field-grid-compact">
-            <div className="field">
-              <label htmlFor="dir_coat_type">Type</label>
-              <select
-                id="dir_coat_type"
-                value={form.coatType}
-                onChange={(e) => set('coatType', e.target.value)}
-              >
-                {COAT_TYPE_OPTIONS.map((o) => (
-                  <option key={o.value || 'empty'} value={o.value}>
-                    {o.label}
-                  </option>
+            <p className="step-meta">
+              {visitsLine(profile.visit_count ?? 0, profile.last_visit_date)}
+            </p>
+            {flags.length > 0 && (
+              <ul className="profile-flags" aria-label="Heads-up">
+                {flags.map((f) => (
+                  <li key={f}>{f}</li>
                 ))}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="dir_hair_or_fur">Hair / fur</label>
-              <select
-                id="dir_hair_or_fur"
-                value={form.hairOrFur}
-                onChange={(e) => set('hairOrFur', e.target.value)}
-              >
-                {HAIR_OR_FUR_OPTIONS.map((o) => (
-                  <option key={o.value || 'empty'} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="dir_coat_density">Density</label>
-              <select
-                id="dir_coat_density"
-                value={form.coatDensity}
-                onChange={(e) => set('coatDensity', e.target.value)}
-              >
-                {COAT_DENSITY_OPTIONS.map((o) => (
-                  <option key={o.value || 'empty'} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+              </ul>
+            )}
           </div>
-          <div className="chip-row">
-            <label className={`chip ${form.undercoat ? 'chip-on' : ''}`}>
-              <input
-                type="checkbox"
-                checked={form.undercoat}
-                onChange={(e) => set('undercoat', e.target.checked)}
-              />
-              Undercoat
-            </label>
-            <label className={`chip ${form.sheds ? 'chip-on' : ''}`}>
-              <input
-                type="checkbox"
-                checked={form.sheds}
-                onChange={(e) => set('sheds', e.target.checked)}
-              />
-              Sheds
-            </label>
-          </div>
-          </div>
-        </div>
-
-        <div className="profile-block">
-          <h3 className="profile-section">Handling</h3>
-          <div className="field-stack">
-            <div className="field">
-              <label htmlFor="dir_handling">Handling score</label>
-              <select
-                id="dir_handling"
-                value={form.handlingScore}
-                onChange={(e) => set('handlingScore', e.target.value)}
-              >
-                {HANDLING_OPTIONS.map((o) => (
-                  <option key={o.value || 'empty'} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="chip-row">
-              <label className={`chip ${form.muzzleRequired ? 'chip-on' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={form.muzzleRequired}
-                  onChange={(e) => set('muzzleRequired', e.target.checked)}
-                />
-                Muzzle
-              </label>
-              <label className={`chip ${form.twoPersonJob ? 'chip-on' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={form.twoPersonJob}
-                  onChange={(e) => set('twoPersonJob', e.target.checked)}
-                />
-                Two-person
-              </label>
-            </div>
-            <div className="field">
-              <label htmlFor="dir_temp_notes">Temperament notes</label>
-              <textarea
-                id="dir_temp_notes"
-                rows={3}
-                value={form.temperamentNotes}
-                onChange={(e) => set('temperamentNotes', e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="profile-block">
-          <h3 className="profile-section">Medical</h3>
-          <div className="field-stack">
-            <div className="chip-row">
-              <label className={`chip ${form.seniorFlag ? 'chip-on' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={form.seniorFlag}
-                  onChange={(e) => set('seniorFlag', e.target.checked)}
-                />
-                Senior
-              </label>
-            </div>
-            <div className="field">
-              <label htmlFor="dir_mobility">Mobility notes</label>
-              <textarea
-                id="dir_mobility"
-                rows={2}
-                value={form.mobilityNotes}
-                onChange={(e) => set('mobilityNotes', e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="dir_vet">Vet notes</label>
-              <textarea
-                id="dir_vet"
-                rows={2}
-                value={form.vetNotes}
-                onChange={(e) => set('vetNotes', e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="profile-block">
-          <h3 className="profile-section">Recent visits</h3>
-          {profile.recent_visits.length === 0 ? (
-            <p className="step-meta">No visits yet.</p>
-          ) : (
-            <ul className="dir-visit-list">
-              {profile.recent_visits.map((v) => (
-                <li key={v.visit_id}>
-                  <button
-                    type="button"
-                    className="dir-visit-row"
-                    disabled={isBusy}
-                    onClick={() => setEditingVisitId(v.visit_id)}
-                    aria-label={`Edit visit on ${formatVisitDate(v.visit_date)}, ${v.actual_minutes} minutes`}
-                  >
-                    <span className="dir-visit-main">
-                      <span className="dir-visit-date">
-                        {formatVisitDate(v.visit_date)}
-                      </span>
-                      <span className="dir-visit-duration">
-                        {v.actual_minutes} min
-                      </span>
-                    </span>
-                    <span className="dir-visit-meta">
-                      <span>{formatCoatCondition(v.condition_score)}</span>
-                      <span className="dir-visit-dot" aria-hidden>
-                        ·
-                      </span>
-                      <span>{formatVisitStatus(v.status)}</span>
-                      {(v.add_ons?.length ?? 0) > 0 && (
-                        <>
-                          <span className="dir-visit-dot" aria-hidden>
-                            ·
-                          </span>
-                          <span>
-                            {v.add_ons
-                              .map((a) => a.name_en ?? a.slug)
-                              .join(', ')}
-                          </span>
-                        </>
-                      )}
-                      <span className="dir-visit-edit">Edit</span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        </form>
-
-        <div className="actions profile-actions">
           {onStartVisit !== undefined && (
             <button
               type="button"
-              className="primary"
+              className="primary profile-hero-action"
               disabled={isBusy}
               onClick={() => {
                 onStartVisit({
@@ -614,21 +422,283 @@ export function PetProfileView({
               Start visit
             </button>
           )}
-          <button
-            type="submit"
-            form="dog-profile-form"
-            className={onStartVisit !== undefined ? undefined : 'primary'}
-            disabled={isBusy}
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            className="ghost"
-            disabled={isBusy}
-            onClick={onBack}
-          >
-            Back
+        </header>
+
+        <form
+          id="dog-profile-form"
+          className="profile-layout"
+          onSubmit={(e) => {
+            e.preventDefault()
+            void save()
+          }}
+        >
+          <div className="profile-col">
+            <div className="profile-block profile-basics">
+              <div className="profile-block-head">
+                <h3 className="profile-section">Basics</h3>
+                <span
+                  className={`basics-count ${basicsFilled === 4 ? 'basics-count-done' : ''}`}
+                >
+                  {basicsFilled} of 4
+                </span>
+              </div>
+              {basicsFilled < 4 && (
+                <p className="step-meta">Each one makes the time estimate better.</p>
+              )}
+              <div className="field-stack">
+                <BreedPicker
+                  id="dir_breed"
+                  label="Breed"
+                  breeds={breeds.filter((b) => b.species === form.species)}
+                  value={form.breedId}
+                  onChange={(v) => set('breedId', v)}
+                  onAdd={addBreed}
+                  disabled={isBusy}
+                />
+                {weightTyped ? (
+                  <div className="field">
+                    <span className="field-label">Size</span>
+                    <div className="size-from-weight">
+                      <span className="chip chip-on chip-static">
+                        {weightChanged ? '—' : (sizeLabel(profile.size_band) ?? '—')}
+                      </span>
+                      <span className="step-meta">
+                        {weightChanged
+                          ? 'From the weight, on save'
+                          : `From ${form.weightKg.trim()} kg`}
+                      </span>
+                      <button type="button" className="linkish" onClick={openWeight}>
+                        Change
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <ChoiceChips
+                    id="dir_size"
+                    label="Size"
+                    columns={4}
+                    options={SIZES}
+                    value={form.sizeBand}
+                    onChange={(v) => set('sizeBand', v)}
+                    disabled={isBusy}
+                    note={
+                      form.sizeBand === ''
+                        ? 'By eye is fine; a weight sets it exactly.'
+                        : sizeLabel(form.sizeBand) ?? undefined
+                    }
+                  />
+                )}
+                <ChoiceChips
+                  id="dir_coat_type"
+                  label="Coat"
+                  columns={2}
+                  options={COAT_TYPES[form.species]}
+                  value={form.coatType}
+                  onChange={(v) => set('coatType', v)}
+                  disabled={isBusy}
+                  note={coatHint}
+                />
+                <ChoiceChips
+                  id="dir_handling"
+                  label="Handling"
+                  options={HANDLING}
+                  value={form.handlingScore}
+                  onChange={(v) => set('handlingScore', v)}
+                  disabled={isBusy}
+                />
+              </div>
+            </div>
+
+            <div className="profile-block">
+              <h3 className="profile-section">Grooming notes</h3>
+              <div className="field-stack">
+                <div className="field">
+                  <label htmlFor="dir_usual_cut">Usual cut</label>
+                  <textarea
+                    id="dir_usual_cut"
+                    rows={2}
+                    value={form.usualCut}
+                    onChange={(e) => set('usualCut', e.target.value)}
+                    placeholder="e.g. teddy face, 1 cm body, tidy feet"
+                  />
+                </div>
+                <ChoiceChips
+                  id="dir_coat_thickness"
+                  label="Coat thickness (optional)"
+                  columns={3}
+                  options={COAT_THICKNESS}
+                  value={form.coatThickness}
+                  onChange={(v) => set('coatThickness', v)}
+                  disabled={isBusy}
+                />
+                <div className="field">
+                  <label htmlFor="dir_temp_notes">Temperament</label>
+                  <textarea
+                    id="dir_temp_notes"
+                    rows={2}
+                    value={form.temperamentNotes}
+                    onChange={(e) => set('temperamentNotes', e.target.value)}
+                    placeholder="e.g. hates the dryer, fine with nails"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="dir_health">Health</label>
+                  <textarea
+                    id="dir_health"
+                    rows={2}
+                    value={form.healthNotes}
+                    onChange={(e) => set('healthNotes', e.target.value)}
+                    placeholder="Mobility, skin, allergies, vet…"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="profile-col">
+            <div className="profile-block">
+              <h3 className="profile-section">Recent visits</h3>
+              {profile.recent_visits.length === 0 ? (
+                <p className="step-meta">No visits yet.</p>
+              ) : (
+                <ul className="dir-visit-list">
+                  {profile.recent_visits.map((v) => (
+                    <li key={v.visit_id}>
+                      <button
+                        type="button"
+                        className="dir-visit-row"
+                        disabled={isBusy}
+                        onClick={() => setEditingVisitId(v.visit_id)}
+                        aria-label={`Edit visit on ${formatVisitDate(v.visit_date)}, ${v.actual_minutes} minutes`}
+                      >
+                        <span className="dir-visit-main">
+                          <span className="dir-visit-date">{formatVisitDate(v.visit_date)}</span>
+                          <span className="dir-visit-duration">{v.actual_minutes} min</span>
+                        </span>
+                        <span className="dir-visit-meta">
+                          <span>{formatCoatCondition(v.condition_score)}</span>
+                          <span className="dir-visit-dot" aria-hidden>
+                            ·
+                          </span>
+                          <span>{formatVisitStatus(v.status)}</span>
+                          {(v.add_ons?.length ?? 0) > 0 && (
+                            <>
+                              <span className="dir-visit-dot" aria-hidden>
+                                ·
+                              </span>
+                              <span>{v.add_ons.map((a) => a.name_en ?? a.slug).join(', ')}</span>
+                            </>
+                          )}
+                          <span className="dir-visit-edit">Edit</span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <details ref={moreRef} className="profile-block profile-more">
+              <summary>
+                <span className="profile-section">More details</span>
+                <span className="step-meta">Name, species, mix, weight, sex, safety</span>
+              </summary>
+              <div className="field-stack">
+                <div className="field">
+                  <label htmlFor="dir_name">Name</label>
+                  <input
+                    id="dir_name"
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => set('name', e.target.value)}
+                  />
+                </div>
+                <SpeciesChips
+                  name="dir_species"
+                  value={form.species}
+                  disabled={isBusy}
+                  onChange={(next) => {
+                    setForm((f) => {
+                      const breedOk = breeds.some(
+                        (b) => String(b.breed_id) === f.breedId && b.species === next,
+                      )
+                      const secondaryOk = breeds.some(
+                        (b) => String(b.breed_id) === f.breedSecondaryId && b.species === next,
+                      )
+                      const coatOk = COAT_TYPES[next].some((o) => o.value === f.coatType)
+                      return {
+                        ...f,
+                        species: next,
+                        breedId: breedOk ? f.breedId : '',
+                        breedSecondaryId: secondaryOk ? f.breedSecondaryId : '',
+                        coatType: coatOk ? f.coatType : '',
+                      }
+                    })
+                  }}
+                />
+                <BreedPicker
+                  id="dir_breed_secondary"
+                  label="Crossed with (optional)"
+                  breeds={breeds.filter((b) => b.species === form.species)}
+                  value={form.breedSecondaryId}
+                  onChange={(v) => set('breedSecondaryId', v)}
+                  onAdd={addBreed}
+                  disabled={isBusy}
+                />
+                <div className="field-grid field-grid-compact more-pair">
+                  <div className="field">
+                    <label htmlFor="dir_weight">Weight (kg)</label>
+                    <input
+                      id="dir_weight"
+                      type="text"
+                      inputMode="decimal"
+                      value={form.weightKg}
+                      onChange={(e) => set('weightKg', e.target.value)}
+                      placeholder="If weighed"
+                    />
+                  </div>
+                  <ChoiceChips
+                    id="dir_sex"
+                    label="Sex"
+                    columns={2}
+                    options={SEXES}
+                    value={form.sex}
+                    onChange={(v) => set('sex', v)}
+                    disabled={isBusy}
+                  />
+                </div>
+                <div className="yes-no-list">
+                  <YesNo
+                    id="dir_muzzle"
+                    label="Needs a muzzle"
+                    value={form.muzzleRequired}
+                    onChange={(v) => set('muzzleRequired', v)}
+                    disabled={isBusy}
+                  />
+                  <YesNo
+                    id="dir_two_person"
+                    label="Two-person job"
+                    value={form.twoPersonJob}
+                    onChange={(v) => set('twoPersonJob', v)}
+                    disabled={isBusy}
+                  />
+                  <YesNo
+                    id="dir_senior"
+                    label="Senior"
+                    value={form.seniorFlag}
+                    onChange={(v) => set('seniorFlag', v)}
+                    disabled={isBusy}
+                  />
+                </div>
+              </div>
+            </details>
+          </div>
+        </form>
+
+        <div className="actions action-bar">
+          {dirty && <span className="action-bar-note">Unsaved changes</span>}
+          <button type="submit" form="dog-profile-form" className="primary" disabled={isBusy}>
+            Save changes
           </button>
         </div>
       </section>

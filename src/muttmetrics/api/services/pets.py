@@ -1,5 +1,7 @@
 """Pet create-or-get, search, and Directory profile reads."""
 
+from decimal import Decimal
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
@@ -11,7 +13,8 @@ from muttmetrics.api.schemas.pets import (
 )
 from muttmetrics.api.services.patching import reject_null_for_required_columns
 from muttmetrics.api.services.visits import visit_to_summary
-from muttmetrics.models import Breed, Owner, Pet, Photo, Visit, VisitAddOn
+from muttmetrics.models import Breed, Owner, Pet, PetChange, Photo, Visit, VisitAddOn
+from muttmetrics.pet_vocab import COAT_TYPES_BY_SPECIES, TRACKED_PET_FIELDS
 from muttmetrics.priors.size import size_band_from_weight
 from muttmetrics.services.visit_eligibility import visit_counts_clause
 from muttmetrics.species import ALLOWED_SPECIES, DEFAULT_SPECIES
@@ -188,9 +191,38 @@ def get_pet_profile(
             "avatar_photo_id": avatar_photo_id,
             "visit_count": int(visit_count or 0),
             "last_visit_date": last_visit_date,
-            "size_band": size_band_from_weight(pet.weight_kg, pet.species) or pet.size_band,
         }
     )
+
+
+def _as_text(value: object) -> str | None:
+    """Change-log spelling: NULL stays NULL; bools lower-case; numbers plain."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, Decimal):
+        return format(value.normalize(), "f")
+    return str(value)
+
+
+def _apply_size(pet: Pet, updates: dict) -> None:
+    """Size rules (docs/architecture/pet-data.md).
+
+    A weighed pet's size comes from its weight (source 'weight'); a size sent
+    alongside a weight is ignored. Without a weight, the size is the one picked
+    by eye (source 'eye'). Clearing the weight of a pet whose size came from
+    it leaves the size blank, since nobody has picked one.
+    """
+    weight = float(pet.weight_kg) if pet.weight_kg is not None else None
+    from_weight = size_band_from_weight(weight, pet.species)
+    if from_weight is not None:
+        pet.size_band, pet.size_source = from_weight, "weight"
+    elif "size_band" in updates:
+        picked = updates["size_band"]
+        pet.size_band, pet.size_source = picked, ("eye" if picked else None)
+    elif pet.size_source == "weight":
+        pet.size_band, pet.size_source = None, None
 
 
 def patch_pet(
@@ -200,10 +232,14 @@ def patch_pet(
     body: PatchPetRequest,
 ) -> PetProfile:
     """
-    Apply a partial pet update. Only fields present in the JSON are touched.
+    Apply a partial pet update. Only fields present in the JSON are touched,
+    so a field the client didn't send keeps its value (blank stays blank).
+
+    Every tracked field that actually changed gets a pet_change row.
 
     Raises LookupError if pet or breed id missing
-    Raises ValueError if name is sent but blank, or breed/species mismatch.
+    Raises ValueError if name is sent but blank, breed/species mismatch, or a
+    coat type that isn't on the list for the pet's species.
     """
     pet = session.get(Pet, pet_id)
 
@@ -227,16 +263,29 @@ def patch_pet(
         breed_id = updates[breed_key] if breed_key in updates else getattr(pet, breed_key)
         ensure_breed_matches_species(session, breed_id, new_species)
 
-    for key, value in updates.items():
-        setattr(pet, key, value)
+    allowed_coats = COAT_TYPES_BY_SPECIES.get(new_species, ())
+    if "coat_type" in updates:
+        if updates["coat_type"] is not None and updates["coat_type"] not in allowed_coats:
+            raise ValueError(
+                f"coat_type {updates['coat_type']!r} is not a {new_species} coat; "
+                f"use one of {allowed_coats}"
+            )
+    elif pet.coat_type is not None and pet.coat_type not in allowed_coats:
+        # Species changed and the old coat doesn't exist for the new one.
+        updates["coat_type"] = None
 
-    # Write-through: size_band is derived from weight, never from the client.
-    if "weight_kg" in updates or "species" in updates:
-        w = pet.weight_kg
-        pet.size_band = size_band_from_weight(
-            float(w) if w is not None else None,
-            pet.species,
-        )
+    before = {field: getattr(pet, field) for field in TRACKED_PET_FIELDS}
+
+    for key, value in updates.items():
+        if key == "size_band":
+            continue  # _apply_size decides
+        setattr(pet, key, value)
+    _apply_size(pet, updates)
+
+    for field in TRACKED_PET_FIELDS:
+        old, new = _as_text(before[field]), _as_text(getattr(pet, field))
+        if old != new:
+            session.add(PetChange(pet_id=pet.pet_id, field=field, old_value=old, new_value=new))
 
     session.flush()
     return get_pet_profile(session, pet_id=pet_id)

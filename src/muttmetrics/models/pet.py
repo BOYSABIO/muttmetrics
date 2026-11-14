@@ -14,17 +14,26 @@ from sqlalchemy import (
     Index,
     Integer,
     Numeric,
+    SmallInteger,
     String,
     Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from muttmetrics.db.base import Base
+from muttmetrics.pet_vocab import (
+    PET_COAT_THICKNESS_CHECK_SQL,
+    PET_COAT_TYPE_CHECK_SQL,
+    PET_SEX_CHECK_SQL,
+    PET_SIZE_BAND_CHECK_SQL,
+    PET_SIZE_SOURCE_CHECK_SQL,
+)
 from muttmetrics.species import DEFAULT_SPECIES, SPECIES_CHECK_SQL
 
 if TYPE_CHECKING:
     from muttmetrics.models.breed import Breed
     from muttmetrics.models.owner import Owner
+    from muttmetrics.models.pet_change import PetChange
     from muttmetrics.models.photo import Photo
     from muttmetrics.models.visit import Visit
 
@@ -44,6 +53,11 @@ class Pet(Base):
             name="ck_pet_handling_score",
         ),
         CheckConstraint(SPECIES_CHECK_SQL, name="ck_pet_species"),
+        CheckConstraint(PET_COAT_TYPE_CHECK_SQL, name="ck_pet_coat_type"),
+        CheckConstraint(PET_COAT_THICKNESS_CHECK_SQL, name="ck_pet_coat_thickness"),
+        CheckConstraint(PET_SIZE_BAND_CHECK_SQL, name="ck_pet_size_band"),
+        CheckConstraint(PET_SIZE_SOURCE_CHECK_SQL, name="ck_pet_size_source"),
+        CheckConstraint(PET_SEX_CHECK_SQL, name="ck_pet_sex"),
         Index("ix_pet_owner_id", "owner_id"),
         Index("ix_pet_breed_id", "breed_id"),
         Index("ix_pet_breed_secondary_id", "breed_secondary_id"),
@@ -61,11 +75,18 @@ class Pet(Base):
     date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
     weight_kg: Mapped[float | None] = mapped_column(Numeric, nullable=True)
 
+    # pet_vocab.py: one coat type per species; thickness 1 thin .. 3 thick.
     coat_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    coat_thickness: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    # Retired 2026-11 (implied by coat_type). Kept until the real values are
+    # checked, then dropped in a later migration. Not in the API.
     hair_or_fur: Mapped[str | None] = mapped_column(String, nullable=True)
     coat_density: Mapped[str | None] = mapped_column(String, nullable=True)
     undercoat: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     sheds: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+
+    # Free text for people (not model input): the cut this dog usually gets.
+    usual_cut: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     handling_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     fear_triggers: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
@@ -75,10 +96,16 @@ class Pet(Base):
 
     skin_conditions: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
     senior_flag: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    # One box for mobility, skin, allergies, vet (2026-11). mobility_notes and
+    # vet_notes were merged into it and are retired (not in the API).
+    health_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     mobility_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     vet_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # From weight when the dog was weighed (size_source 'weight'), otherwise
+    # picked by eye ('eye'). ADR-001 amendment 2026-11.
     size_band: Mapped[str | None] = mapped_column(String, nullable=True)
+    size_source: Mapped[str | None] = mapped_column(String, nullable=True)
     visit_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     avg_duration_min: Mapped[float | None] = mapped_column(Numeric, nullable=True)
     duration_stddev_min: Mapped[float | None] = mapped_column(Numeric, nullable=True)
@@ -91,3 +118,6 @@ class Pet(Base):
     breed_secondary: Mapped[Breed | None] = relationship(foreign_keys=[breed_secondary_id])
     visits: Mapped[list[Visit]] = relationship(back_populates="pet")
     photos: Mapped[list[Photo]] = relationship(back_populates="pet")
+    changes: Mapped[list[PetChange]] = relationship(
+        back_populates="pet", cascade="all, delete-orphan", passive_deletes=True
+    )

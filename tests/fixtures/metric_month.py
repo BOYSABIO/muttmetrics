@@ -163,7 +163,7 @@ EXPECTED: dict[str, Any] = {
         "over_buffer_days": 0,
     },
     "eur_per_hour": {
-        (0, True): {
+        (None, True): {  # all April visits are shave-downs
             "n": 6,
             "show_rate": True,
             "eur_per_hour_ex_tip": 60.0,

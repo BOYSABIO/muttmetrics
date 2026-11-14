@@ -259,7 +259,7 @@ def test_patch_dog_rejects_derived_field(
 
     response = client.patch(
         f"/pets/{pet_id}",
-        json={"size_band": "xl"},
+        json={"visit_count": 9},
         headers=auth_headers,
     )
     assert response.status_code == 422
@@ -283,14 +283,16 @@ def test_patch_weight_sets_size_band(
     )
     assert patched.status_code == 200
     assert patched.json()["size_band"] == "s"
+    assert patched.json()["size_source"] == "weight"
 
-    # Client still cannot set size_band directly
-    forbidden = client.patch(
+    # A weighed dog's size comes from the weight; a size sent by hand is ignored.
+    ignored = client.patch(
         f"/pets/{pet_id}",
         json={"size_band": "xl"},
         headers=auth_headers,
     )
-    assert forbidden.status_code == 422
+    assert ignored.status_code == 200
+    assert ignored.json()["size_band"] == "s"
 
 
 @pytest.mark.parametrize("weight", [-3, 0, 7500])

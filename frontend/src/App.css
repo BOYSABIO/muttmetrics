@@ -282,7 +282,8 @@ section.panel h2 {
   max-width: 100%;
 }
 
-.field label {
+.field label,
+.field > .field-label {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--ink);
@@ -471,6 +472,12 @@ textarea::placeholder {
 
 .actions.stack {
   flex-direction: column;
+}
+
+/* A small Cancel / Confirm pair inside a card (e.g. Add pet): right-aligned,
+   primary last, matching the action bar. */
+.actions.inline-actions {
+  justify-content: flex-end;
 }
 
 button {
@@ -976,6 +983,22 @@ button.dog-avatar-editable:hover:not(:disabled) .dog-avatar-face {
   color: var(--accent-press);
 }
 
+/* Coat condition: six words, three per row on a phone, one row on a wide screen. */
+.condition-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.condition-picker .chip {
+  justify-content: center;
+}
+
+@media (min-width: 560px) {
+  .condition-picker {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
 .profile-hero {
   display: flex;
   align-items: center;
@@ -1127,7 +1150,7 @@ button.linkish:hover:not(:disabled) {
   margin: 0.35rem 0 0;
 }
 
-.profile-actions {
+.action-bar {
   position: sticky;
   bottom: 0;
   z-index: 5;
@@ -1143,11 +1166,22 @@ button.linkish:hover:not(:disabled) {
   );
 }
 
-.profile-actions > button {
+.action-bar > button {
   flex: 1 1 0;
   min-width: 0;
   padding-inline: 0.5rem;
   white-space: nowrap;
+}
+
+/* Secondary on the left, primary last (on the right) and the widest. */
+.action-bar > .step-back,
+.action-bar > button:not(.primary) {
+  flex: 0 1 auto;
+  padding-inline: 1rem;
+}
+
+.action-bar > button.primary {
+  flex: 1 1 auto;
 }
 
 /* The floating + would sit on top of Save while a profile is open. */
@@ -1452,7 +1486,7 @@ main.app-home:has(.profile-panel) .fab {
     --bar-bg: var(--paper);
   }
 
-  .profile-actions {
+  .action-bar {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
@@ -1460,9 +1494,529 @@ main.app-home:has(.profile-panel) .fab {
     border-top: 1px solid var(--line);
   }
 
-  .profile-actions > button {
+  .action-bar {
+    justify-content: flex-end;
+  }
+
+  .action-bar > button,
+  .action-bar > button.primary {
     flex: 0 0 auto;
     width: auto;
     min-width: 8rem;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Capture on a computer (2026-11-14): same flow, laid out for the     */
+/* screen instead of a phone strip.                                    */
+/* ------------------------------------------------------------------ */
+
+@media (min-width: 768px) {
+  .app-capture .dir-card-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  /* Forms (new client, the visit, "another pet?") stay a readable column;
+     only the list of pets to pick from uses the full width. */
+  .app-capture .capture-narrow {
+    max-width: 44rem;
+    margin-inline: auto;
+    width: 100%;
+  }
+
+  /* Step 3: two fields per row; wide things take the whole row. */
+  .visit-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem 1.25rem;
+    align-items: start;
+  }
+
+  .visit-details > .field:has(.chip-row),
+  .visit-details > .field:has(input[type='text']),
+  .visit-details > .checkbox-row,
+  .visit-details > .photo-picker,
+  .visit-details > .actions,
+  .visit-details > :not(.field):not(.checkbox-row) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1100px) {
+  .app-capture .dir-card-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* One layout for every screen (docs/architecture/ui-conventions.md):   */
+/* leave = top left; save/continue = bottom right; delete = page end.   */
+/* ------------------------------------------------------------------ */
+
+.page-back {
+  align-self: flex-start;
+  margin: 0 0 0.5rem -0.55rem;
+}
+
+.profile-hero {
+  flex-wrap: wrap;
+}
+
+.profile-hero-action {
+  margin-left: auto;
+  align-self: center;
+}
+
+@media (max-width: 559px) {
+  .profile-hero-action {
+    flex: 1 1 100%;
+    margin-left: 0;
+  }
+}
+
+/* The delete button sits on the LEFT on every screen size, so it never lines
+   up with Save (bottom right). A gap below keeps it away from the bar. */
+.danger-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+  margin-bottom: 2.5rem;
+  padding: 0.9rem 1rem;
+  border: 1.5px dashed var(--danger, #b3361f);
+  border-radius: var(--radius-sm);
+}
+
+.danger-zone-title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--danger, #b3361f);
+}
+
+
+/* ------------------------------------------------------------------ */
+/* New visit wizard: steps on top, one bar pinned to the bottom.       */
+/* ------------------------------------------------------------------ */
+
+/* The visit fills the screen; the body takes the spare height, so the bar
+   is at the bottom on every step, short or long. */
+main.app-capture:has(.capture-visit) {
+  padding-bottom: 0;
+}
+
+.app-capture .capture-visit {
+  flex: 1 0 auto;
+}
+
+.wizard-body {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.wizard-bar {
+  margin-top: 0;
+}
+
+/* Keeps Continue in the same place on step 1, where there's no Back. */
+.action-bar > .slot-placeholder {
+  visibility: hidden;
+}
+
+.wizard-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wizard-steps li {
+  padding-top: 0.45rem;
+  border-top: 4px solid var(--line);
+  border-radius: 2px;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--ink-faint);
+}
+
+.wizard-steps li.done {
+  border-top-color: var(--accent);
+  color: var(--ink-muted);
+}
+
+.wizard-steps li.current {
+  border-top-color: var(--ink);
+  color: var(--ink);
+}
+
+/* Step 2: the clock is the screen. */
+.timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1.5rem 1rem 1.25rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: center;
+}
+
+.timer-state {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.timer-running .timer-state {
+  color: var(--accent);
+}
+
+.timer-running .timer-state::before {
+  content: '';
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.4rem;
+  border-radius: 50%;
+  background: var(--clay);
+  vertical-align: 0.05rem;
+  animation: timer-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes timer-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timer-running .timer-state::before {
+    animation: none;
+  }
+}
+
+.timer-clock {
+  margin: 0 0 0.75rem;
+  font-family: var(--mono);
+  font-size: clamp(3.5rem, 18vw, 5rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.timer-idle .timer-clock {
+  color: var(--ink-faint);
+}
+
+.timer button.timer-main {
+  width: 100%;
+  max-width: 20rem;
+  min-height: 3.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.timer button.timer-reset {
+  align-self: center;
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.input-suffix {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-suffix input {
+  flex: 1;
+  padding-right: 3.25rem;
+}
+
+.input-suffix span {
+  position: absolute;
+  right: 0.9rem;
+  color: var(--ink-muted);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* Phone: step 3's fields get the same spacing as the rest of the form
+   (on a computer it's a two-column grid, set above). */
+@media (max-width: 767px) {
+  .visit-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+}
+
+/* Desk: a message during the visit lines up with the visit column. */
+@media (min-width: 768px) {
+  main.app-capture:has(.capture-visit) > .status {
+    max-width: 44rem;
+    width: 100%;
+    margin-inline: auto;
+  }
+}
+
+/* Breed picker: the "Add … as a breed" row reads as an action, not a breed. */
+.breed-picker-option.breed-picker-add {
+  border-top: 1px dashed var(--line);
+  color: var(--accent);
+  font-weight: 650;
+}
+
+/* ------------------------------------------------------------------ */
+/* Pet profile (2026-11): Basics first, notes, visits, folded details.  */
+/* docs/architecture/pet-data.md says why these fields.                 */
+/* ------------------------------------------------------------------ */
+
+.profile-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  width: 100%;
+}
+
+.profile-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+/* Computer: the facts on the left, history and the rest on the right. */
+@media (min-width: 768px) {
+  .profile-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 1.1rem;
+  }
+}
+
+.profile-block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.basics-count {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--warn);
+}
+
+.basics-count-done {
+  color: var(--accent);
+}
+
+.profile-summary {
+  margin: 0;
+  font-weight: 650;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.profile-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-flags li {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--clay-soft, #fbe3d8);
+  color: var(--warn);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Fixed lists as a grid of equal chips on a phone, one row when it fits. */
+.choice-chips {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.choice-chips .chip {
+  justify-content: center;
+  text-align: center;
+  padding-inline: 0.5rem;
+}
+
+.choice-chips-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.choice-chips-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.choice-chips-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.choice-chips-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.choice-chips-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+
+
+.choice-chips .chip:disabled {
+  opacity: 0.55;
+}
+
+.choice-chips .chip.chip-on:disabled {
+  opacity: 0.8;
+}
+
+/* Yes / No rows: label left, two small chips right. */
+.yes-no-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.yes-no {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.yes-no-label {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.yes-no .chip-row {
+  flex-wrap: nowrap;
+}
+
+.yes-no .chip {
+  min-width: 3.4rem;
+  justify-content: center;
+}
+
+/* "More details": folded by default, the header is the whole tap target. */
+details.profile-more {
+  display: block;
+}
+
+details.profile-more > summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+details.profile-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.profile-more > summary .profile-section::after {
+  content: ' ▸';
+}
+
+details.profile-more[open] > summary .profile-section::after {
+  content: ' ▾';
+}
+
+details.profile-more[open] > .field-stack {
+  margin-top: 0.85rem;
+}
+
+/* The bar says when there's something to save. */
+.action-bar-note {
+  align-self: center;
+  margin-right: auto;
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: var(--warn);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ */
+/* Profile sizing pass: one chip size everywhere, controls that line up */
+/* ------------------------------------------------------------------ */
+
+/* Every chip (lists, yes/no, species) is the same height as the others,
+   and a bit shorter than a text field so the two never look alike. */
+.chip {
+  min-height: 2.5rem;
+}
+
+/* From 560px wide, chips size to their words (a two-option list no longer
+   stretches into two huge pills); a minimum keeps short words tappable. */
+@media (min-width: 560px) {
+  .choice-chips {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .choice-chips .chip {
+    flex: 0 0 auto;
+    min-width: 5.5rem;
+    padding-inline: 0.9rem;
+  }
+}
+
+/* Long words (handling): chips size to their words on a phone too. */
+.choice-chips.choice-chips-flow {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.choice-chips-flow .chip {
+  flex: 0 0 auto;
+  min-width: 3.5rem;
+  padding-inline: 0.85rem;
+}
+
+/* Size that comes from the weight: a statement, not greyed-out buttons. */
+.size-from-weight {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.chip-static {
+  cursor: default;
+  min-width: 5.5rem;
+  justify-content: center;
+}
+
+.size-from-weight .linkish {
+  margin-left: auto;
+  align-self: center;
+}
+
+/* Clear sits next to the breed field: same height, same edge. */
+.breed-picker-clear {
+  align-self: stretch;
+  padding-inline: 0.9rem;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+}
+
+/* Notes: two lines to start, they grow as you type more. */
+.profile-block textarea {
+  min-height: 4.25rem;
+}
+
+/* Weight and sex share a row in More details. */
+.more-pair {
+  align-items: start;
+}
+
+.more-pair input {
+  max-width: 100%;
 }

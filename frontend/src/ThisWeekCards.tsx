@@ -12,6 +12,7 @@ import {
   coatInsight,
   coatLabel,
   comparisonLabel,
+  estimateInsight,
   formatCap,
   formatHours,
   formatMoney,
@@ -249,13 +250,47 @@ export function TimingCard({ recent, days }: { recent: MetricsPeriodBlock; days:
   const minN = recent.min_n
   const over = recent.overrun.avg_minutes.value
   const miss = recent.p90_miss.rate.value
+  const b = recent.estimate_bands
+  const bands = [
+    { key: 'p50', label: 'Within the typical time', count: b.within_p50 },
+    { key: 'p90', label: 'Longer, within the worst case', count: b.within_p90 },
+    { key: 'past', label: 'Past the worst case', count: b.past_p90 },
+  ]
   return (
     <section className="tw-card" aria-label="Timing">
       <div className="tw-card-head">
         <h2 className="tw-label">Time vs estimate</h2>
         <span className="tw-card-note">last {days} days</span>
       </div>
-      <div className="tw-pair">
+      <p className="tw-insight">{estimateInsight(b, minN)}</p>
+      {b.enough && (
+        <>
+          <div className="tw-bands" aria-hidden>
+            {bands.map((band) =>
+              band.count > 0 ? (
+                <span
+                  key={band.key}
+                  className={`tw-band tw-band-${band.key}`}
+                  style={{ flexGrow: band.count }}
+                />
+              ) : null,
+            )}
+          </div>
+          <ul className="tw-band-legend">
+            {bands.map((band) => (
+              <li key={band.key}>
+                <span className={`tw-band-swatch tw-band-${band.key}`} aria-hidden />
+                <span className="tw-band-label">{band.label}</span>
+                <span className="tw-band-count">
+                  {band.count}
+                  <span className="tw-band-pct"> · {Math.round((band.count / b.n) * 100)}%</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <div className="tw-pair tw-pair-small">
         <article className="tw-stat">
           <h3 className="tw-stat-title">Ran long</h3>
           <p className={over === null ? 'tw-stat-value tw-stat-value-thin' : 'tw-stat-value'}>

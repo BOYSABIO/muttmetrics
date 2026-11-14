@@ -96,11 +96,29 @@ def owner_payload(owner: Owner) -> dict[str, Any]:
                 "sex": pet.sex,
                 "date_of_birth": _jsonable(pet.date_of_birth),
                 "weight_kg": _jsonable(pet.weight_kg),
+                "size_band": pet.size_band,
+                "size_source": pet.size_source,
                 "coat_type": pet.coat_type,
+                "coat_thickness": pet.coat_thickness,
+                "handling_score": pet.handling_score,
+                "muzzle_required": pet.muzzle_required,
+                "two_person_job": pet.two_person_job,
+                "senior_flag": pet.senior_flag,
+                "usual_cut": pet.usual_cut,
                 "temperament_notes": pet.temperament_notes,
+                "health_notes": pet.health_notes,
                 "mobility_notes": pet.mobility_notes,
                 "vet_notes": pet.vet_notes,
                 "fear_triggers": pet.fear_triggers,
+                "profile_changes": [
+                    {
+                        "field": change.field,
+                        "old_value": change.old_value,
+                        "new_value": change.new_value,
+                        "changed_at": _jsonable(change.changed_at),
+                    }
+                    for change in sorted(pet.changes, key=lambda c: c.change_id)
+                ],
                 "visits": visits_out,
                 "photos": photos_out,
             }
@@ -127,6 +145,7 @@ def load_owner_tree(session: Session, owner_id: int) -> Owner | None:
         .options(
             selectinload(Owner.pets).selectinload(Pet.visits).selectinload(Visit.visit_add_ons),
             selectinload(Owner.pets).selectinload(Pet.photos),
+            selectinload(Owner.pets).selectinload(Pet.changes),
         )
     )
     return session.scalars(stmt).first()

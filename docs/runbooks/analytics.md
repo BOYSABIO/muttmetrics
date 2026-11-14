@@ -13,7 +13,7 @@ Every metric is a **range function** with inclusive dates. Same definition for a
 | Metric | Call |
 |--------|------|
 | Summary (visits, minutes, revenue, overall €/hour) | `metric_summary(p_start, p_end)` |
-| €/hour by coat × shaved | `metric_eur_per_hour(p_start, p_end)` |
+| €/hour by coat condition (shave-downs one row) | `metric_eur_per_hour(p_start, p_end)` |
 | Pivot / overrun / P90 miss | `metric_pivot_rate` / `metric_overrun` / `metric_p90_miss` `(p_start, p_end)` |
 | Utilization per day | `metric_utilization(buffer_minutes, p_start, p_end)` |
 | Utilization per week (month view) | `metric_utilization_weeks(buffer_minutes, p_start, p_end)`, built on the per-day function |
@@ -51,7 +51,7 @@ Every M5 metric that aggregates visits uses this filter unless a glossary entry 
 | **Include** | `visit.status` is `'completed'` **or** `NULL` (legacy rows before status was filled) |
 | **Exclude** | `status` in (`'cancelled'`, `'no_show'`) — groom did not happen / should not count as a logged job |
 | **Range** | Inclusive `visit.visit_date` between `p_start` and `p_end` (week = Mon–Sun; month = calendar month) |
-| **Condition polarity** | `condition_score`: **0 = worst … 5 = best** ([#123](https://github.com/BOYSABIO/muttmetrics/issues/123)) |
+| **Condition polarity** | `condition_score`: **0 = worst … 5 = best** ([#123](https://github.com/BOYSABIO/muttmetrics/issues/123)). On screen as words, one per score (2026-11-14): 0 *Matted*, 1 *Rough*, 2 *Tangled*, 3 *OK*, 4 *Good*, 5 *Great* (`frontend/src/condition.ts`; the stored value stays the number) |
 
 This matches the compliance numerator so “completed visits” means the same thing in capture health and in analytics.
 
@@ -65,19 +65,19 @@ A **cell** is one group produced by that metric’s **GROUP BY** — **not** “
 
 | Metric | Typical cell (group of visits) | What `n` counts |
 |--------|--------------------------------|-----------------|
-| €/hour (#27) | One (`condition_score`, `shaved_down`) bucket **within the chosen range** | Eligible visits in that bucket — **many dogs** can sit in the same cell |
+| €/hour (#27) | One coat condition (unshaved visits), or **all shave-downs together**, **within the chosen range** | Eligible visits in that bucket — **many dogs** can sit in the same cell |
 | Pivot / overrun / P90 miss (#28) | The chosen range (week or month on the dashboard; wide range for ops “overall”) | Eligible visits in that slice |
 | Utilization (#29) | One `visit_date` inside the range | Visits that day |
 
 **Week vs month:** a week matches the salon’s short pulse (#158). A **month** (#170) is the same formulas on a longer range — useful early on when weekly cells sit under `MIN_N`. Do **not** average weekly averages to get a month; recompute from visit rows for that range.
 
-**The recent window ([#228](https://github.com/BOYSABIO/muttmetrics/issues/228)):** some questions are slow. "Does this kind of coat pay less per hour?" spreads one period's grooms over up to 12 coat × shaved cells, so a week (or even a month) can't fill them. Those numbers use the **last `RECENT_DAYS` (90)** up to the end of the period being viewed (or today, if that's earlier): same functions, same `MIN_N`, a longer range. Ninety days fills the cells while old prices drop out within a quarter.
+**The recent window ([#228](https://github.com/BOYSABIO/muttmetrics/issues/228)):** some questions are slow. "Does this kind of coat pay less per hour?" spreads one period's grooms over up to 7 cells (6 conditions + shave-downs; 12 before 2026-11-14), so a week (or even a month) can't fill them. Those numbers use the **last `RECENT_DAYS` (90)** up to the end of the period being viewed (or today, if that's earlier): same functions, same `MIN_N`, a longer range. Ninety days fills the cells while old prices drop out within a quarter.
 
 | Number on the This week screen | Range |
 |---|---|
 | Grooms, hours, take-home, overall €/hour | The selected week or month, compared with the previous one |
 | Day by day (week) / week by week (month) | The selected period |
-| €/hour by coat × shaved, the coat sentence | Last 90 days |
+| €/hour by coat condition, the coat sentence | Last 90 days |
 | Overrun, P90 miss (shown only once visits carry estimates) | Last 90 days |
 | All time: the hero in **All** mode; in week and month only a one-line link to it (grooms so far, next milestone) | First completed visit → today |
 
@@ -100,7 +100,7 @@ So `MIN_N` is “enough visits **in this bucket** to show a mean/rate,” not �
 
 ### Effective €/hour
 
-**Question:** For eligible visits, what did we earn per hour of groom time, sliced by coat condition × whether we shaved down?
+**Question:** For eligible visits, what did we earn per hour of groom time, sliced by the coat's condition on arrival, with shave-downs as their own group?
 
 We publish **two** named rates so pricing power and take-home are never confused (see learning note below).
 
@@ -112,7 +112,7 @@ We publish **two** named rates so pricing power and take-home are never confused
 | **Revenue (inc tip)** | `final_price + coalesce(tip, 0)` — missing tip counts as `0`, not “unknown revenue” |
 | **€/hour ex tip** | `sum(revenue ex tip) / sum(hours)` over the cell |
 | **€/hour inc tip** | `sum(revenue inc tip) / sum(hours)` over the cell |
-| **Grouping** | Range × `condition_score` × `shaved_down` |
+| **Grouping** | Range × (`condition_score` for unshaved visits **or** one shave-down cell). A visit with `shaved_down` true goes to the shave-down cell (`condition_score` NULL in the result) whatever its condition; otherwise it needs a `condition_score`. `shaved_down` NULL counts as not shaved. **Amended 2026-11-14** (migration `a7b8c9d0e1f2`): it was condition × shaved_down, up to 12 cells, and shave-downs (almost always bad coats) spread over cells that could never fill |
 | **Unit** | Euro per hour |
 | **`n`** | Count of eligible visits in the cell; apply `MIN_N` |
 | **NULL price / NULL minutes** | Visit **excluded** from this metric (not treated as €0 or 0 minutes) |
@@ -141,6 +141,20 @@ We publish **two** named rates so pricing power and take-home are never confused
 | **Miss** | `actual_minutes > predicted_min_p90` (boolean) |
 | **P90 miss rate** | `count(miss) / n` on eligible visits; apply `MIN_N` |
 | **No prediction** | **Excluded** (same as overrun) |
+
+### Estimate bands (2026-11-14)
+
+| Piece | Definition |
+|-------|------------|
+| **Eligible** | Shared eligibility, **and** `predicted_min_p50` **and** `predicted_min_p90` present, **and** `actual_minutes IS NOT NULL` (the P90-miss visits, minus any without a P50) |
+| **Within P50** | `actual_minutes <= predicted_min_p50` ("within the typical time") |
+| **Within P90** | `predicted_min_p50 < actual_minutes <= predicted_min_p90` ("longer, within the worst case") |
+| **Past P90** | `actual_minutes > predicted_min_p90` (same as a P90 miss) |
+| **`enough`** | `n >= MIN_N`. Counts are always facts; the screen draws the proportions only when `enough` |
+
+**Executable:** `metric_estimate_bands(p_start, p_end)` → `n`, `within_p50`, `within_p90`, `past_p90`, `enough`. The three counts add up to `n`.
+
+**On the screen (timing card, last 90 days):** one sentence judged against what a worst case is for: it should be beaten about **1 in 10** times. Past P90 above 15% → "estimates run short"; below 5% → "estimates are cautious"; otherwise "about right". Then the three bands as one bar, then the average overrun and the P90 miss rate.
 
 ### Pivot rate
 
@@ -203,7 +217,7 @@ Capture can attach catalog techniques to a visit (`visit_add_on` → `add_on`: h
 
 | Question | Answer for now |
 |----------|----------------|
-| Do current €/hour cells include technique? | **No.** `#27` still groups by `condition_score` × `shaved_down` only. A hand-stripped full groom sits in the same coat cell as a normal one. |
+| Do current €/hour cells include technique? | **No.** `#27` still groups by `condition_score` × `shaved_down` only. A hand-stripped full groom sits in the same coat cell as a normal one. (Since 2026-11-14 the cells are conditions plus one shave-down cell.) |
 | Should €/hour be shown **by technique** later? | **Yes, once `n` supports it.** Same eligibility and `MIN_N` as today; a cell would be (at least) one `add_on` within the range — likely `EXISTS` join to `visit_add_on`, not a new fact column. Do not ship a technique slice while most cells sit under `MIN_N`. |
 | Does a visit with two add-ons count twice? | Decide when the metric is defined (visit-once vs once-per-technique). Prefer **visit-once** for overall €/hour; technique slices can be “visits that used this add-on.” Amend this runbook before SQL. |
 

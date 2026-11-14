@@ -355,7 +355,7 @@ section.panel h2 {
 }
 
 @media (min-width: 768px) {
-  .profile-actions {
+  .action-bar {
     border-top: var(--edge);
   }
 }
@@ -696,4 +696,69 @@ input[type='checkbox']:focus-visible {
     animation-delay: 0s !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* New visit: the timer is a card like the photo picker; Stop is ink so it
+   reads differently from Start without looking like a delete. */
+.timer {
+  border: var(--edge);
+  box-shadow: var(--pop);
+}
+
+.timer button.timer-main {
+  border: var(--edge);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--pop-sm);
+}
+
+.timer button.timer-stop {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.timer button.timer-stop:hover:not(:disabled) {
+  background: #000;
+}
+
+.wizard-steps li {
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+}
+
+/* Phone: capture sits on the paper, so the bar fades into paper too. */
+main.app-capture {
+  --bar-bg: var(--paper);
+}
+
+/* Desk: capture is a card exactly as tall as the window (minus its margin)
+   that scrolls inside, so the bar is pinned to the card's bottom edge on
+   every step, short or long. */
+@media (min-width: 768px) {
+  #root:has(.app-capture) {
+    height: calc(100svh - 3rem);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  main.app-capture {
+    --bar-bg: var(--surface);
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .app-capture .action-bar {
+    background: var(--surface);
+  }
+}
+
+/* Clear next to the breed field wears the field's own edge. */
+.breed-picker-clear {
+  border: var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
 }

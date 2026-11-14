@@ -10,6 +10,32 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-11-14
+
+First M6.5 release: capture and the pet profile cleaned up, so they're quicker to use and the data is clean enough to train a model on later. **Three migrations; `c9d0e1f2a3b4` rewrites existing pet rows** (coat, size, sex): run the read-only checks in the release notes first. **On the box, after deploying:** `python -m muttmetrics.seed --breeds-only` (never the plain seed there).
+
+### Added
+
+- **About 60 more breeds, and "Add a breed".** The catalog grows from 20 to 77: common salon breeds and the doodle crosses, each with starting-guess typical minutes, matting risk, coat and size for the estimate (`seed/data.py`; the groomer corrects them). Breeds show their English name; typing the German one still finds them, accents optional ("schafer" → German Shepherd). When nothing matches, the picker offers *Add "X" as a breed* (`POST /breeds`): it's marked as added in the salon, and a twin with other capitals or the German name gets the existing breed back instead. A breed added in the salon has no typical minutes, so its dogs get no estimate until someone sets them. `python -m muttmetrics.seed --breeds-only` updates just the breeds (the full seed also rewrites services and would blank prices without the private pricing file)
+- **Time vs estimate tells you what it means.** The timing card now says whether estimates run short, are cautious or are about right (a worst case should be beaten about 1 in 10 times), and shows every groom with an estimate as one bar: within the typical time / longer but within the worst case / past it. New SQL function `metric_estimate_bands` (migration `b8c9d0e1f2a3`, `analytics.md` "Estimate bands")
+- `python ops/demo_data.py --recent`: about 12 weeks of synthetic visits ending today (`ops/demo_recent.py`), so the dev dashboard and video footage show current weeks: repeat dogs with history and estimates, owners with two dogs groomed back to back, cats, add-ons, tips, bad coats undercharged, and dog profiles only partly filled. Invented names and prices, fixed random seed, still only into an empty database; CI's e2e data is unchanged
+
+### Changed
+
+- **The pet profile, redone.** The top says what matters at a glance: breed · size · coat · handling, visits and how long ago, and heads-up tags (*Muzzle*, *Two people*, *Senior*, *Health note*). Then **Basics**, the four facts the estimate leans on, as taps with a "3 of 4" count: breed, size (S/M/L/XL by eye, or from the weight), coat (with a one-line hint per type), handling (*Easy … Very difficult*). Then grooming notes (usual cut, thickness, temperament, health), recent visits, and a folded *More details* (name, species, crossed with, weight, sex, and Yes / No for muzzle, two people, senior, where neither means nobody checked). On a computer: facts left, visits and details right. The bar says *Unsaved changes*, and Back asks before throwing them away
+- **Pet profile data cleaned up so it can feed a model later** (migration `c9d0e1f2a3b4`, new `docs/architecture/pet-data.md`, ADR-001 amended). Every field a model may use is now a fixed list the database enforces (`src/muttmetrics/pet_vocab.py`):
+  - **Coat:** one coat type per species: dog *Smooth, Double, Curly, Wire, Long & silky, Combination*; cat *Short-haired, Long-haired*. "Single" became "Long & silky", and *Wire* is new. Plus *Thickness* (thin / normal / thick, from the old density). Hair/fur, undercoat and sheds followed from the type and left the profile (the columns stay until a later cleanup)
+  - **Size can be picked by eye** when the dog wasn't weighed; a weight still wins. A new `size_source` says which (`weight` / `eye`). Breed hints use the same four sizes (no more "xs")
+  - **Blank stays blank:** saving the profile only sends what changed. Before, any save wrote "no" into every unticked box (muzzle, two-person, senior…), so "nobody checked" and "no" looked the same. Sex is *Female / Male* or blank (no "unknown" value)
+  - **New:** *Usual cut* (the cut the dog usually gets), and one *Health notes* box (mobility and vet notes merged into it). Handling shows words (*Easy … Very difficult*); the stored 1–5 is unchanged
+  - **Change log:** each profile save that changes a structured fact (size, coat, handling, breed…) writes a `pet_change` row, so an analysis can use what was known on a visit's date. No names or notes in it. Client export includes it; erase also wipes the new notes
+  - Breeds: English names are unique per species (any capitalisation), and a breed records whether it came with the app or was added in the salon. The seed matches breeds by species + name
+- **Coat condition is a word, not a number.** Capture and visit edits ask it as six taps (*Matted, Rough, Tangled, OK, Good, Great* for 0–5; tap again to clear) instead of a 0–5 field, and the dashboard uses the same words. "Coat 1" was easy to mix up with the dog's coat *type*. The stored value is still 0–5; the words live in one place (`frontend/src/condition.ts`) so they can change after the groomer has tried them
+- **New visit works on a computer.** It was a phone strip in the middle of the screen; now the pets to pick from fill the width (2–3 per row) and the visit form uses two fields per row, while forms stay a readable column. The phone layout is unchanged
+- **Buttons are in the same place on every screen** (`docs/architecture/ui-conventions.md`), so a thumb that learned one screen can't hit Delete or Save on the next. Leaving is always top left (*← Back* on pages, *✕ Close* in New visit; the bottom *Cancel visit* is gone). The bottom bar always ends with the main action on the right (*Save changes*, *Continue*, *Save visit*) with *← Back* to its left. *Delete visit* moved out of the bar into its own box at the end of the visit page, on the left, away from Save. *Start visit* moved up next to the dog's name. The header has *Home* and *Clients* tabs (Home used to be only the logo). In the inline Add pet form, *Cancel* is now left of *Add pet*
+- **New visit: the bottom buttons stay put, and the timer step was redesigned.** The three steps share one bar pinned to the bottom of the screen (on a computer, the bottom of the card, which now scrolls inside), so *Continue* is in the same spot on every step instead of following the content. A step tracker (*Photo · Time · Details*) replaces "Step 2 of 3". The timer step is one big clock with a single *Start timer* / *Stop timer* button and a small *Reset timer*; "Minutes groomed" fills in when you stop and can be typed instead. Step 3's fields on a phone got even spacing
+- **€ / hour by coat: every shave-down is one row** (migration `a7b8c9d0e1f2`, `analytics.md` amended). It was condition × shaved, up to 12 rows; shave-downs happen almost only on bad coats, so most "· shaved" rows could never fill. Now 6 conditions + "Shave-down" = 7 rows, and the coat sentence reads "Good coats earn €X an hour more than shave-downs"
+
 ## [0.6.7] — 2026-11-11
 
 Owner-only files everywhere, and an erase that reaches the photo backups. No migration. **On the box, once:** reinstall `muttmetrics-api.service` (it gains `UMask=0077`) — see the release notes.
@@ -137,7 +163,9 @@ baseline the groomer's screen and `/health` can name.
 
 - Insecure / short `API_KEY` values refused at API (and proxy) startup
 
-[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.6.6...HEAD
+[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.7.0
+[0.6.7]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.7
 [0.6.6]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.6
 [0.6.5]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.5
 [0.6.4]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.4

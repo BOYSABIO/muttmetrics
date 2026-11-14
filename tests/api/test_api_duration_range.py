@@ -37,6 +37,7 @@ def test_duration_range_with_breed(
         name="Range Dog",
         breed_id=breed.breed_id,
         size_band="l",
+        size_source="eye",
         handling_score=4,
     )
     db_session.add(dog)
@@ -76,6 +77,7 @@ def test_duration_range_matches_visit_create(
         name="Sync Dog",
         breed_id=breed.breed_id,
         size_band="l",
+        size_source="eye",
         handling_score=4,
     )
     db_session.add(dog)

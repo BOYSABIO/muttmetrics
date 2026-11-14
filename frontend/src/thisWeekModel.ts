@@ -7,12 +7,14 @@
  */
 
 import type {
+  EstimateBands,
   EurPerHourCell,
   MetricValue,
   PeriodSummary,
   UtilizationDay,
   UtilizationWeek,
 } from './api'
+import { conditionWord } from './condition'
 import { addDays, formatWeekday, mondayOf, parseISODate, toISODate } from './dates'
 
 // ---------------------------------------------------------------------------
@@ -92,18 +94,28 @@ export function comparisonLabel(mode: 'week' | 'month', partial: boolean): strin
 // Coat rows
 // ---------------------------------------------------------------------------
 
-export function coatLabel(score: number, shaved: boolean): string {
-  const base = score === 0 ? 'Worst' : score === 5 ? 'Best' : `Coat ${score}`
-  return shaved ? `${base} · shaved` : base
+/** Row label: the condition's word, or "Shave-down" for the shaved row. */
+export function coatLabel(score: number | null, shaved: boolean): string {
+  return shaved ? 'Shave-down' : conditionWord(score)
 }
 
+/** For sentences: "matted coats", "shave-downs". */
+function coatPhrase(score: number | null, shaved: boolean): string {
+  return shaved ? 'shave-downs' : `${conditionWord(score).toLowerCase()} coats`
+}
+
+function capitalise(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+/** Matted … Great, then the shave-down row last. */
 export function sortCoatCells(cells: EurPerHourCell[]): EurPerHourCell[] {
   return cells
     .slice()
     .sort(
       (a, b) =>
-        a.condition_score - b.condition_score ||
-        Number(a.shaved_down) - Number(b.shaved_down),
+        Number(a.shaved_down) - Number(b.shaved_down) ||
+        (a.condition_score ?? 0) - (b.condition_score ?? 0),
     )
 }
 
@@ -111,19 +123,44 @@ export function sortCoatCells(cells: EurPerHourCell[]): EurPerHourCell[] {
 export function coatInsight(cells: EurPerHourCell[], minN: number, days: number): string {
   const ready = cells.filter((c) => c.eur_per_hour_inc_tip.value !== null)
   if (ready.length === 0) {
-    return `Each coat score needs ${minN} grooms in ${days} days before it shows a rate.`
+    return `Each coat condition needs ${minN} grooms in ${days} days before it shows a rate.`
   }
   // Rounded like the rows show them, so the sentence matches the numbers below it.
   const rate = (c: EurPerHourCell) => Math.round(c.eur_per_hour_inc_tip.value as number)
   if (ready.length === 1) {
     const c = ready[0]
-    return `${coatLabel(c.condition_score, c.shaved_down)} earns ${formatMoney(rate(c))} an hour. The other coats are still filling up.`
+    return `${capitalise(coatPhrase(c.condition_score, c.shaved_down))} earn ${formatMoney(rate(c))} an hour. The others are still filling up.`
   }
   const best = ready.reduce((x, y) => (rate(y) > rate(x) ? y : x))
   const worst = ready.reduce((x, y) => (rate(y) < rate(x) ? y : x))
   const gap = rate(best) - rate(worst)
   if (gap === 0) return 'Every coat with enough grooms earns about the same per hour.'
-  return `${coatLabel(best.condition_score, best.shaved_down)} earns ${formatMoney(gap)} an hour more than ${coatLabel(worst.condition_score, worst.shaved_down)}.`
+  return `${capitalise(coatPhrase(best.condition_score, best.shaved_down))} earn ${formatMoney(gap)} an hour more than ${coatPhrase(worst.condition_score, worst.shaved_down)}.`
+}
+
+// ---------------------------------------------------------------------------
+// Time vs estimate
+// ---------------------------------------------------------------------------
+
+/** "1 in 4" from a share. */
+function oneIn(share: number): string {
+  return `1 in ${Math.max(1, Math.round(1 / share))}`
+}
+
+/**
+ * What the spread means. The worst-case estimate is built to be beaten about
+ * 1 in 10 times, so that's the yardstick.
+ */
+export function estimateInsight(b: EstimateBands, minN: number): string {
+  if (!b.enough) return `Needs ${minN} grooms with an estimate before it says anything.`
+  const past = b.past_p90 / b.n
+  if (past > 0.15) {
+    return `Estimates run short: ${oneIn(past)} grooms went past the worst case (it should be about 1 in 10).`
+  }
+  if (past < 0.05) {
+    return 'Estimates are cautious: the worst case almost never happens, so they could be tighter.'
+  }
+  return 'Estimates are about right: roughly 1 in 10 grooms runs past the worst case, as intended.'
 }
 
 // ---------------------------------------------------------------------------

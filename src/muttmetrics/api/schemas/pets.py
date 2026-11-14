@@ -7,6 +7,13 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from muttmetrics.api.schemas.add_ons import AddOnSummary
+from muttmetrics.pet_vocab import (
+    COAT_THICKNESS_MAX,
+    COAT_THICKNESS_MIN,
+    CoatType,
+    Sex,
+    SizeBandCode,
+)
 from muttmetrics.species import DEFAULT_SPECIES
 
 SpeciesLiteral = Literal["dog", "cat"]
@@ -99,37 +106,29 @@ class PetProfile(BaseModel):
     species: SpeciesLiteral
     breed_id: int | None = None
     breed_secondary_id: int | None = None
-    sex: str | None = None
+    sex: Sex | None = None
     date_of_birth: date | None = None
     weight_kg: Decimal | None = None
+    size_band: SizeBandCode | None = None
+    size_source: Literal["weight", "eye"] | None = Field(
+        default=None, description="weight = from the weighed dog; eye = picked by hand"
+    )
 
-    coat_type: str | None = None
-    hair_or_fur: str | None = None
-    coat_density: str | None = None
-    undercoat: bool | None = None
-    sheds: bool | None = None
+    coat_type: CoatType | None = None
+    coat_thickness: int | None = Field(default=None, description="1 thin, 2 normal, 3 thick")
+    usual_cut: str | None = None
 
     handling_score: int | None = None
-    fear_triggers: list[str] | None = None
     muzzle_required: bool | None = None
     two_person_job: bool | None = None
     temperament_notes: str | None = None
 
-    skin_conditions: list[str] | None = None
     senior_flag: bool | None = None
-    mobility_notes: str | None = None
-    vet_notes: str | None = None
+    health_notes: str | None = None
 
-    # Derived (ADR-001) — display only; never accept on PATCH (#132)
-    size_band: str | None = Field(default=None, description="Derived — display only")
+    # Computed from visit rows on read (ADR-001 #171) — never accepted on PATCH
     visit_count: int | None = Field(default=None, description="Derived — display only")
-    avg_duration_min: Decimal | None = Field(default=None, description="Derived — display only")
-    duration_stddev_min: Decimal | None = Field(default=None, description="Derived — display only")
-    typical_interval_days: Decimal | None = Field(
-        default=None, description="Derived — display only"
-    )
     last_visit_date: date | None = Field(default=None, description="Derived — display only")
-    next_due_date: date | None = Field(default=None, description="Derived — display only")
 
     avatar_photo_id: int | None = Field(
         default=None,
@@ -149,24 +148,24 @@ class PatchPetRequest(BaseModel):
     species: SpeciesLiteral | None = None
     breed_id: int | None = None
     breed_secondary_id: int | None = None
-    sex: str | None = None
+    sex: Sex | None = None
     date_of_birth: date | None = None
     # > 0, and a ceiling that catches grams typed into a kg field (7500 -> 422).
     weight_kg: Decimal | None = Field(default=None, gt=0, le=150)
+    # Picked by eye. Ignored when the pet has a weight: size then comes from
+    # the weight (pet-data.md).
+    size_band: SizeBandCode | None = None
 
-    coat_type: str | None = None
-    hair_or_fur: str | None = None
-    coat_density: str | None = None
-    undercoat: bool | None = None
-    sheds: bool | None = None
+    coat_type: CoatType | None = Field(
+        default=None, description="Must be on the list for the pet's species (pet_vocab.py)"
+    )
+    coat_thickness: int | None = Field(default=None, ge=COAT_THICKNESS_MIN, le=COAT_THICKNESS_MAX)
+    usual_cut: str | None = None
 
     handling_score: int | None = Field(default=None, ge=1, le=5)
-    fear_triggers: list[str] | None = None
     muzzle_required: bool | None = None
     two_person_job: bool | None = None
     temperament_notes: str | None = None
 
-    skin_conditions: list[str] | None = None
     senior_flag: bool | None = None
-    mobility_notes: str | None = None
-    vet_notes: str | None = None
+    health_notes: str | None = None

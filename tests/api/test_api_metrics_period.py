@@ -190,8 +190,8 @@ def test_period_includes_a_recent_window_ending_at_the_range_end(
     # April's six plus the Mar 31 visit just before it; the cancelled one never counts
     assert recent["summary"]["visit_count"] == EXPECTED["summary"]["visit_count"] + 1
     cells = {(c["condition_score"], c["shaved_down"]): c for c in recent["eur_per_hour"]}
-    assert cells[(0, True)]["n"] == 7
-    assert cells[(0, True)]["eur_per_hour_inc_tip"]["value"] == pytest.approx(60.0)
+    assert cells[(None, True)]["n"] == 7  # the shave-down row
+    assert cells[(None, True)]["eur_per_hour_inc_tip"]["value"] == pytest.approx(60.0)
     # A finished month is compared with the whole previous month
     assert data["previous_is_partial"] is False
 

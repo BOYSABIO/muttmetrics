@@ -13,7 +13,7 @@ Three entities, two kinds of “not typed by the groomer”:
 - **`owner` / `dog`:** rolling snapshots of visit history. Store as **nullable columns**, **recompute via a job/CLI** after visits change. Never accept them as user input on APIs or CSV import.
 - **`visit`:** the **fact table** (one row per groom). Most fields are captured at the event. A small set is **system-computed at write/score time** and stored on that row — not a later aggregate job.
 
-`dog.size_band` is derived from `weight_kg`; store it, recompute when weight changes.
+`dog.size_band` is derived from `weight_kg`; store it, recompute when weight changes. (2026-11: or picked by eye when there is no weight; see the amendment below.)
 
 ### Amendment (#171) — two kinds of “derived,” handled differently
 
@@ -25,6 +25,19 @@ A stored aggregate is a **cache**. Until #171, the recompute job from this ADR n
 | `size_band` | The dog’s own `weight_kg` | **Pure function** `size_band_from_weight` for the prior and profile display; **write-through** on dog PATCH when `weight_kg` changes; one-time backfill (`ops/backfill_size_band.py`) for dogs that already have a weight. |
 
 Other ADR-001 dog/owner aggregates (`avg_duration_min`, owner LTV, …) stay `NULL` until a real recompute job exists — nothing reads them for metrics or the prior today.
+
+### Amendment (2026-11) — size can be picked by eye; profile changes are logged
+
+Most dogs are never weighed, and size sets the price, so a weight-only `size_band` stayed empty. `size_band` is now **hand-enterable when there is no weight**, and a new `size_source` says which it was:
+
+| `size_source` | Meaning | Who writes it |
+|---|---|---|
+| `weight` | `size_band_from_weight(weight_kg, species)` | PATCH write-through (unchanged from #171) and `ops/backfill_size_band.py` |
+| `eye` | Picked by hand | PATCH, only while `weight_kg` is NULL |
+
+A weight always wins: a size sent alongside a weight is ignored, and clearing the weight of a pet whose size came from it leaves the size blank. The two are different measurements, so a model can treat them differently.
+
+Hand-entered pet fields can be filled long after the visits they describe (profiles are filled offline), and some change (handling; a puppy's size). Overwriting in place would give every past visit today's value. So every PATCH that changes a field in `pet_vocab.TRACKED_PET_FIELDS` writes a `pet_change` row (old, new, when). It is an audit trail, not a derived cache: nothing recomputes it. Full field rules: [`pet-data.md`](../pet-data.md).
 
 ### Hand-entered vs derived
 
@@ -38,11 +51,11 @@ Other ADR-001 dog/owner aggregates (`avg_duration_min`, owner LTV, …) stay `NU
 
 #### `dog` — hand-entered
 
-`owner_id`, `name`, `breed_id`, `breed_secondary_id`, `sex`, `date_of_birth`, `weight_kg`, coat fields (`coat_type`, `hair_or_fur`, `coat_density`, `undercoat`, `sheds`), temperament fields (`handling_score`, `fear_triggers`, `muzzle_required`, `two_person_job`, `temperament_notes`), medical fields (`skin_conditions`, `senior_flag`, `mobility_notes`, `vet_notes`)
+`owner_id`, `name`, `breed_id`, `breed_secondary_id`, `sex`, `date_of_birth`, `weight_kg`, coat fields (`coat_type`, `coat_thickness`, `usual_cut`), temperament fields (`handling_score`, `muzzle_required`, `two_person_job`, `temperament_notes`), health fields (`senior_flag`, `health_notes`). 2026-11: `hair_or_fur`, `coat_density`, `undercoat`, `sheds`, `mobility_notes`, `vet_notes`, `fear_triggers`, `skin_conditions` retired from the API ([`pet-data.md`](../pet-data.md))
 
 #### `dog` — derived (columns; recompute only)
 
-`size_band` (from `weight_kg`), `visit_count`, `avg_duration_min`, `duration_stddev_min`, `typical_interval_days`, `last_visit_date`, `next_due_date`
+`size_band` (from `weight_kg`, or by eye without one: 2026-11 amendment), `visit_count`, `avg_duration_min`, `duration_stddev_min`, `typical_interval_days`, `last_visit_date`, `next_due_date`
 
 #### `visit` — captured at the event (hand-entered or observed)
 
@@ -61,7 +74,7 @@ These are **not** filled by the owner/dog recompute job. They are written when t
 ### Consequences
 
 - Models issue (#7) includes derived columns on `owner` / `dog` as normal mapped attributes, nullable where history is missing; `visit` includes the system-computed columns above.
-- Capture, CSV import, and any later HTTP `PATCH` for dog/owner must not silently overwrite owner/dog derived columns, or visit `days_since_last` / `predicted_*`, from user input. Same safe lists as the enrichment runbook. `#171`: PATCH may **write** `size_band` when `weight_kg` changes — still never accept `size_band` from the client.
+- Capture, CSV import, and any later HTTP `PATCH` for dog/owner must not silently overwrite owner/dog derived columns, or visit `days_since_last` / `predicted_*`, from user input. Same safe lists as the enrichment runbook. `#171`: PATCH may **write** `size_band` when `weight_kg` changes. (2026-11: the client may send `size_band` only for a pet without a weight; see the amendment.)
 - A `recompute_derived` CLI is part of the design (later issue on M2–M3), even if not built in this ADR. Until then, visit-history fields used in product are compute-on-read (#171).
 - Analytics can still aggregate over `visit` when they need guaranteed freshness; visit-history product reads do the same. `size_band` is write-through + optional backfill, not a visit aggregate.
 
