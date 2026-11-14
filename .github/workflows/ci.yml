@@ -113,7 +113,7 @@ jobs:
               n_brd = conn.execute(text('SELECT COUNT(*) FROM breed')).scalar_one()
               n_high = conn.execute(text('SELECT COUNT(*) FROM breed WHERE matting_risk >= 4')).scalar_one()
               assert n_svc == 5, n_svc
-              assert n_brd == 16, n_brd  # 11 dog + 5 cat (#190)
+              assert n_brd == 77, n_brd  # 68 dog + 9 cat (0.7.0)
               assert n_high >= 6, n_high
               print(f'OK: {n_svc} services, {n_brd} breeds, {n_high} high matting-risk')
           "
