@@ -10,6 +10,14 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-11-14
+
+Deploy fix found while deploying 0.7.0. No migration, nothing to do on the box beyond the deploy.
+
+### Fixed
+
+- **A deploy from a shell with a strict umask served a 403 page while reporting "Deploy OK."** `ops/deploy.py` built the SPA with the shell's umask; after a `umask 077` (set earlier in the same session for a rehearsal), `frontend/dist` came out owner-only, so Caddy, which runs as its own user, couldn't read it. The API kept answering, and step 9 only checked the API, so the deploy passed. Step 7 now builds under umask 022 whatever the shell has, and step 9 also requires the page itself (`GET <app>/`) to return 200 before `/api/services`, naming the likely cause when it doesn't (`release.md`)
+
 ## [0.7.0] — 2026-11-14
 
 First M6.5 release: capture and the pet profile cleaned up, so they're quicker to use and the data is clean enough to train a model on later. **Three migrations; `c9d0e1f2a3b4` rewrites existing pet rows** (coat, size, sex): run the read-only checks in the release notes first. **On the box, after deploying:** `python -m muttmetrics.seed --breeds-only` (never the plain seed there).
@@ -163,7 +171,8 @@ baseline the groomer's screen and `/health` can name.
 
 - Insecure / short `API_KEY` values refused at API (and proxy) startup
 
-[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.7.1
 [0.7.0]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.7.0
 [0.6.7]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.7
 [0.6.6]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.6
