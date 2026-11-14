@@ -7,7 +7,8 @@ Stops at the first failure. No auto-deploy on merge: run this deliberately.
     python ops/deploy.py --allow-main              # desktop drill from main
 
 Order: guard → backup → move code (checkout tag / pull main) → read version →
-install → migrate → SPA build → restart hook → health checks.
+install → migrate → SPA build (umask 022) → restart hook → health checks
+(API version, then the page and the /api proxy through the SPA server).
 
 The version is read *after* the code moves, so a release that bumps it isn't
 reported as a mismatch. A tag is checked out detached, which is why there is no
@@ -159,6 +160,52 @@ def wait_for_status(url: str, want: int, timeout: float) -> int:
         time.sleep(1)
 
 
+# The SPA is read by the web server (Caddy), which runs as its own user. A
+# strict umask in the deploying shell (0.7.0: a leftover `umask 077`) wrote
+# frontend/dist owner-only and Caddy answered 403 while /api still worked.
+SPA_UMASK = 0o022
+
+
+def build_spa(*, dry_run: bool) -> None:
+    """npm ci + build with a umask that leaves dist/ world-readable."""
+    npm = "npm.cmd" if os.name == "nt" else "npm"
+    previous = os.umask(SPA_UMASK)
+    try:
+        run([npm, "ci"], dry_run=dry_run, cwd=REPO_ROOT / "frontend")
+        run([npm, "run", "build"], dry_run=dry_run, cwd=REPO_ROOT / "frontend")
+    finally:
+        os.umask(previous)
+
+
+def check_app(app_url: str, timeout: float) -> list[str]:
+    """Through the SPA server: the page itself, then the /api proxy.
+
+    /health needs no key and bypasses the SPA server, so neither proves what
+    the phone sees. Returns log lines; raises SystemExit on the first failure.
+    """
+    base = app_url.rstrip("/")
+    lines = []
+
+    page = wait_for_status(f"{base}/", 200, timeout)
+    lines.append(f"  {base}/ → {page}")
+    if page != 200:
+        raise SystemExit(
+            f"App page check failed ({page or 'no answer'}). 403 = the SPA server can't read "
+            "frontend/dist (file modes: `ls -l frontend/dist`; fix with "
+            "`chmod -R u=rwX,go=rX frontend/dist`); 502 or no answer = it isn't running."
+        )
+
+    api = wait_for_status(f"{base}/api/services", 200, timeout)
+    lines.append(f"  {base}/api/services → {api}")
+    if api != 200:
+        raise SystemExit(
+            f"SPA proxy check failed ({api or 'no answer'}). 401 = the SPA server "
+            "isn't adding X-API-Key from API_KEY (#194); 502 or no answer = it isn't "
+            "running or can't reach the API."
+        )
+    return lines
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(
@@ -256,9 +303,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # 7) SPA build
     log("7. SPA build")
-    npm = "npm.cmd" if os.name == "nt" else "npm"
-    run([npm, "ci"], dry_run=dry, cwd=REPO_ROOT / "frontend")
-    run([npm, "run", "build"], dry_run=dry, cwd=REPO_ROOT / "frontend")
+    build_spa(dry_run=dry)
 
     # 8) Restart services
     log("8. Restart services")
@@ -282,6 +327,7 @@ def main(argv: list[str] | None = None) -> int:
     if dry:
         log(f"  [dry-run] GET {args.health_url} → version must match")
         if args.app_url:
+            log(f"  [dry-run] GET {args.app_url}/ → 200 (the page is readable)")
             log(f"  [dry-run] GET {args.app_url}/api/services → 200 (proxy adds the key)")
         return 0
 
@@ -289,16 +335,8 @@ def main(argv: list[str] | None = None) -> int:
     log(f"  /health → {body}")
 
     if args.app_url:
-        # /health needs no key, so it can't prove the proxy works. /services does.
-        url = f"{args.app_url.rstrip('/')}/api/services"
-        status = wait_for_status(url, 200, args.health_timeout)
-        log(f"  {url} → {status}")
-        if status != 200:
-            raise SystemExit(
-                f"SPA proxy check failed ({status or 'no answer'}). 401 = the SPA server "
-                "isn't adding X-API-Key from API_KEY (#194); 502 or no answer = it isn't "
-                "running or can't reach the API."
-            )
+        for line in check_app(args.app_url, args.health_timeout):
+            log(line)
     else:
         log("  (no --app-url / MUTTMETRICS_APP_URL: proxy check skipped)")
 

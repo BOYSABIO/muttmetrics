@@ -94,3 +94,59 @@ def test_proxy_check_treats_no_answer_as_zero(monkeypatch):
 
     monkeypatch.setattr(deploy.urllib.request, "urlopen", refused)
     assert deploy.get_status("http://x/api/services") == 0
+
+
+# --- 0.7.1: the page itself must be servable --------------------------------
+
+
+@pytest.mark.skipif(not hasattr(__import__("os"), "umask"), reason="POSIX umask")
+def test_spa_builds_under_umask_022_and_restores_the_shells(monkeypatch):
+    """0.7.0 deployed from a shell with `umask 077`: dist/ came out owner-only
+    and Caddy (another user) answered 403. The build now runs under 022."""
+    import os
+
+    import ops.deploy as deploy
+
+    seen = []
+
+    def fake_run(cmd, *, dry_run, cwd=None):
+        current = os.umask(0)
+        os.umask(current)
+        seen.append((cmd[-1], current))
+
+    monkeypatch.setattr(deploy, "run", fake_run)
+    before = os.umask(0o077)
+    try:
+        deploy.build_spa(dry_run=False)
+        after = os.umask(before)
+    finally:
+        os.umask(before)
+    assert seen == [("ci", 0o022), ("build", 0o022)]
+    assert after == 0o077  # the caller's umask is back
+
+
+def test_app_check_fails_loudly_when_the_page_is_403(monkeypatch):
+    import ops.deploy as deploy
+
+    statuses = {"http://app/": 403, "http://app/api/services": 200}
+    monkeypatch.setattr(deploy, "get_status", lambda url: statuses[url])
+    monkeypatch.setattr(deploy.time, "sleep", lambda s: None)
+    clock = iter([0.0, 0.0, 99.0, 99.0])
+    monkeypatch.setattr(deploy.time, "monotonic", lambda: next(clock))
+    with pytest.raises(SystemExit, match="can't read frontend/dist"):
+        deploy.check_app("http://app", timeout=5)
+
+
+def test_app_check_passes_page_then_proxy(monkeypatch):
+    import ops.deploy as deploy
+
+    calls = []
+
+    def status(url):
+        calls.append(url)
+        return 200
+
+    monkeypatch.setattr(deploy, "get_status", status)
+    lines = deploy.check_app("http://app/", timeout=5)
+    assert calls == ["http://app/", "http://app/api/services"]
+    assert lines == ["  http://app/ → 200", "  http://app/api/services → 200"]

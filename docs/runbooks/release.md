@@ -52,11 +52,11 @@ Steps (stops on first failure):
 4. Read the version from `pyproject.toml` **now**, after the move. With `--to`, refuse if `vX.Y.Z` doesn't contain version `X.Y.Z`
 5. `pip install -e .` (runtime dependencies only)
 6. `alembic upgrade head`
-7. `npm ci` + `npm run build` in `frontend/`
+7. `npm ci` + `npm run build` in `frontend/`, under **umask 022** whatever the shell has: Caddy reads `frontend/dist` as another user, and an owner-only build is a 403 page (0.7.0)
 8. Restart: if `MUTTMETRICS_RESTART_CMD` is set, run it; otherwise print a manual reminder
 9. Health:
    - `GET /health`: `"version"` must match step 4. It retries for up to `--health-timeout` seconds (default 30), because `systemctl restart` returns before the API is listening.
-   - If `--app-url` (or `MUTTMETRICS_APP_URL`) is set: `GET <app>/api/services` must return 200. `/health` needs no key, so only a protected route proves the SPA server adds `X-API-Key` (#194).
+   - If `--app-url` (or `MUTTMETRICS_APP_URL`) is set: `GET <app>/` must return 200 (the page is servable), then `GET <app>/api/services` must return 200. `/health` needs no key and skips the SPA server, so only these two prove what the phone sees: the page, and the proxy adding `X-API-Key` (#194).
 
 **Why a tag is checked out, not pulled.** A checked-out tag isn't on a branch, and `git pull` needs one. The box therefore stays on the tag it last deployed, and every release or rollback is the same command: `--to` a tag.
 
