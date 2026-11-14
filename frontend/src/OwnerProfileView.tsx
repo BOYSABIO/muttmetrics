@@ -9,6 +9,7 @@ import {
 } from './api'
 import { PetAvatar } from './PetAvatar'
 import { SpeciesChips } from './SpeciesChips'
+import { PageBack } from './PageBack'
 import { speciesLabel } from './species'
 
 type OwnerForm = {
@@ -132,6 +133,7 @@ export function OwnerProfileView({
         </p>
       )}
       <section className="panel profile-panel">
+        <PageBack onClick={onBack} disabled={isBusy} />
         <header className="profile-hero profile-hero-owner">
           <div className="dog-avatar dog-avatar-lg owner-avatar" aria-hidden>
             <span className="owner-avatar-initial">
@@ -306,15 +308,8 @@ export function OwnerProfileView({
                   autoFocus
                 />
               </div>
-              <div className="actions">
-                <button
-                  type="button"
-                  className="primary"
-                  disabled={isBusy}
-                  onClick={() => void addPet()}
-                >
-                  {isBusy ? 'Adding…' : 'Add pet'}
-                </button>
+              {/* Same order as the action bar: secondary left, primary right. */}
+              <div className="actions inline-actions">
                 <button
                   type="button"
                   disabled={isBusy}
@@ -324,6 +319,14 @@ export function OwnerProfileView({
                   }}
                 >
                   Cancel
+                </button>
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={isBusy}
+                  onClick={() => void addPet()}
+                >
+                  {isBusy ? 'Adding…' : 'Add pet'}
                 </button>
               </div>
             </div>
@@ -344,22 +347,9 @@ export function OwnerProfileView({
         </div>
         </form>
 
-        <div className="actions profile-actions">
-          <button
-            type="submit"
-            form="owner-profile-form"
-            className="primary"
-            disabled={isBusy}
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            className="ghost"
-            disabled={isBusy}
-            onClick={onBack}
-          >
-            Back
+        <div className="actions action-bar">
+          <button type="submit" form="owner-profile-form" className="primary" disabled={isBusy}>
+            Save changes
           </button>
         </div>
       </section>

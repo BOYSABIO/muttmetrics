@@ -70,7 +70,7 @@ npm run build
 npm run e2e                      # starts preview on :5174 if needed
 ```
 
-Synthetic Syn* rows only (`ops/demo_data.py`) — never a dump. First-time browsers: `npx playwright install chromium` in `frontend/`.
+Synthetic Syn* rows only (`ops/demo_data.py`) — never a dump. For the dev database, `python ops/demo_data.py --recent` also adds ~12 weeks of synthetic visits ending today (repeat dogs, a two-dog owner, cats, add-ons, partly filled profiles), so This week isn't empty; use it for UI work and video footage. First-time browsers: `npx playwright install chromium` in `frontend/`.
 
 ## Dependabot (#196)
 
@@ -226,7 +226,7 @@ After migrations, load breed priors and the service catalog (idempotent — safe
 python -m muttmetrics.seed
 ```
 
-Timing priors live in `src/muttmetrics/seed/data.py`. Catalog floors (`service.price_base`) are optional and **never committed** — copy [`data/pricing.example.json`](./data/pricing.example.json) to `data/private/pricing.json` (gitignored) and fill in real numbers. CI and any clone without that file seed `price_base` as NULL, which is valid. Re-running seed without the private file will null out previously seeded prices. On-the-spot charge still lives on `visit.quoted_price` / `final_price` / `tip`.
+Timing priors live in `src/muttmetrics/seed/data.py`. Catalog floors (`service.price_base`) are optional and **never committed** — copy [`data/pricing.example.json`](./data/pricing.example.json) to `data/private/pricing.json` (gitignored) and fill in real numbers. CI and any clone without that file seed `price_base` as NULL, which is valid. Re-running seed without the private file will null out previously seeded prices; `python -m muttmetrics.seed --breeds-only` updates only the breed catalog (the safe one for the server). On-the-spot charge still lives on `visit.quoted_price` / `final_price` / `tip`.
 
 ## Running the API
 

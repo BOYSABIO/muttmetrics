@@ -1,4 +1,5 @@
--- Effective €/hour by condition × shaved_down (#27 / #170).
+-- Effective €/hour by coat condition, all shave-downs in one row (#27 / #170; 2026-11-14).
+-- The shave-down row has condition_score NULL and shaved_down true.
 -- Definition: docs/runbooks/analytics.md — metric_eur_per_hour(p_start, p_end).
 -- Rates are NULL when n < MIN_N (metric_constants). Real results → docs/notes/ only.
 --
@@ -19,4 +20,4 @@ SELECT
     eur_per_hour_ex_tip,
     eur_per_hour_inc_tip
 FROM metric_eur_per_hour(DATE '2026-03-02', DATE '2026-03-08')
-ORDER BY condition_score, shaved_down;
+ORDER BY shaved_down, condition_score;

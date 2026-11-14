@@ -33,6 +33,8 @@ import {
   type VisitStep,
 } from './draft'
 import { PhotoPicker } from './PhotoPicker'
+import { ConditionPicker } from './ConditionPicker'
+import { PageBack } from './PageBack'
 
 function formatElapsed(ms: number): string {
   const totalSec = Math.max(0, Math.floor(ms / 1000))
@@ -46,6 +48,8 @@ function floorMinutes(ms: number): number {
 }
 
 type Mode = 'search' | 'new' | 'visit' | 'after_save'
+
+const WIZARD_STEPS = ['Photo', 'Time', 'Details'] as const
 
 type AfterSaveState = {
   owner_id: number
@@ -262,11 +266,12 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
     const minutes = floorMinutes(now - startedAt)
     if (minutes < 1) {
       setActualMinutes('')
-      setMessage('Under 1 minute - type minutes manually or press Start again.')
+      setMessage('Under a minute: type the minutes, or reset and start again.')
       return
     }
     setActualMinutes(String(minutes))
-    setMessage(`Timer stopped: ${minutes} min (floored). You can edit before continuing.`)
+    // The minutes field shows the result; no banner needed.
+    setMessage('')
   }
 
   function resetTimer() {
@@ -462,7 +467,7 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
   }
 
   /**
-   * Close / Cancel visit. Never while a save is running (the draft would be
+   * Close (top left). Never while a save is running (the draft would be
    * cleared under it), and ask first if the timer is still going: one stray
    * tap would otherwise end a groom.
    */
@@ -624,14 +629,7 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
   return (
     <>
           <header className="app-header app-header-capture">
-            <button
-              type="button"
-              className="header-back"
-              onClick={requestExitCapture}
-              disabled={isBusy}
-            >
-              Close
-            </button>
+            <PageBack label="Close" onClick={requestExitCapture} disabled={isBusy} />
             <h1>
               {mode === 'new'
                 ? 'New client'
@@ -715,7 +713,7 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
       )}
 
       {mode === 'new' && (
-        <section className="panel">
+        <section className="panel capture-narrow">
           <p className="step-meta">
             Already a client? Pick them as you type. Or create new — phone is
             optional unless the name already exists.
@@ -845,7 +843,22 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
               disabled={isBusy}
             />
           </div>
-          <div className="actions stack">
+          <div className="actions action-bar">
+            <button
+              type="button"
+              className="step-back"
+              disabled={isBusy}
+              onClick={() => {
+                setMode('search')
+                setMessage('')
+                setPickedOwner(null)
+                setOwnerHits([])
+                setNameConflicts([])
+                setOwnerPhone('')
+              }}
+            >
+              ← Back
+            </button>
             <button
               type="button"
               className="primary"
@@ -858,27 +871,12 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
                   ? 'Add pet & continue'
                   : 'Continue to visit'}
             </button>
-            <button
-              type="button"
-              className="ghost"
-              disabled={isBusy}
-              onClick={() => {
-                setMode('search')
-                setMessage('')
-                setPickedOwner(null)
-                setOwnerHits([])
-                setNameConflicts([])
-                setOwnerPhone('')
-              }}
-            >
-              Back
-            </button>
           </div>
         </section>
       )}
 
       {mode === 'after_save' && afterSave !== null && (
-        <section className="panel">
+        <section className="panel capture-narrow">
           <p className="step-meta">
             Next: another pet from {afterSave.owner_name}? Same visit date (
             {afterSave.visit_date}). Each pet gets its own timer.
@@ -935,15 +933,7 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
               placeholder="New pet name"
             />
           </div>
-          <div className="actions stack">
-            <button
-              type="button"
-              className="primary"
-              disabled={isBusy || nextPetName.trim() === ''}
-              onClick={() => void addPetThenVisitFromAfterSave()}
-            >
-              {isBusy ? 'Adding…' : 'Add pet & start visit'}
-            </button>
+          <div className="actions action-bar">
             <button
               type="button"
               disabled={isBusy}
@@ -955,102 +945,96 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
             >
               Done
             </button>
+            <button
+              type="button"
+              className="primary"
+              disabled={isBusy || nextPetName.trim() === ''}
+              onClick={() => void addPetThenVisitFromAfterSave()}
+            >
+              {isBusy ? 'Adding…' : 'Add pet & start visit'}
+            </button>
           </div>
         </section>
       )}
 
       {mode === 'visit' && selectedPet !== null && (
-        <section className="panel">
+        <section className="panel capture-visit capture-narrow">
           <p className="visit-owner">{selectedPet.owner_name}</p>
-          <p className="step-meta">Step {visitStep} of 3</p>
-
-          {visitStep === 1 && (
-            <>
-              <PhotoPicker
-                label="Before photo (optional)"
-                inputId="intake-photo"
-                file={intakeFile}
-                onPick={setIntakeFile}
-                disabled={isBusy}
-              />
-              <div className="actions stack">
-                <button
-                  type="button"
-                  className="primary"
-                  onClick={() => setVisitStep(2)}
+          <ol className="wizard-steps" aria-label={`Step ${visitStep} of 3`}>
+            {WIZARD_STEPS.map((label, i) => {
+              const n = i + 1
+              return (
+                <li
+                  key={label}
+                  className={n < visitStep ? 'done' : n === visitStep ? 'current' : undefined}
+                  aria-current={n === visitStep ? 'step' : undefined}
                 >
-                  Continue
-                </button>
-              </div>
-            </>
+                  {label}
+                </li>
+              )
+            })}
+          </ol>
+
+          {/* The body grows to fill the screen, so the bar below sits at the
+              bottom on every step instead of following the content. */}
+          <div className="wizard-body">
+          {visitStep === 1 && (
+            <PhotoPicker
+              label="Before photo (optional)"
+              inputId="intake-photo"
+              file={intakeFile}
+              onPick={setIntakeFile}
+              disabled={isBusy}
+            />
           )}
 
           {visitStep === 2 && (
             <>
-              <p className="timer-readout">
-                {timerStatus === 'idle' && 'Ready'}
-                {timerStatus === 'running' && `Running ${formatElapsed(elapsedMs)}`}
-                {timerStatus === 'stopped' && `Stopped ${formatElapsed(elapsedMs)}`}
-              </p>
-              <div className="timer-controls">
-                <button
-                  type="button"
-                  className="primary"
-                  onClick={startTimer}
-                  disabled={timerStatus === 'running'}
-                >
-                  Start
-                </button>
-                <button
-                  type="button"
-                  onClick={stopTimer}
-                  disabled={timerStatus !== 'running'}
-                >
-                  Stop
-                </button>
-                <button type="button" onClick={requestResetTimer}>
-                  Reset
-                </button>
+              <div className={`timer timer-${timerStatus}`}>
+                <p className="timer-state">
+                  {timerStatus === 'idle' && 'Not started'}
+                  {timerStatus === 'running' && 'Timing'}
+                  {timerStatus === 'stopped' && 'Stopped'}
+                </p>
+                <p className="timer-clock">{formatElapsed(elapsedMs)}</p>
+                {timerStatus === 'idle' && (
+                  <button type="button" className="primary timer-main" onClick={startTimer}>
+                    Start timer
+                  </button>
+                )}
+                {timerStatus === 'running' && (
+                  <button type="button" className="timer-main timer-stop" onClick={stopTimer}>
+                    Stop timer
+                  </button>
+                )}
+                {timerStatus !== 'idle' && (
+                  <button type="button" className="linkish timer-reset" onClick={requestResetTimer}>
+                    Reset timer
+                  </button>
+                )}
               </div>
-              <div className="field">
-                <label htmlFor="actual_minutes">Actual minutes</label>
-                <input
-                  id="actual_minutes"
-                  type="number"
-                  min={1}
-                  value={actualMinutes}
-                  onChange={(e) => setActualMinutes(e.target.value)}
-                />
-              </div>
-              <div className="actions stack">
-                <button
-                  type="button"
-                  className="primary"
-                  onClick={() => {
-                    if (Number(actualMinutes) < 1) {
-                      setMessage('Need minutes ≥ 1 (use timer or type).')
-                      return
-                    }
-                    setMessage('')
-                    setVisitStep(3)
-                  }}
-                >
-                  Continue
-                </button>
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={() => setVisitStep(1)}
-                  disabled={isBusy}
-                >
-                  Back
-                </button>
+              <div className="field timer-minutes">
+                <label htmlFor="actual_minutes">Minutes groomed</label>
+                <div className="input-suffix">
+                  <input
+                    id="actual_minutes"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    value={actualMinutes}
+                    onChange={(e) => setActualMinutes(e.target.value)}
+                  />
+                  <span aria-hidden>min</span>
+                </div>
+                <p className="step-meta">
+                  Fills in when you stop the timer. Forgot to start it? Type the minutes.
+                </p>
               </div>
             </>
           )}
 
           {visitStep === 3 && (
-            <>
+            <div className="visit-details">
               <div className="field">
                 <label htmlFor="visit_date">Visit date</label>
                 <input
@@ -1138,21 +1122,12 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
                   onChange={(e) => setQuotedPrice(e.target.value)}
                 />
               </div>
-              <div className="field">
-                <label htmlFor="condition_score">
-                  Coat condition (optional) — 0 worst … 5 best
-                </label>
-                <input
-                  id="condition_score"
-                  type="number"
-                  min={0}
-                  max={5}
-                  inputMode="numeric"
-                  placeholder="0–5"
-                  value={conditionScore}
-                  onChange={(e) => setConditionScore(e.target.value)}
-                />
-              </div>
+              <ConditionPicker
+                id="condition_score"
+                value={conditionScore}
+                onChange={setConditionScore}
+                disabled={isBusy}
+              />
               <label className="checkbox-row" htmlFor="shaved_down">
                 <input
                   id="shaved_down"
@@ -1181,35 +1156,53 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
                 disabled={isBusy}
               />
 
-              <div className="actions stack">
-                <button
-                  type="button"
-                  className="primary"
-                  onClick={saveVisit}
-                  disabled={isBusy}
-                >
-                  {isBusy ? 'Saving…' : 'Save visit'}
-                </button>
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={() => setVisitStep(2)}
-                  disabled={isBusy}
-                >
-                  Back
-                </button>
-              </div>
-            </>
+            </div>
           )}
+          </div>
 
-          <button
-            type="button"
-            className="ghost"
-            onClick={requestExitCapture}
-            disabled={isBusy}
-          >
-            Cancel visit
-          </button>
+          {/* One bar for all three steps: Back on the left (kept as an empty
+              slot on step 1 so Continue never moves), the step's action right. */}
+          <div className="actions action-bar wizard-bar">
+            <button
+              type="button"
+              className={`step-back${visitStep === 1 ? ' slot-placeholder' : ''}`}
+              onClick={() => setVisitStep((visitStep - 1) as VisitStep)}
+              disabled={isBusy || visitStep === 1}
+              aria-hidden={visitStep === 1 ? true : undefined}
+            >
+              ← Back
+            </button>
+            {visitStep === 1 && (
+              <button type="button" className="primary" onClick={() => setVisitStep(2)}>
+                Continue
+              </button>
+            )}
+            {visitStep === 2 && (
+              <button
+                type="button"
+                className="primary"
+                onClick={() => {
+                  if (Number(actualMinutes) < 1) {
+                    setMessage(
+                      timerStatus === 'running'
+                        ? 'Stop the timer first, or type the minutes.'
+                        : 'Need the minutes: use the timer or type them.',
+                    )
+                    return
+                  }
+                  setMessage('')
+                  setVisitStep(3)
+                }}
+              >
+                Continue
+              </button>
+            )}
+            {visitStep === 3 && (
+              <button type="button" className="primary" onClick={saveVisit} disabled={isBusy}>
+                {isBusy ? 'Saving…' : 'Save visit'}
+              </button>
+            )}
+          </div>
         </section>
       )}
     </>

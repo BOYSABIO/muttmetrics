@@ -74,7 +74,21 @@ function App() {
                   </span>
                 )}
               </button>
+              {/* Both main areas are named tabs in the same spot on every screen,
+                  so getting back to the numbers never depends on knowing the logo
+                  is a button. */}
               <nav className="home-links" aria-label="Main">
+                <button
+                  type="button"
+                  className="home-link"
+                  aria-current={area === 'this_week' ? 'page' : undefined}
+                  onClick={() => {
+                    setArea('this_week')
+                    setMessage('')
+                  }}
+                >
+                  Home
+                </button>
                 <button
                   type="button"
                   className="home-link"

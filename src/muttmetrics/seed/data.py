@@ -83,9 +83,9 @@ SEED_SERVICES: list[dict] = [
 ]
 
 # matting_risk: 1 (low) .. 5 (pelted / Doodle territory)
-# typical_size_band is a catalog hint for people reading the breed list. It uses
-# xs/s/m/l/xl (toy breeds are "xs"). Nothing in the code reads it: a pet's own
-# size_band comes from its weight (priors/size.py, s/m/l/xl only, #171 / #190).
+# typical_size_band is a catalog hint (s/m/l/xl, the same four bands as a pet's
+# size; toy breeds are "s"). A pet's own size comes from its weight, or is
+# picked by eye (pet-data.md). default_coat_type uses pet_vocab.py's lists.
 SEED_BREEDS: list[dict] = [
     {
         "species": "dog",
@@ -182,7 +182,7 @@ SEED_BREEDS: list[dict] = [
         "species": "dog",
         "name_en": "Shih Tzu",
         "name_de": "Shih Tzu",
-        "default_coat_type": "double",
+        "default_coat_type": "silky",
         "default_hair_or_fur": "hair",
         "typical_size_band": "s",
         "base_groom_minutes": 90,
@@ -195,9 +195,9 @@ SEED_BREEDS: list[dict] = [
         "species": "dog",
         "name_en": "Yorkshire Terrier",
         "name_de": "Yorkshire Terrier",
-        "default_coat_type": "single",
+        "default_coat_type": "silky",
         "default_hair_or_fur": "hair",
-        "typical_size_band": "xs",
+        "typical_size_band": "s",
         "base_groom_minutes": 75,
         "matting_risk": 3,
         "blows_coat": False,
@@ -208,9 +208,9 @@ SEED_BREEDS: list[dict] = [
         "species": "dog",
         "name_en": "Maltese",
         "name_de": "Malteser",
-        "default_coat_type": "single",
+        "default_coat_type": "silky",
         "default_hair_or_fur": "hair",
-        "typical_size_band": "xs",
+        "typical_size_band": "s",
         "base_groom_minutes": 80,
         "matting_risk": 4,
         "blows_coat": False,
@@ -234,7 +234,7 @@ SEED_BREEDS: list[dict] = [
         "species": "cat",
         "name_en": "Domestic Short Hair",
         "name_de": "Hauskatze kurzhaar",
-        "default_coat_type": "smooth",
+        "default_coat_type": "short",
         "default_hair_or_fur": "fur",
         "typical_size_band": "m",
         "base_groom_minutes": 45,
@@ -247,7 +247,7 @@ SEED_BREEDS: list[dict] = [
         "species": "cat",
         "name_en": "Domestic Long Hair",
         "name_de": "Hauskatze langhaar",
-        "default_coat_type": "double",
+        "default_coat_type": "long",
         "default_hair_or_fur": "fur",
         "typical_size_band": "m",
         "base_groom_minutes": 70,
@@ -260,7 +260,7 @@ SEED_BREEDS: list[dict] = [
         "species": "cat",
         "name_en": "Persian",
         "name_de": "Perser",
-        "default_coat_type": "double",
+        "default_coat_type": "long",
         "default_hair_or_fur": "fur",
         "typical_size_band": "m",
         "base_groom_minutes": 90,
@@ -273,7 +273,7 @@ SEED_BREEDS: list[dict] = [
         "species": "cat",
         "name_en": "Maine Coon",
         "name_de": "Maine Coon",
-        "default_coat_type": "double",
+        "default_coat_type": "long",
         "default_hair_or_fur": "fur",
         "typical_size_band": "l",
         "base_groom_minutes": 80,
@@ -295,4 +295,145 @@ SEED_BREEDS: list[dict] = [
         "recommended_interval_days": 56,
         "home_care_protocol": "Assess coat at first visit; fill pet-level coat fields.",
     },
+]
+
+
+# --- More breeds (2026-11) ---------------------------------------------------
+# Common salon breeds and crosses, so most dogs get a real breed instead of
+# "Mixed breed". Minutes, matting risk and interval are STARTING GUESSES for
+# a full groom (the rules prior, docs/prior.md), to be corrected by the groomer
+# and later replaced by history (M7). Size uses the pricing bands by typical
+# adult weight (priors/size.py: dog s <= 10 kg, m <= 26, l <= 45, xl above).
+# Coat: pet_vocab.py. None where the breed comes in several coats (Dachshund,
+# Jack Russell): the dog's own profile says which.
+
+_HAIR_COATS = {"curly", "silky", "wire"}
+
+
+def _breed(
+    species: str,
+    name_en: str,
+    name_de: str,
+    coat: str | None,
+    size: str,
+    minutes: int,
+    matting: int,
+    interval: int,
+) -> dict:
+    return {
+        "species": species,
+        "name_en": name_en,
+        "name_de": name_de,
+        "default_coat_type": coat,
+        "default_hair_or_fur": (
+            None if coat is None else ("hair" if coat in _HAIR_COATS else "fur")
+        ),
+        "typical_size_band": size,
+        "base_groom_minutes": minutes,
+        "matting_risk": matting,
+        "blows_coat": coat == "double" or (species == "cat" and coat == "long"),
+        "recommended_interval_days": interval,
+        "home_care_protocol": None,
+    }
+
+
+SEED_BREEDS += [
+    # Double coats: undercoat, shedding seasons, long drying
+    _breed("dog", "Golden Retriever", "Golden Retriever", "double", "l", 90, 2, 56),
+    _breed("dog", "Bernese Mountain Dog", "Berner Sennenhund", "double", "xl", 120, 3, 56),
+    _breed("dog", "Australian Shepherd", "Australian Shepherd", "double", "m", 90, 3, 56),
+    _breed("dog", "Border Collie", "Border Collie", "double", "m", 80, 3, 56),
+    _breed("dog", "Rough Collie", "Langhaarcollie", "double", "l", 110, 4, 56),
+    _breed("dog", "Shetland Sheepdog", "Sheltie", "double", "s", 80, 3, 49),
+    _breed("dog", "Siberian Husky", "Siberian Husky", "double", "m", 100, 2, 70),
+    _breed("dog", "Samoyed", "Samojede", "double", "m", 130, 4, 49),
+    _breed("dog", "Pomeranian", "Zwergspitz", "double", "s", 70, 3, 42),
+    _breed("dog", "German Spitz", "Deutscher Spitz", "double", "s", 75, 3, 49),
+    _breed("dog", "Chow Chow", "Chow-Chow", "double", "m", 110, 4, 49),
+    _breed("dog", "Newfoundland", "Neufundländer", "double", "xl", 150, 4, 56),
+    _breed("dog", "Leonberger", "Leonberger", "double", "xl", 140, 4, 56),
+    _breed("dog", "Hovawart", "Hovawart", "double", "l", 90, 3, 56),
+    _breed("dog", "Old English Sheepdog", "Bobtail", "double", "l", 150, 5, 42),
+    _breed("dog", "Pembroke Welsh Corgi", "Welsh Corgi Pembroke", "double", "m", 60, 2, 70),
+    _breed("dog", "Shiba Inu", "Shiba Inu", "double", "s", 60, 2, 70),
+    _breed("dog", "Pekingese", "Pekinese", "double", "s", 80, 4, 42),
+    _breed("dog", "Rottweiler", "Rottweiler", "double", "l", 60, 1, 70),
+    # Curly: keeps growing, mats, short intervals
+    _breed("dog", "Miniature Poodle", "Zwergpudel", "curly", "s", 80, 4, 35),
+    _breed("dog", "Toy Poodle", "Toypudel", "curly", "s", 70, 4, 35),
+    _breed("dog", "Bichon Frise", "Bichon Frisé", "curly", "s", 90, 5, 35),
+    _breed("dog", "Bolonka Zwetna", "Bolonka Zwetna", "curly", "s", 80, 4, 35),
+    _breed("dog", "Maltipoo", "Maltipoo", "curly", "s", 85, 5, 35),
+    _breed("dog", "Cavapoo", "Cavapoo", "curly", "s", 85, 5, 35),
+    _breed("dog", "Bernedoodle", "Bernedoodle", "curly", "l", 130, 5, 35),
+    _breed("dog", "Aussiedoodle", "Aussiedoodle", "curly", "m", 110, 5, 35),
+    _breed("dog", "Portuguese Water Dog", "Portugiesischer Wasserhund", "curly", "m", 110, 4, 42),
+    # Long & silky: keeps growing, mats behind ears and legs
+    _breed("dog", "Havanese", "Havaneser", "silky", "s", 85, 4, 35),
+    _breed("dog", "Lhasa Apso", "Lhasa Apso", "silky", "s", 90, 4, 35),
+    _breed("dog", "Coton de Tulear", "Coton de Tuléar", "silky", "s", 90, 5, 35),
+    # Wire: hand stripping or clipping
+    _breed("dog", "Miniature Schnauzer", "Zwergschnauzer", "wire", "s", 75, 3, 42),
+    _breed("dog", "Standard Schnauzer", "Mittelschnauzer", "wire", "m", 90, 3, 42),
+    _breed("dog", "Giant Schnauzer", "Riesenschnauzer", "wire", "l", 120, 3, 49),
+    _breed(
+        "dog", "West Highland White Terrier", "West Highland White Terrier", "wire", "s", 75, 3, 42
+    ),
+    _breed("dog", "Scottish Terrier", "Scottish Terrier", "wire", "s", 80, 3, 49),
+    _breed("dog", "Cairn Terrier", "Cairn Terrier", "wire", "s", 70, 2, 56),
+    _breed("dog", "Border Terrier", "Border Terrier", "wire", "s", 70, 2, 56),
+    _breed("dog", "Wire Fox Terrier", "Drahthaar-Foxterrier", "wire", "s", 80, 3, 49),
+    _breed("dog", "Airedale Terrier", "Airedale Terrier", "wire", "m", 110, 3, 56),
+    _breed("dog", "Wirehaired Dachshund", "Rauhaardackel", "wire", "s", 50, 2, 70),
+    # Combination: short body, long feathering
+    _breed("dog", "Cocker Spaniel", "Englischer Cocker Spaniel", "combination", "m", 90, 4, 42),
+    _breed(
+        "dog",
+        "American Cocker Spaniel",
+        "Amerikanischer Cocker Spaniel",
+        "combination",
+        "m",
+        100,
+        4,
+        35,
+    ),
+    _breed(
+        "dog",
+        "English Springer Spaniel",
+        "Englischer Springer Spaniel",
+        "combination",
+        "m",
+        90,
+        3,
+        49,
+    ),
+    _breed(
+        "dog",
+        "Cavalier King Charles Spaniel",
+        "Cavalier King Charles Spaniel",
+        "combination",
+        "s",
+        60,
+        2,
+        49,
+    ),
+    _breed("dog", "Irish Setter", "Irish Red Setter", "combination", "l", 100, 3, 56),
+    _breed("dog", "Papillon", "Papillon", "combination", "s", 55, 2, 56),
+    _breed("dog", "Long-haired Dachshund", "Langhaardackel", "combination", "s", 55, 2, 56),
+    # Smooth: short and close, mostly bath, brush, nails
+    _breed("dog", "Chihuahua", "Chihuahua", "smooth", "s", 35, 1, 70),
+    _breed("dog", "Pug", "Mops", "smooth", "s", 40, 1, 70),
+    _breed("dog", "Beagle", "Beagle", "smooth", "m", 45, 1, 70),
+    _breed("dog", "Boxer", "Boxer", "smooth", "l", 50, 1, 84),
+    _breed("dog", "English Bulldog", "Englische Bulldogge", "smooth", "m", 50, 1, 70),
+    _breed("dog", "Dalmatian", "Dalmatiner", "smooth", "l", 50, 1, 84),
+    _breed("dog", "Whippet", "Whippet", "smooth", "m", 35, 1, 84),
+    # Several coats: the dog's profile says which
+    _breed("dog", "Dachshund", "Dackel", None, "s", 45, 1, 70),
+    _breed("dog", "Jack Russell Terrier", "Jack Russell Terrier", None, "s", 50, 1, 63),
+    # Cats
+    _breed("cat", "British Shorthair", "Britisch Kurzhaar", "short", "m", 45, 1, 70),
+    _breed("cat", "Ragdoll", "Ragdoll", "long", "l", 70, 3, 56),
+    _breed("cat", "Norwegian Forest Cat", "Norwegische Waldkatze", "long", "l", 75, 3, 56),
+    _breed("cat", "Siberian", "Sibirische Katze", "long", "m", 70, 3, 56),
 ]

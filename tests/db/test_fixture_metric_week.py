@@ -50,18 +50,19 @@ def test_fixture_covers_required_cases() -> None:
     assert tue["planned_p90"] > BUFFER_MINUTES
 
 
-def test_eur_per_hour_0_shaved_hand_math() -> None:
+def test_eur_per_hour_shave_down_hand_math() -> None:
+    # Every shaved visit is one cell, whatever its condition (2026-11-14)
     cell = [
         v
         for v in VISITS
         if _in_week(v)
         and _eligible(v)
-        and v["condition_score"] == 0
         and v["shaved_down"] is True
         and v["final_price"] is not None
         and v["actual_minutes"] > 0
     ]
-    assert len(cell) == 5
+    assert len(cell) == 6
+    assert {v["condition_score"] for v in cell} == {0, 4}
 
     minutes = sum(v["actual_minutes"] for v in cell)
     rev_ex = sum(float(v["final_price"]) for v in cell)
@@ -70,8 +71,8 @@ def test_eur_per_hour_0_shaved_hand_math() -> None:
     )
     hours = minutes / 60.0
 
-    expected = EXPECTED["eur_per_hour"][(0, True)]
-    assert expected["n"] == 5
+    expected = EXPECTED["eur_per_hour"][(None, True)]
+    assert expected["n"] == 6
     assert expected["show_rate"] is True
     assert expected["hours"] == pytest.approx(hours)
     assert expected["revenue_ex_tip"] == pytest.approx(rev_ex)

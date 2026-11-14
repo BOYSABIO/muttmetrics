@@ -3,6 +3,7 @@ import {
   errorMessage,
   fetchPetProfile,
   fetchOwnerProfile,
+  createBreed,
   listBreeds,
   searchPets,
   type BreedListItem,
@@ -131,6 +132,13 @@ export function Directory({ onStartVisit }: DirectoryProps) {
           onOpenOwner={(id) => void openDirectoryOwner(id)}
           onStartVisit={onStartVisit}
           onSaved={() => void refreshList()}
+          onAddBreed={async (species, name) => {
+            const breed = await createBreed(species, name)
+            setBreeds((prev) =>
+              prev.some((b) => b.breed_id === breed.breed_id) ? prev : [...prev, breed],
+            )
+            return breed
+          }}
         />
       </>
     )

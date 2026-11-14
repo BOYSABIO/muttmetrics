@@ -4,6 +4,7 @@ from muttmetrics.models.add_on import AddOn
 from muttmetrics.models.breed import Breed
 from muttmetrics.models.owner import Owner
 from muttmetrics.models.pet import Pet
+from muttmetrics.models.pet_change import PetChange
 from muttmetrics.models.photo import Photo
 from muttmetrics.models.service import Service
 from muttmetrics.models.visit import Visit
@@ -14,6 +15,7 @@ __all__ = [
     "Breed",
     "Owner",
     "Pet",
+    "PetChange",
     "Photo",
     "Service",
     "Visit",

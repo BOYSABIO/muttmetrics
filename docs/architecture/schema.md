@@ -35,8 +35,11 @@ erDiagram
         int breed_id FK
         text name
         numeric weight_kg
-        text size_band "derived"
-        int handling_score "1-5 internal"
+        text size_band "s-xl, from weight or by eye"
+        text size_source "weight|eye"
+        text coat_type "fixed list per species"
+        int coat_thickness "1 thin - 3 thick"
+        int handling_score "1 easy - 5 very difficult"
     }
 
     VISIT {
@@ -120,12 +123,17 @@ erDiagram
 
 | Group | Columns |
 |-------|---------|
-| Identity | `owner_id`, `name`, `species` (`dog`/`cat`, [ADR-004](./adr/004-species.md)), `breed_id`, `breed_secondary_id`, `sex`, `date_of_birth`, `weight_kg` |
-| Coat | `coat_type`, `hair_or_fur`, `coat_density`, `undercoat`, `sheds` |
-| Temperament (internal) | `handling_score`, `fear_triggers[]`, `muzzle_required`, `two_person_job`, `temperament_notes` |
-| Medical | `skin_conditions[]`, `senior_flag`, `mobility_notes`, `vet_notes` |
+Which fields exist, why, and the data rules (fixed lists, blank = nobody checked, change log): [`pet-data.md`](./pet-data.md). Allowed values: `src/muttmetrics/pet_vocab.py`, enforced by CHECKs.
+
+| Group | Columns |
+|-------|---------|
+| Identity | `owner_id`, `name`, `species` (`dog`/`cat`, [ADR-004](./adr/004-species.md)), `breed_id`, `breed_secondary_id` ("crossed with"), `sex` (`female`/`male`/NULL), `date_of_birth`, `weight_kg` |
+| Size ([ADR-001](./adr/001-derived-fields.md) amendment 2026-11) | `size_band` (`s`/`m`/`l`/`xl`) + `size_source`: `weight` = written through from `weight_kg` on PATCH (`size_band_from_weight`; `ops/backfill_size_band.py` after SQL edits), `eye` = picked by hand when there's no weight. Both NULL or both set |
+| Coat | `coat_type` (dog: `smooth`/`double`/`curly`/`wire`/`silky`/`combination`; cat: `short`/`long`), `coat_thickness` (1 thin, 2 normal, 3 thick), `usual_cut` (free text) |
+| Temperament (internal) | `handling_score` (1 easy … 5 very difficult), `muzzle_required`, `two_person_job`, `temperament_notes` |
+| Health | `senior_flag`, `health_notes` |
+| Retired 2026-11 (not in the API; dropped later) | `hair_or_fur`, `coat_density`, `undercoat`, `sheds` (implied by `coat_type`), `mobility_notes`, `vet_notes` (merged into `health_notes`), `fear_triggers[]`, `skin_conditions[]` (never in the UI) |
 | Derived: computed on read ([#171](https://github.com/BOYSABIO/muttmetrics/issues/171)) | `visit_count`, `last_visit_date`. The columns exist, but product code reads `visit` rows instead |
-| Derived: written through on PATCH ([#171](https://github.com/BOYSABIO/muttmetrics/issues/171) / [#190](https://github.com/BOYSABIO/muttmetrics/issues/190)) | `size_band`, from `weight_kg` + `species` via `size_band_from_weight`; `ops/backfill_size_band.py` for SQL edits |
 | Derived: no writer yet (stay `NULL`) | `avg_duration_min`, `duration_stddev_min`, `typical_interval_days`, `next_due_date` |
 
 ### `visit`
@@ -142,9 +150,13 @@ erDiagram
 | Status | `status`, `cancelled_hours_before` |
 | System: when saved | `created_at` (set by Postgres, `DEFAULT now()`; never written by the API). **NULL = saved before 2026-11 ([#224](https://github.com/BOYSABIO/muttmetrics/issues/224)), unknown.** Compare with `visit_date` to tell a visit logged on the day from a backfilled one |
 
+### `pet_change`
+
+One row per tracked field a profile save changed (`pet_id`, `field`, `old_value`, `new_value` as text, `changed_at`). Tracked fields: `pet_vocab.TRACKED_PET_FIELDS` (structured facts only; no names or notes). Lets an analysis use what was known on a visit's date. `ON DELETE CASCADE` with the pet. SQL edits bypass it.
+
 ### `breed` / `service`
 
-Reference tables only — no FKs to other entities. See model files for full column lists.
+Reference tables only — no FKs to other entities. See model files for full column lists. `breed.source` is `catalog` (shipped, with priors) or `salon` (added in the shop); English names are unique per species, any capitalisation (`uq_breed_species_name_en`). `default_coat_type` and `typical_size_band` use the pet lists.
 
 ### `photo`
 
@@ -168,7 +180,7 @@ Metrics are **SQL functions** (plus one constants view), not tables ([ADR-003](.
 |--------|------|---------|
 | `metric_constants` | one-row view | `min_n`, the small-sample threshold (5) |
 | `metric_summary(p_start, p_end)` | function | visit count, minutes, revenue, overall €/hour |
-| `metric_eur_per_hour(p_start, p_end)` | function | €/hour by `condition_score` × `shaved_down` |
+| `metric_eur_per_hour(p_start, p_end)` | function | €/hour by `condition_score`, with every shave-down in one cell (2026-11-14) |
 | `metric_pivot_rate` / `metric_overrun` / `metric_p90_miss` `(p_start, p_end)` | functions | timing checks against the stored prediction |
 | `metric_utilization(buffer_minutes, p_start, p_end)` | function | one row per day: planned vs actual vs buffer |
 | `metric_utilization_weeks(buffer_minutes, p_start, p_end)` | function | the per-day rows grouped by ISO week ([#178](https://github.com/BOYSABIO/muttmetrics/issues/178)) |

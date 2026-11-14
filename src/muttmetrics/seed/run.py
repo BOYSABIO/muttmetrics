@@ -31,7 +31,13 @@ def _upsert_add_on(session, row: dict) -> None:
 
 
 def _upsert_breed(session, row: dict) -> None:
-    existing = session.scalar(select(Breed).where(Breed.name_en == row["name_en"]))
+    # Same key as the unique index: species + English name, any capitalisation.
+    existing = session.scalar(
+        select(Breed).where(
+            Breed.species == row["species"],
+            func.lower(Breed.name_en) == row["name_en"].lower(),
+        )
+    )
     if existing is None:
         session.add(Breed(**row))
         return
@@ -39,6 +45,24 @@ def _upsert_breed(session, row: dict) -> None:
         if key == "name_en":
             continue
         setattr(existing, key, value)
+    # A breed first added in the salon becomes a catalog breed (with priors).
+    existing.source = "catalog"
+
+
+def seed_breeds() -> int:
+    """Upsert only the breed catalog. Safe on the server: services and add-ons
+    (and their prices) are left alone. Returns the number of breeds."""
+    with session_scope() as session:
+        for row in SEED_BREEDS:
+            _upsert_breed(session, row)
+        session.flush()
+        n_breeds = session.scalar(select(func.count()).select_from(Breed)) or 0
+        n_salon = (
+            session.scalar(select(func.count()).select_from(Breed).where(Breed.source == "salon"))
+            or 0
+        )
+    print(f"breeds: {n_breeds} ({n_salon} added in the salon)")
+    return n_breeds
 
 
 def seed_reference_data() -> None:

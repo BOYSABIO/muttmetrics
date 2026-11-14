@@ -424,6 +424,88 @@
 }
 
 /* ---------------------------------------------------------------- */
+/* Time vs estimate: one bar in three bands                         */
+/* ---------------------------------------------------------------- */
+
+.tw-bands {
+  display: flex;
+  gap: 3px;
+  height: 1rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+.tw-band {
+  display: block;
+  flex-basis: 0;
+  min-width: 0.4rem;
+  transform-origin: left center;
+  animation: tw-grow-x 0.7s var(--ease-out, ease-out) 0.3s both;
+}
+
+.tw-band-p50 {
+  background: var(--accent);
+}
+
+.tw-band-p90 {
+  background: var(--sun, #f2b33d);
+}
+
+.tw-band-past {
+  background: var(--clay, var(--warn));
+}
+
+.tw-band-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+}
+
+.tw-band-legend li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tw-band-swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+  border: 1.5px solid var(--ink);
+}
+
+.tw-band-label {
+  color: var(--ink-muted);
+}
+
+.tw-band-count {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tw-band-pct {
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+.tw-pair-small {
+  margin-top: auto;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--line);
+}
+
+.tw-pair-small .tw-stat-value {
+  font-size: 1.15rem;
+}
+
+/* ---------------------------------------------------------------- */
 /* Pairs and trios of small numbers                                 */
 /* ---------------------------------------------------------------- */
 

@@ -8,6 +8,8 @@ import {
   type ServiceListItem,
   type VisitDetail,
 } from './api'
+import { ConditionPicker } from './ConditionPicker'
+import { PageBack } from './PageBack'
 
 const STATUS_OPTIONS = [
   { value: '', label: '—' },
@@ -77,7 +79,8 @@ type VisitEditViewProps = {
 
 /**
  * Edit or hard-delete one visit (#193).
- * Layout matches Directory profiles: one panel, sticky Save / Back / Delete.
+ * Layout matches Directory profiles: Back top left, Save in the sticky bar,
+ * Delete at the end of the page (docs/architecture/ui-conventions.md).
  */
 export function VisitEditView({
   visitId,
@@ -207,11 +210,7 @@ export function VisitEditView({
           {message}
         </p>
         <section className="panel profile-panel">
-          <div className="actions profile-actions">
-            <button type="button" className="ghost" onClick={onBack}>
-              Back
-            </button>
-          </div>
+          <PageBack onClick={onBack} />
         </section>
       </>
     )
@@ -225,6 +224,7 @@ export function VisitEditView({
         </p>
       )}
       <section className="panel profile-panel">
+        <PageBack onClick={onBack} disabled={isBusy} />
         <header className="profile-hero profile-hero-owner">
           <div className="profile-hero-text">
             <h2>Edit visit</h2>
@@ -346,19 +346,12 @@ export function VisitEditView({
           <div className="profile-block">
             <h3 className="profile-section">Coat & notes</h3>
             <div className="field-stack">
-              <div className="field">
-                <label htmlFor="edit_condition">Coat condition (0–5)</label>
-                <input
-                  id="edit_condition"
-                  type="number"
-                  min={0}
-                  max={5}
-                  value={form.conditionScore}
-                  onChange={(e) => set('conditionScore', e.target.value)}
-                  disabled={isBusy}
-                  placeholder="Optional"
-                />
-              </div>
+              <ConditionPicker
+                id="edit_condition"
+                value={form.conditionScore}
+                onChange={(next) => set('conditionScore', next)}
+                disabled={isBusy}
+              />
               <label className="checkbox-row" htmlFor="edit_shaved">
                 <input
                   id="edit_shaved"
@@ -393,25 +386,20 @@ export function VisitEditView({
           </div>
         </form>
 
-        <div className="actions profile-actions">
-          <button
-            type="submit"
-            form="visit-edit-form"
-            className="primary"
-            disabled={isBusy}
-          >
-            {isBusy ? 'Saving…' : 'Save'}
+        {/* Destructive actions live at the end of the page, never in the action bar. */}
+        <div className="danger-zone">
+          <div>
+            <p className="danger-zone-title">Delete this visit</p>
+            <p className="step-meta">Removes the visit and its photos. It can't be undone in the app.</p>
+          </div>
+          <button type="button" className="danger" disabled={isBusy} onClick={() => void remove()}>
+            Delete visit
           </button>
-          <button type="button" disabled={isBusy} onClick={onBack}>
-            Back
-          </button>
-          <button
-            type="button"
-            className="danger"
-            disabled={isBusy}
-            onClick={() => void remove()}
-          >
-            Delete
+        </div>
+
+        <div className="actions action-bar">
+          <button type="submit" form="visit-edit-form" className="primary" disabled={isBusy}>
+            {isBusy ? 'Saving…' : 'Save changes'}
           </button>
         </div>
       </section>

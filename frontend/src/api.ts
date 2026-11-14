@@ -53,8 +53,12 @@ export type AddOnSummary = {
 export type BreedListItem = {
   breed_id: number
   species: Species
-  name_de: string | null
+  /** Shown on screen */
   name_en: string | null
+  /** Searchable only ("Schäferhund" finds German Shepherd) */
+  name_de: string | null
+  /** catalog = shipped with typical minutes; salon = added in the shop */
+  source: 'catalog' | 'salon'
 }
 
 export type VisitSummary = {
@@ -76,19 +80,21 @@ export type PetProfile = {
   sex: string | null
   date_of_birth: string | null
   weight_kg: string | number | null
+  /** s | m | l | xl; from the weight when weighed, else picked by eye */
+  size_band: string | null
+  size_source: 'weight' | 'eye' | null
+  /** One code per species: petVocab.ts COAT_TYPES */
   coat_type: string | null
-  hair_or_fur: string | null
-  coat_density: string | null
-  undercoat: boolean | null
-  sheds: boolean | null
+  /** 1 thin, 2 normal, 3 thick */
+  coat_thickness: number | null
+  usual_cut: string | null
+  /** 1 easy .. 5 very difficult */
   handling_score: number | null
   muzzle_required: boolean | null
   two_person_job: boolean | null
   temperament_notes: string | null
   senior_flag: boolean | null
-  mobility_notes: string | null
-  vet_notes: string | null
-  size_band: string | null
+  health_notes: string | null
   visit_count: number | null
   last_visit_date: string | null
   avatar_photo_id: number | null
@@ -204,7 +210,8 @@ export type PeriodSummary = {
 }
 
 export type EurPerHourCell = {
-  condition_score: number
+  /** null on the shave-down row (every shaved visit, whatever the condition) */
+  condition_score: number | null
   shaved_down: boolean
   n: number
   groomed_minutes: number | null
@@ -224,6 +231,16 @@ export type P90MissOut = {
   n: number
   miss_count: number
   rate: MetricValue
+}
+
+/** Where grooms with an estimate landed (metric_estimate_bands, 2026-11-14). */
+export type EstimateBands = {
+  n: number
+  within_p50: number
+  within_p90: number
+  past_p90: number
+  /** n >= MIN_N: proportions mean something */
+  enough: boolean
 }
 
 export type UtilizationDay = {
@@ -260,6 +277,7 @@ export type MetricsPeriodBlock = {
   eur_per_hour: EurPerHourCell[]
   overrun: OverrunOut
   p90_miss: P90MissOut
+  estimate_bands: EstimateBands
   utilization: UtilizationDay[]
   utilization_weeks: UtilizationWeek[]
 }
@@ -415,6 +433,23 @@ export function listBreeds(species?: Species): Promise<BreedListItem[]> {
   if (species) params.set('species', species)
   const qs = params.toString()
   return getJson(qs ? `/breeds?${qs}` : '/breeds')
+}
+
+/**
+ * Add a breed the catalog doesn't have. If one with that name already exists
+ * (any capitals, or its German name), you get that one back instead of a twin.
+ */
+export async function createBreed(species: Species, nameEn: string): Promise<BreedListItem> {
+  const res = await fetch('/api/breeds', {
+    method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ species, name_en: nameEn }),
+  })
+  if (res.status === 409) {
+    const data = (await res.json()) as { detail: { breed: BreedListItem } }
+    return data.detail.breed
+  }
+  return (await readJson(res)) as BreedListItem
 }
 
 export function fetchPetProfile(petId: number): Promise<PetProfile> {

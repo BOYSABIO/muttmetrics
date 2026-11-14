@@ -53,6 +53,9 @@ def _owner_tree(
         temperament_notes="nervous around men",
         vet_notes="allergy",
         fear_triggers=["vacuum"],
+        usual_cut="teddy face",
+        health_notes="itchy skin",
+        coat_type="curly",
     )
     db_session.add(pet)
     db_session.flush()
@@ -95,6 +98,9 @@ def test_export_contains_only_that_owner(db_session: Session, tmp_path: Path) ->
     assert payload["name"] == "Syn Export A"
     assert payload["pets"][0]["name"] == "Syn Dog A"
     assert payload["pets"][0]["visits"][0]["visit_id"] == visit_a.visit_id
+    assert payload["pets"][0]["usual_cut"] == "teddy face"
+    assert payload["pets"][0]["health_notes"] == "itchy skin"
+    assert payload["pets"][0]["profile_changes"] == []
     assert all(p["owner_id"] == a.owner_id for pet in payload["pets"] for p in pet["visits"])
     dumped = json.dumps(payload)
     assert "Syn Export B" not in dumped
@@ -139,6 +145,8 @@ def test_erase_scrubs_pii_keeps_visits_and_spares_others(
     assert pet_a.name == erased_pet_name(pet_a.pet_id)
     assert pet_a.temperament_notes is None and pet_a.vet_notes is None
     assert pet_a.fear_triggers is None
+    assert pet_a.usual_cut is None and pet_a.health_notes is None
+    assert pet_a.coat_type == "curly"  # structured facts stay, anonymised
     assert visit_a.what_surprised_me is None and visit_a.pivot_reason is None
     assert visit_a.actual_minutes == 60
     assert visit_a.final_price == 45

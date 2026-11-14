@@ -173,13 +173,14 @@ VISITS: list[VisitSpec] = [
 # Metric SQL (#27–#29) must match these; do not regenerate from views.
 # ---------------------------------------------------------------------------
 
-# €/hour cell condition=0 × shaved=True: V1–V5
-#   minutes = 120+100+95+90+85 = 490 → hours = 490/60
-#   rev ex  = 70+65+60+60+55 = 310 → 310 / (490/60) = 18600/490 = 1860/49
-#   tips    = 15+0+10+0+10 = 35 → rev inc = 345 → 20700/490 = 2070/49
-_EUR_0_SHAVED_HOURS = 490 / 60
-_EUR_0_SHAVED_EX = 310 / _EUR_0_SHAVED_HOURS
-_EUR_0_SHAVED_INC = 345 / _EUR_0_SHAVED_HOURS
+# €/hour shave-down cell (every shaved visit, whatever its condition; since
+# 2026-11-14): V1–V5 (condition 0) + V12 (condition 4)
+#   minutes = 120+100+95+90+85 + 70 = 560 → hours = 560/60
+#   rev ex  = 70+65+60+60+55 + 52 = 362 → 362 / (560/60)
+#   tips    = 15+0+10+0+10 + 0 = 35 → rev inc = 397 → 397 / (560/60)
+_EUR_SHAVE_HOURS = 560 / 60
+_EUR_SHAVE_EX = 362 / _EUR_SHAVE_HOURS
+_EUR_SHAVE_INC = 397 / _EUR_SHAVE_HOURS
 
 # Overrun (eligible + P50 present): V1–V7, V11, V12, V15 (n=10)
 #   (30+10+5+0-5-5-10+5+10-20) / 10 = 20/10 = 2.0
@@ -187,6 +188,11 @@ _OVERRUN_AVG = 2.0
 
 # P90 miss (same n=10): only V1 (120 > 110) → 1/10
 _P90_MISS_RATE = 1 / 10
+
+# Estimate bands (P50 and P90 present, n=10; V8 has none):
+#   within P50 (actual <= P50): V15 80≤100, V4 90≤90, V5 85≤90, V6 45≤50, V7 40≤50 → 5
+#   within P90 (P50 < actual <= P90): V11 55, V12 70, V2 100, V3 95 → 4
+#   past P90: V1 120 > 110 → 1
 
 # Pivot: eligible V1–V8, V11, V12, V15 (n=11); pivoted true = V3 only → 1/11
 _PIVOT_RATE = 1 / 11
@@ -212,17 +218,18 @@ EXPECTED: dict[str, Any] = {
     "buffer_minutes": BUFFER_MINUTES,
     "week": {"start": WEEK_START, "end": WEEK_END},
     "empty_week": {"start": EMPTY_WEEK_START, "end": EMPTY_WEEK_END},
-    # --- €/hour (week × condition × shaved); show_rate iff n >= MIN_N ---
+    # --- €/hour: one cell per condition for unshaved visits, plus ONE shave-down
+    # cell keyed (None, True); show_rate iff n >= MIN_N ---
     "eur_per_hour": {
-        # n=5 → show
-        (0, True): {
-            "n": 5,
+        # V1–V5 + V12: n=6 → show
+        (None, True): {
+            "n": 6,
             "show_rate": True,
-            "eur_per_hour_ex_tip": _EUR_0_SHAVED_EX,
-            "eur_per_hour_inc_tip": _EUR_0_SHAVED_INC,
-            "revenue_ex_tip": 310.0,
-            "revenue_inc_tip": 345.0,
-            "hours": _EUR_0_SHAVED_HOURS,
+            "eur_per_hour_ex_tip": _EUR_SHAVE_EX,
+            "eur_per_hour_inc_tip": _EUR_SHAVE_INC,
+            "revenue_ex_tip": 362.0,
+            "revenue_inc_tip": 397.0,
+            "hours": _EUR_SHAVE_HOURS,
         },
         # V6 only (V7 excluded: NULL price); n=1 → hide rates
         (5, False): {
@@ -233,13 +240,6 @@ EXPECTED: dict[str, Any] = {
         },
         # V11 alone
         (4, False): {
-            "n": 1,
-            "show_rate": False,
-            "eur_per_hour_ex_tip": None,
-            "eur_per_hour_inc_tip": None,
-        },
-        # V12 alone — below MIN_N cell called out in the issue
-        (4, True): {
             "n": 1,
             "show_rate": False,
             "eur_per_hour_ex_tip": None,
@@ -296,6 +296,7 @@ EXPECTED: dict[str, Any] = {
         "rate": _P90_MISS_RATE,
         "show_rate": True,
     },
+    "estimate_bands": {"n": 10, "within_p50": 5, "within_p90": 4, "past_p90": 1, "enough": True},
     # --- utilization by visit_date (eligible only) ---
     "utilization": {
         date(2026, 3, 2): {

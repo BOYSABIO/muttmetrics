@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from muttmetrics.api.schemas.metrics import (
     AllTimeOut,
+    EstimateBandsOut,
     EurPerHourCellOut,
     MetricsPeriodBlock,
     MetricValue,
@@ -159,7 +160,7 @@ def load_period_metrics(
     )
     eur_per_hour = [
         EurPerHourCellOut(
-            condition_score=int(r["condition_score"]),
+            condition_score=(None if r["condition_score"] is None else int(r["condition_score"])),
             shaved_down=bool(r["shaved_down"]),
             n=int(r["n"]),
             groomed_minutes=int(r["groomed_minutes"]),
@@ -248,6 +249,25 @@ def load_period_metrics(
             rate=_metric_value(p90_row["miss_rate"]),
         )
 
+    bands_row = (
+        session.execute(
+            text(
+                """
+                SELECT n, within_p50, within_p90, past_p90, enough
+                FROM metric_estimate_bands(:p_start, :p_end)
+                """
+            ),
+            params,
+        )
+        .mappings()
+        .first()
+    )
+    estimate_bands = (
+        EstimateBandsOut(n=0, within_p50=0, within_p90=0, past_p90=0, enough=False)
+        if bands_row is None
+        else EstimateBandsOut.model_validate(dict(bands_row))
+    )
+
     util_rows = (
         session.execute(
             text(
@@ -305,6 +325,7 @@ def load_period_metrics(
         pivot=pivot,
         overrun=overrun,
         p90_miss=p90_miss,
+        estimate_bands=estimate_bands,
         utilization=utilization,
         utilization_weeks=utilization_weeks,
     )

@@ -44,12 +44,13 @@ def backfill(session: Session, *, apply: bool) -> BackfillReport:
             report.no_weight += 1
             continue
         new_band = size_band_from_weight(float(pet.weight_kg), pet.species)
-        if pet.size_band == new_band:
+        if pet.size_band == new_band and pet.size_source == ("weight" if new_band else None):
             report.unchanged += 1
             continue
         report.changes.append((pet.pet_id, float(pet.weight_kg), pet.size_band, new_band))
         if apply:
             pet.size_band = new_band
+            pet.size_source = "weight" if new_band else None
     if apply:
         session.flush()
     return report

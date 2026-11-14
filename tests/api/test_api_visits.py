@@ -124,6 +124,7 @@ def test_create_visit_with_breed_sets_predictions(
         name="Prior Dog",
         breed_id=breed.breed_id,
         size_band="l",
+        size_source="eye",
         handling_score=4,
     )
     db_session.add(dog)
@@ -361,6 +362,7 @@ def test_patch_visit_date_recomputs_days_since_last_keeps_predictions(
         name="Patch Date Dog",
         breed_id=breed.breed_id,
         size_band="l",
+        size_source="eye",
         handling_score=4,
     )
     db_session.add(dog)

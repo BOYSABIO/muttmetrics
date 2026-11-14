@@ -31,7 +31,10 @@ class PeriodSummaryOut(BaseModel):
 
 
 class EurPerHourCellOut(BaseModel):
-    condition_score: int
+    """One € / hour cell: a coat condition (unshaved visits), or every
+    shave-down together (``shaved_down`` true, ``condition_score`` null)."""
+
+    condition_score: int | None
     shaved_down: bool
     n: int
     groomed_minutes: int | None = None
@@ -57,6 +60,19 @@ class P90MissOut(BaseModel):
     n: int
     miss_count: int
     rate: MetricValue
+
+
+class EstimateBandsOut(BaseModel):
+    """Where grooms with an estimate landed: within P50, within P90, past P90.
+
+    Counts are facts; ``enough`` is n >= MIN_N (proportions are drawn only then).
+    """
+
+    n: int
+    within_p50: int
+    within_p90: int
+    past_p90: int
+    enough: bool
 
 
 class UtilizationDayOut(BaseModel):
@@ -107,6 +123,7 @@ class MetricsPeriodBlock(BaseModel):
     pivot: PivotOut
     overrun: OverrunOut
     p90_miss: P90MissOut
+    estimate_bands: EstimateBandsOut
     utilization: list[UtilizationDayOut]
     utilization_weeks: list[UtilizationWeekOut]
 

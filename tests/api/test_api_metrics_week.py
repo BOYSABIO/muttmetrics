@@ -63,14 +63,14 @@ def test_metrics_week_full_fixture(
     )
 
     by_cell = {(c["condition_score"], c["shaved_down"]): c for c in data["eur_per_hour"]}
-    show = by_cell[(0, True)]
-    exp_show = EXPECTED["eur_per_hour"][(0, True)]
-    assert show["n"] == 5
+    show = by_cell[(None, True)]
+    exp_show = EXPECTED["eur_per_hour"][(None, True)]
+    assert show["n"] == 6
     assert show["eur_per_hour_ex_tip"]["reason"] is None
     assert show["eur_per_hour_ex_tip"]["value"] == pytest.approx(exp_show["eur_per_hour_ex_tip"])
     assert show["eur_per_hour_inc_tip"]["value"] == pytest.approx(exp_show["eur_per_hour_inc_tip"])
 
-    hide = by_cell[(4, True)]
+    hide = by_cell[(4, False)]
     assert hide["n"] == 1
     assert hide["eur_per_hour_ex_tip"]["value"] is None
     assert hide["eur_per_hour_ex_tip"]["reason"] == "not_enough_data"
@@ -78,6 +78,8 @@ def test_metrics_week_full_fixture(
     assert data["pivot"]["n"] == EXPECTED["pivot"]["n"]
     assert data["pivot"]["pivoted_count"] == EXPECTED["pivot"]["pivoted_count"]
     assert data["pivot"]["rate"]["value"] == pytest.approx(EXPECTED["pivot"]["rate"])
+
+    assert data["estimate_bands"] == EXPECTED["estimate_bands"]
 
     assert data["overrun"]["n"] == EXPECTED["overrun"]["n"]
     assert data["overrun"]["avg_minutes"]["value"] == pytest.approx(

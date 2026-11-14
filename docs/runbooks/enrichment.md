@@ -44,7 +44,7 @@ Connect for SQL escape-hatch work: [`ops-db-peek.md`](./db-peek.md). Schema: [`s
 | Table | Safe to hand-UPDATE (examples) | Forbidden |
 |-------|----------------------------------|-----------|
 | `owner` | `phone`, `email`, `notes`, `address_area`, `preferred_channel`, `client_since`, `locale`, `name` | `visit_count`, `neglect_rate`, `lifetime_value`, … |
-| `pet` | `breed_id`, `breed_secondary_id`, `weight_kg`, `species` (only if correcting a mis-logged animal), coat/temperament/medical hand-entered fields, `name` | `size_band`, `visit_count`, `last_visit_date`, `avg_duration_min`, … |
+| `pet` | `breed_id`, `breed_secondary_id`, `weight_kg`, `species` (only if correcting a mis-logged animal), `coat_type`, `coat_thickness`, `handling_score`, the yes/no flags, notes, `name`. Values: [`pet-data.md`](../architecture/pet-data.md); the database refuses anything off the lists. `size_band` + `size_source = 'eye'` together, only for a pet without a weight. SQL edits skip the `pet_change` log | `visit_count`, `last_visit_date`, `avg_duration_min`, …; `size_band` of a weighed pet (run `backfill_size_band.py`) |
 | `visit` | `visit_date`, `actual_minutes`, `condition_score` (**0 = worst … 5 = best**), `what_surprised_me`, `status`, service ids / prices / tips if needed | `days_since_last`, `predicted_min_p50`, `predicted_min_p90` |
 
 Why forbidden matters: derived values are **meant to be recomputed from visits**. If you type `last_visit_date` by hand, it can disagree with the real `visit` table. Later analytics will trust the wrong number.
