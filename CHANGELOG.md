@@ -10,6 +10,16 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-11-17
+
+The client list shows each pet's photo and what's still missing on it, and "Doodle" joins the breed list. No migration. **On the box, after deploying:** `python -m muttmetrics.seed --breeds-only` (never the plain seed there).
+
+### Added
+
+- **Photos in the client list** and in New visit's pet list: the same photo as the pet's profile (its profile photo, else its latest before-photo), as a small copy so a list doesn't download every full photo. `GET /photos/{id}?size=thumb` makes that copy on request (192 px, never stored); `GET /pets` now returns `avatar_photo_id`. Changing the photo on a profile updates the list behind it
+- **What's missing, at a glance:** after a pet's name in the client list, four small squares for the basics (breed, size, coat, handling), hollow for each one nobody has filled in; the header counts the pets still missing any. A pet with all four shows nothing. Hover or a screen reader gives the words ("Basics 2 of 4. Missing: size and coat"). `GET /pets` returns `basics_missing`; the rule is the profile's "n of 4" (`pet_vocab.BASICS`)
+- **"Doodle" in the breed list**, for a poodle cross whose other half isn't known (or when the owner just says "a doodle"). Curly coat, high matting risk, a middle size as the starting guess (a weight on the dog still wins). It couldn't be added in the salon: typing "doodle" already matched Goldendoodle, Labradoodle and the others, and *Add a breed* only appears when nothing matches. The catalog is now 78 breeds (69 dog, 9 cat)
+
 ## [0.8.0] — 2026-11-17
 
 The whole app, polished: it moves, it answers every tap, and saving a visit is worth looking at. Frontend only: **no migration, no API change, nothing to do on the box beyond the deploy.** The rules are in `docs/architecture/ui-conventions.md` ("Motion").
@@ -201,7 +211,8 @@ baseline the groomer's screen and `/health` can name.
 
 - Insecure / short `API_KEY` values refused at API (and proxy) startup
 
-[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.9.0
 [0.8.0]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.8.0
 [0.7.1]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.7.1
 [0.7.0]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.7.0

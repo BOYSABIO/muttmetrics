@@ -1,9 +1,12 @@
 """POST /pets create-or-get. and GET /pets directory search."""
 
 import uuid
+from io import BytesIO
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 
 
 @pytest.fixture
@@ -426,3 +429,61 @@ def test_breed_must_match_species(
     )
     assert created.status_code == 201
     assert created.json()["breed_id"] == cat_breed_id
+
+
+def _listed(client: TestClient, auth_headers: dict[str, str], token: str, pet_id: int) -> dict:
+    rows = client.get(f"/pets?q={token}", headers=auth_headers).json()
+    return next(row for row in rows if row["pet_id"] == pet_id)
+
+
+def test_list_dogs_says_which_basics_are_missing(
+    client: TestClient, owner_id: int, auth_headers: dict[str, str]
+) -> None:
+    token = uuid.uuid4().hex[:8]
+    pet_id = client.post(
+        "/pets", json={"owner_id": owner_id, "name": f"Basics{token}"}, headers=auth_headers
+    ).json()["pet_id"]
+
+    assert _listed(client, auth_headers, token, pet_id)["basics_missing"] == [
+        "breed",
+        "size",
+        "coat",
+        "handling",
+    ]
+
+    # A weight counts as a size; coat and handling as picked.
+    patched = client.patch(
+        f"/pets/{pet_id}",
+        json={"weight_kg": "8.5", "coat_type": "curly", "handling_score": 2},
+        headers=auth_headers,
+    )
+    assert patched.status_code == 200
+    assert _listed(client, auth_headers, token, pet_id)["basics_missing"] == ["breed"]
+
+
+def test_list_dogs_carries_the_profile_avatar(
+    client: TestClient,
+    owner_id: int,
+    auth_headers: dict[str, str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PHOTO_ROOT", str(tmp_path))
+    token = uuid.uuid4().hex[:8]
+    pet_id = client.post(
+        "/pets", json={"owner_id": owner_id, "name": f"Avatar{token}"}, headers=auth_headers
+    ).json()["pet_id"]
+    assert _listed(client, auth_headers, token, pet_id)["avatar_photo_id"] is None
+
+    buf = BytesIO()
+    Image.new("RGB", (300, 300), "blue").save(buf, format="PNG")
+    photo = client.post(
+        f"/pets/{pet_id}/photos",
+        files={"file": ("a.png", buf.getvalue(), "image/png")},
+        headers=auth_headers,
+    )
+    assert photo.status_code == 201
+
+    listed = _listed(client, auth_headers, token, pet_id)["avatar_photo_id"]
+    profile = client.get(f"/pets/{pet_id}", headers=auth_headers).json()["avatar_photo_id"]
+    assert listed == photo.json()["photo_id"] == profile

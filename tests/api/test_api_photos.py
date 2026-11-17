@@ -222,3 +222,26 @@ def test_delete_visit_removes_photos_and_files(
     assert listed.status_code in (200, 404)
     if listed.status_code == 200:
         assert listed.json() == []
+
+
+def test_get_photo_thumb_is_small(
+    client: TestClient, visit_id: int, auth_headers: dict[str, str]
+) -> None:
+    photo_id = _upload(client, visit_id, _png(1200, 900), auth_headers).json()["photo_id"]
+
+    full = client.get(f"/photos/{photo_id}", headers=auth_headers)
+    thumb = client.get(f"/photos/{photo_id}?size=thumb", headers=auth_headers)
+
+    assert thumb.status_code == 200
+    assert thumb.headers["content-type"] == "image/jpeg"
+    small = Image.open(BytesIO(thumb.content))
+    assert max(small.size) == 192
+    assert small.size[0] / small.size[1] == pytest.approx(1200 / 900, rel=0.02)
+    assert len(thumb.content) < len(full.content)
+
+
+def test_get_photo_unknown_size_422(
+    client: TestClient, visit_id: int, auth_headers: dict[str, str]
+) -> None:
+    photo_id = _upload(client, visit_id, _png(400, 400), auth_headers).json()["photo_id"]
+    assert client.get(f"/photos/{photo_id}?size=huge", headers=auth_headers).status_code == 422

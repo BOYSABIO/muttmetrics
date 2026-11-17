@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -122,8 +122,16 @@ def list_visit_photos(visit_id: int, session: DbSession) -> list[PhotoResponse]:
 
 
 @router.get("/photos/{photo_id}", dependencies=[Depends(require_api_key)])
-def get_photo(photo_id: int, session: DbSession) -> Response:
-    """The bytes. Auth means an <img src> cannot fetch this directly."""
+def get_photo(
+    photo_id: int,
+    session: DbSession,
+    size: Annotated[Literal["full", "thumb"], Query()] = "full",
+) -> Response:
+    """The bytes. Auth means an <img src> cannot fetch this directly.
+
+    ``size=thumb`` answers with a small copy (``images.THUMB_EDGE``) for lists,
+    so a page of avatars doesn't download every full photo.
+    """
     photo = session.get(Photo, photo_id)
     if photo is None:
         raise HTTPException(status_code=404, detail=f"Photo {photo_id} not found")
@@ -134,6 +142,9 @@ def get_photo(photo_id: int, session: DbSession) -> Response:
         # Row promises bytes that are gone - the inconsistency designed
         # the write order to avoid. 404 for the caller; the row is the clue
         raise HTTPException(status_code=404, detail=f"Photo {photo_id} file is missing") from exc
+
+    if size == "thumb":
+        data = images.thumbnail(data)
 
     return Response(
         content=data,

@@ -8,10 +8,12 @@ import {
   searchPets,
   type BreedListItem,
   type PetProfile,
+  type Basic,
   type PetSearchItem,
   type OwnerProfile,
 } from './api'
 import { formatLastVisit } from './dates'
+import { basicsLabel } from './petVocab'
 import { withTransition } from './motion'
 import { PetAvatar } from './PetAvatar'
 import { PetProfileView } from './PetProfileView'
@@ -122,6 +124,8 @@ export function Directory({ onStartVisit }: DirectoryProps) {
     }, 'back')
   }
 
+  const needBasics = filtered.filter((d) => d.basics_missing.length > 0).length
+
   const status = (
     <>
       <Toast message={message} onClear={() => setMessage('')} />
@@ -213,6 +217,13 @@ export function Directory({ onStartVisit }: DirectoryProps) {
             <div className="client-list-head" aria-hidden>
               <span>
                 {filtered.length} {filtered.length === 1 ? 'pet' : 'pets'}
+                {needBasics > 0 && (
+                  <span className="client-list-need">
+                    {' · '}
+                    <BasicsPips missing={['size']} legend />
+                    {needBasics} missing basics
+                  </span>
+                )}
               </span>
               <span>Last visit</span>
             </div>
@@ -239,20 +250,23 @@ export function Directory({ onStartVisit }: DirectoryProps) {
                         morphPetId === dog.pet_id ? { viewTransitionName: 'pet-avatar' } : undefined
                       }
                     >
-                      <PetAvatar photoId={null} name={dog.name} />
+                      <PetAvatar photoId={dog.avatar_photo_id} name={dog.name} thumb />
                     </span>
                     <div className="dir-card-body">
-                      <button
-                        type="button"
-                        className="dir-card-title-btn"
-                        disabled={isBusy}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          void openDirectoryPet(dog.pet_id)
-                        }}
-                      >
-                        {dog.name}
-                      </button>
+                      <span className="client-name-row">
+                        <button
+                          type="button"
+                          className="dir-card-title-btn"
+                          disabled={isBusy}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void openDirectoryPet(dog.pet_id)
+                          }}
+                        >
+                          {dog.name}
+                        </button>
+                        <BasicsPips missing={dog.basics_missing} />
+                      </span>
                       <div className="dir-card-meta">
                         {speciesLabel(dog.species)}
                         {' · '}
@@ -283,5 +297,28 @@ export function Directory({ onStartVisit }: DirectoryProps) {
         )}
       </section>
     </>
+  )
+}
+
+/**
+ * Four small squares after a pet's name, one per basic (breed, size, coat,
+ * handling): filled when known, hollow when nobody has filled it in. Nothing
+ * at all once all four are known, so a finished dog looks finished.
+ */
+function BasicsPips({ missing, legend = false }: { missing: Basic[]; legend?: boolean }) {
+  if (missing.length === 0) return null
+  const known = 4 - missing.length
+  const label = legend ? undefined : `Basics ${known} of 4. Missing: ${basicsLabel(missing)}`
+  return (
+    <span
+      className={legend ? 'basics-pips basics-pips-legend' : 'basics-pips'}
+      role={legend ? undefined : 'img'}
+      aria-label={label}
+      title={label}
+    >
+      {(['breed', 'size', 'coat', 'handling'] as const).map((b) => (
+        <i key={b} className={missing.includes(b) ? 'is-missing' : undefined} />
+      ))}
+    </span>
   )
 }
