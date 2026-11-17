@@ -367,6 +367,9 @@ SEED_BREEDS += [
     _breed("dog", "Cavapoo", "Cavapoo", "curly", "s", 85, 5, 35),
     _breed("dog", "Bernedoodle", "Bernedoodle", "curly", "l", 130, 5, 35),
     _breed("dog", "Aussiedoodle", "Aussiedoodle", "curly", "m", 110, 5, 35),
+    # Any poodle cross whose other half nobody knows (or the owner just says
+    # "a doodle"). Middle size as a starting guess; a weight on the dog wins.
+    _breed("dog", "Doodle", "Doodle", "curly", "m", 110, 5, 35),
     _breed("dog", "Portuguese Water Dog", "Portugiesischer Wasserhund", "curly", "m", 110, 4, 42),
     # Long & silky: keeps growing, mats behind ears and legs
     _breed("dog", "Havanese", "Havaneser", "silky", "s", 85, 4, 35),

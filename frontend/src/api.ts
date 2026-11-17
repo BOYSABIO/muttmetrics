@@ -12,6 +12,9 @@
 
 export type Species = 'dog' | 'cat'
 
+/** The four facts the estimate leans on most (pet_vocab.BASICS). */
+export type Basic = 'breed' | 'size' | 'coat' | 'handling'
+
 export type PetSearchItem = {
   pet_id: number
   name: string
@@ -19,6 +22,10 @@ export type PetSearchItem = {
   owner_id: number
   owner_name: string
   last_visit_date: string | null
+  /** Same photo as the profile's avatar; fetch it with `?size=thumb` in a list. */
+  avatar_photo_id: number | null
+  /** Which basics nobody has filled in yet ([] when all four are known). */
+  basics_missing: Basic[]
 }
 
 export type ServiceListItem = {

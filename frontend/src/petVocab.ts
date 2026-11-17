@@ -68,3 +68,18 @@ export const SEXES: Option<string>[] = [
   { value: 'female', label: 'Female' },
   { value: 'male', label: 'Male' },
 ]
+
+const BASIC_WORDS: Record<'breed' | 'size' | 'coat' | 'handling', string> = {
+  breed: 'breed',
+  size: 'size',
+  coat: 'coat',
+  handling: 'handling',
+}
+
+/** "size and coat", "breed, size and coat". */
+export function basicsLabel(missing: readonly ('breed' | 'size' | 'coat' | 'handling')[]): string {
+  const words = missing.map((m) => BASIC_WORDS[m])
+  return words.length <= 1
+    ? (words[0] ?? '')
+    : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`
+}

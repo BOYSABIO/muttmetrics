@@ -10,6 +10,7 @@ from muttmetrics.api.schemas.add_ons import AddOnSummary
 from muttmetrics.pet_vocab import (
     COAT_THICKNESS_MAX,
     COAT_THICKNESS_MIN,
+    Basic,
     CoatType,
     Sex,
     SizeBandCode,
@@ -69,6 +70,15 @@ class PetSearchItem(BaseModel):
     owner_id: int
     owner_name: str
     last_visit_date: date | None = None
+    avatar_photo_id: int | None = Field(
+        default=None,
+        description="Same photo as the profile's avatar: the latest profile photo, "
+        "else the latest before-photo. GET /photos/{id}?size=thumb for a list.",
+    )
+    basics_missing: list[Basic] = Field(
+        default_factory=list,
+        description="Which of breed, size, coat, handling nobody has filled in yet.",
+    )
 
 
 class OwnerSummary(BaseModel):

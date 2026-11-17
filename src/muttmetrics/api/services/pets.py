@@ -14,7 +14,7 @@ from muttmetrics.api.schemas.pets import (
 from muttmetrics.api.services.patching import reject_null_for_required_columns
 from muttmetrics.api.services.visits import visit_to_summary
 from muttmetrics.models import Breed, Owner, Pet, PetChange, Photo, Visit, VisitAddOn
-from muttmetrics.pet_vocab import COAT_TYPES_BY_SPECIES, TRACKED_PET_FIELDS
+from muttmetrics.pet_vocab import BASICS, COAT_TYPES_BY_SPECIES, TRACKED_PET_FIELDS, Basic
 from muttmetrics.priors.size import size_band_from_weight
 from muttmetrics.services.visit_eligibility import visit_counts_clause
 from muttmetrics.species import ALLOWED_SPECIES, DEFAULT_SPECIES
@@ -82,6 +82,31 @@ def create_or_get_pet(
     return pet, True
 
 
+def basics_missing(pet: Pet) -> list[Basic]:
+    """Which of the four basics are still blank, in BASICS order.
+
+    Size counts as known from a size picked by eye or from a weight (a weight
+    always sets the size). Same rule as the profile's "n of 4".
+    """
+    known = {
+        "breed": pet.breed_id is not None,
+        "size": pet.size_band is not None or pet.weight_kg is not None,
+        "coat": pet.coat_type is not None,
+        "handling": pet.handling_score is not None,
+    }
+    return [name for name in BASICS if not known[name]]
+
+
+def _latest_photo_sq(kind: str):
+    """Newest photo of one kind per pet."""
+    return (
+        select(Photo.pet_id.label("pet_id"), func.max(Photo.photo_id).label("photo_id"))
+        .where(Photo.kind == kind)
+        .group_by(Photo.pet_id)
+        .subquery()
+    )
+
+
 def search_pets(
     session: Session,
     *,
@@ -106,10 +131,18 @@ def search_pets(
         .subquery()
     )
 
+    # The avatar: same rule as the profile (latest profile photo, else the
+    # latest before-photo), in one query for the whole list.
+    profile_sq = _latest_photo_sq("profile")
+    intake_sq = _latest_photo_sq("intake")
+    avatar = func.coalesce(profile_sq.c.photo_id, intake_sq.c.photo_id)
+
     stmt = (
-        select(Pet, last_visit_sq.c.last_visit_date)
+        select(Pet, last_visit_sq.c.last_visit_date, avatar.label("avatar_photo_id"))
         .options(joinedload(Pet.owner))
         .outerjoin(last_visit_sq, Pet.pet_id == last_visit_sq.c.pet_id)
+        .outerjoin(profile_sq, Pet.pet_id == profile_sq.c.pet_id)
+        .outerjoin(intake_sq, Pet.pet_id == intake_sq.c.pet_id)
         .order_by(Pet.name)
         .limit(limit)
     )
@@ -128,8 +161,10 @@ def search_pets(
             owner_id=pet.owner_id,
             owner_name=pet.owner.name,
             last_visit_date=last_visit_date,
+            avatar_photo_id=avatar_photo_id,
+            basics_missing=basics_missing(pet),
         )
-        for pet, last_visit_date in rows
+        for pet, last_visit_date, avatar_photo_id in rows
     ]
 
 

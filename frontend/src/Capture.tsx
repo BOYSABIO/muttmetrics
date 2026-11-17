@@ -793,7 +793,7 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
                     })
                   }}
                 >
-                  <PetAvatar photoId={null} name={dog.name} />
+                  <PetAvatar photoId={dog.avatar_photo_id} name={dog.name} thumb />
                   <div className="dir-card-body">
                     <span className="dir-card-title">{dog.name}</span>
                     <span className="dir-card-meta">

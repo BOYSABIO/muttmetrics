@@ -6,6 +6,8 @@ type PetAvatarProps = {
   size?: 'md' | 'lg'
   /** Which word gives the initial: a pet's last ("Mr Biscuit" → B), a person's first. */
   initialFrom?: 'first' | 'last'
+  /** In a list: load a small copy of the photo, and only when it scrolls into view. */
+  thumb?: boolean
   /** When set, tapping the avatar opens the device photo picker. */
   onPickFile?: (file: File) => void
   disabled?: boolean
@@ -53,6 +55,7 @@ export function PetAvatar({
   name,
   size = 'md',
   initialFrom = 'last',
+  thumb = false,
   onPickFile,
   disabled = false,
 }: PetAvatarProps) {
@@ -65,7 +68,7 @@ export function PetAvatar({
   // Proxy injects X-API-Key for /api/photos/* — plain <img> is enough.
   const src =
     photoId != null && failedPhotoId !== photoId
-      ? `/api/photos/${photoId}`
+      ? `/api/photos/${photoId}${thumb ? '?size=thumb' : ''}`
       : null
 
   const className = [
@@ -87,6 +90,8 @@ export function PetAvatar({
           src={src}
           alt=""
           className="dog-avatar-img"
+          loading={thumb ? 'lazy' : undefined}
+          decoding="async"
           onError={() => {
             if (photoId != null) {
               setFailedPhotoId(photoId)

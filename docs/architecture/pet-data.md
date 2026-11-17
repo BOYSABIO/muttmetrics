@@ -55,14 +55,14 @@ Not in the API or the UI. The columns stay until the real values have been check
 ## Breeds
 
 - On screen: the English name. `name_de` is kept for search (accents optional) and for the seed.
-- The catalog (`src/muttmetrics/seed/data.py`, about 77 breeds) carries the cold-start priors: typical minutes, matting risk, rebook interval, default coat and size. Starting guesses; correct them with the groomer.
+- The catalog (`src/muttmetrics/seed/data.py`, about 78 breeds) carries the cold-start priors: typical minutes, matting risk, rebook interval, default coat and size. Starting guesses; correct them with the groomer.
 - **Added in the salon** (`POST /breeds`, `breed.source = 'salon'`): only offered when nothing in the list matches what was typed. English names are unique per species, any capitalisation, and typing an existing German name returns that breed. A salon breed has no typical minutes, so the rules estimate stays empty for its dogs until someone fills them in (SQL or a seed entry; seeding a breed with the same name turns it into a catalog breed).
 - Mixes: "Crossed with" (`breed_secondary_id`). Crosses groomed as their own thing (doodles) are breeds.
 - On the server, update the catalog with `python -m muttmetrics.seed --breeds-only`. The full seed also rewrites services and would blank their prices without `data/private/pricing.json`.
 
 ## On screen
 
-The profile asks the four **Basics** first (breed, size, coat, handling) as taps, with a filled count, because they're the model's main inputs. Yes / No fields are two chips where neither selected means "nobody checked"; tapping a selected chip clears it. Everything else sits under notes or the folded *More details*.
+The profile asks the four **Basics** first (breed, size, coat, handling) as taps, with a filled count, because they're the model's main inputs. The client list shows the same four as small squares after a pet's name, hollow for each one still blank, and nothing once all four are known (`GET /pets` returns `basics_missing`; one rule in `pet_vocab.BASICS` and `services/pets.basics_missing`: a size counts as known from a size picked by eye or a weight). Yes / No fields are two chips where neither selected means "nobody checked"; tapping a selected chip clears it. Everything else sits under notes or the folded *More details*.
 
 ## What a visit adds
 

@@ -18,6 +18,8 @@ register_heif_opener()
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024  # generous for phone original
 MAX_EDGE = 1600  # px on long edge after downscaling
 JPEG_QUALITY = 85
+THUMB_EDGE = 192  # px: an avatar in a list is 36-48 px, so 2-4x for sharp screens
+THUMB_QUALITY = 80
 
 
 class ImageRejected(ValueError):
@@ -68,4 +70,18 @@ def process_upload(data: bytes) -> bytes:
     except OSError as exc:
         raise ImageRejected(f"Could not process image: {exc}") from exc
 
+    return out.getvalue()
+
+
+def thumbnail(data: bytes, edge: int = THUMB_EDGE) -> bytes:
+    """A small copy of a stored photo, for lists. Made on request, never stored.
+
+    The input is one of our own JPEGs (already rotated and stripped), so this
+    only shrinks it. Square-ish crops are the browser's job (object-fit).
+    """
+    out = BytesIO()
+    with Image.open(BytesIO(data)) as img:
+        small = img.convert("RGB")
+        small.thumbnail((edge, edge))
+        small.save(out, format="JPEG", quality=THUMB_QUALITY, optimize=True)
     return out.getvalue()

@@ -47,6 +47,7 @@ Month comes from **upload time**, not visit date — it is the only input always
 | `POST /visits/{visit_id}/photos` | `X-API-Key` | multipart upload (`file`, optional `kind=intake\|after`) |
 | `GET /visits/{visit_id}/photos` | `X-API-Key` | metadata list, oldest first |
 | `GET /photos/{photo_id}` | `X-API-Key` | the JPEG bytes |
+| `GET /photos/{photo_id}?size=thumb` | `X-API-Key` | a small copy (192 px long edge), made on request and never stored; the client list and New visit use it for avatars (0.9.0) |
 
 Status codes: **413** upload too large (15MB; the API reads at most 15MB + 1 byte, so an oversized file is never held in memory whole), **415** not a decodable image, **404** unknown visit or photo, **401** missing or wrong key.
 

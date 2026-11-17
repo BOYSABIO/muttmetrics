@@ -300,6 +300,7 @@ export function PetProfileView({
       await uploadPetProfilePhoto(profile.pet_id, file)
       show(await fetchPetProfile(profile.pet_id))
       setMessage('Photo updated')
+      onSaved()
     } catch (error) {
       console.error(error)
       setMessage(errorMessage(error))

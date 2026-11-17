@@ -41,6 +41,11 @@ COAT_THICKNESS_MAX = 3
 
 # --- Size ----------------------------------------------------------------------
 SIZE_BANDS: tuple[str, ...] = ("s", "m", "l", "xl")
+
+# The four facts a time estimate (and later the model) leans on most. The
+# profile counts them ("2 of 4") and the client list flags what's missing.
+Basic = Literal["breed", "size", "coat", "handling"]
+BASICS: tuple[Basic, ...] = ("breed", "size", "coat", "handling")
 SizeBandCode = Literal["s", "m", "l", "xl"]
 
 # Where size_band came from: computed from a weighed dog, or picked by eye.
