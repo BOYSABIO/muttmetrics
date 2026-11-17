@@ -23,7 +23,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: npm-audit
+      - name: npm-audit (what the app ships)
+        # Gate on react / react-dom. Build and lint tools are reported in the next
+        # step but don't block: an advisory there with no fixed version yet can't
+        # reach the app (picomatch ReDoS, 2026-11).
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: npm-audit (build tools, report only)
+        continue-on-error: true
         run: npm audit --audit-level=high
 
       - name: Lint
