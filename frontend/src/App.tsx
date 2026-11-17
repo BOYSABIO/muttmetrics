@@ -4,7 +4,10 @@ import { APP_NAME, APP_VERSION, BUSINESS_NAME } from './brand'
 import { Capture } from './Capture'
 import { Directory } from './Directory'
 import { loadDraft, type DraftVisit, type SelectedPet } from './draft'
+import { withTransition } from './motion'
 import { ThisWeek } from './ThisWeek'
+import { setSoundEnabled, soundEnabled } from './sound'
+import { IconPlus, Toast } from './ui'
 
 type Screen = 'home' | 'capture'
 /** Home shell destinations. Capture is an action (+), not a peer tab. */
@@ -19,35 +22,48 @@ function App() {
   const [area, setArea] = useState<Area>('this_week')
   const [startPet, setStartPet] = useState<SelectedPet | null>(null)
   const [message, setMessage] = useState('')
+  const [sound, setSound] = useState(() => soundEnabled())
 
-  // Home toast (e.g. "Saved …") used to stick forever after a visit save.
+  // The New visit button is a labelled pill at the top of a page and shrinks
+  // to a round "+" once you scroll, so it stops covering what you're reading.
+  const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
-    if (screen !== 'home' || message === '') {
-      return
-    }
-    const t = window.setTimeout(() => {
+    const onScroll = (): void => setScrolled(window.scrollY > 48)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  function goTo(next: Area): void {
+    if (next === area) return
+    withTransition(() => {
+      setArea(next)
       setMessage('')
-    }, 4000)
-    return () => window.clearTimeout(t)
-  }, [screen, message])
+    }, next === 'directory' ? 'forward' : 'back')
+  }
 
   function openCapture(): void {
-    setStartPet(null)
-    setMessage('')
-    setScreen('capture')
+    withTransition(() => {
+      setStartPet(null)
+      setMessage('')
+      setScreen('capture')
+    }, 'up')
   }
 
   function startVisitForPet(dog: SelectedPet): void {
-    setStartPet(dog)
-    setMessage('')
-    setScreen('capture')
+    withTransition(() => {
+      setStartPet(dog)
+      setMessage('')
+      setScreen('capture')
+    }, 'up')
   }
 
   function leaveCapture(doneMessage: string): void {
-    setResume(null)
-    setStartPet(null)
-    setMessage(doneMessage)
-    setScreen('home')
+    withTransition(() => {
+      setResume(null)
+      setStartPet(null)
+      setMessage(doneMessage)
+      setScreen('home')
+    }, 'down')
   }
 
   return (
@@ -59,11 +75,7 @@ function App() {
               <button
                 type="button"
                 className="brand-home"
-                onClick={() => {
-                  setArea('this_week')
-                  setMessage('')
-                }}
-                aria-current={area === 'this_week' ? 'page' : undefined}
+                onClick={() => goTo('this_week')}
               >
                 {BUSINESS_NAME === '' ? (
                   APP_NAME
@@ -82,10 +94,7 @@ function App() {
                   type="button"
                   className="home-link"
                   aria-current={area === 'this_week' ? 'page' : undefined}
-                  onClick={() => {
-                    setArea('this_week')
-                    setMessage('')
-                  }}
+                  onClick={() => goTo('this_week')}
                 >
                   Home
                 </button>
@@ -93,10 +102,7 @@ function App() {
                   type="button"
                   className="home-link"
                   aria-current={area === 'directory' ? 'page' : undefined}
-                  onClick={() => {
-                    setArea('directory')
-                    setMessage('')
-                  }}
+                  onClick={() => goTo('directory')}
                 >
                   Clients
                 </button>
@@ -109,27 +115,39 @@ function App() {
                 </button>
               </nav>
             </header>
-            {message !== '' && (
-              <p className="status" role="status">
-                {message}
-              </p>
-            )}
+            <Toast message={message} onClear={() => setMessage('')} />
             {area === 'this_week' && <ThisWeek onLogVisit={openCapture} />}
             {area === 'directory' && (
               <Directory onStartVisit={startVisitForPet} />
             )}
-            <p className="app-version" aria-label={`App version ${APP_VERSION}`}>
-              v{APP_VERSION}
-            </p>
+            <footer className="app-footer">
+              <p className="app-version" aria-label={`App version ${APP_VERSION}`}>
+                v{APP_VERSION}
+              </p>
+              <button
+                type="button"
+                className="linkish sound-toggle"
+                aria-pressed={sound}
+                onClick={() => {
+                  setSoundEnabled(!sound)
+                  setSound(!sound)
+                }}
+              >
+                Sound {sound ? 'on' : 'off'}
+              </button>
+            </footer>
           </div>
           <button
             type="button"
-            className="fab"
+            className={scrolled ? 'fab fab-compact' : 'fab'}
             aria-label="New visit"
             onClick={openCapture}
           >
             <span className="fab-plus" aria-hidden>
-              +
+              <IconPlus size={22} />
+            </span>
+            <span className="fab-label" aria-hidden>
+              New visit
             </span>
           </button>
         </>

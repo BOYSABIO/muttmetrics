@@ -4,6 +4,7 @@ import {
   createOwner,
   createVisit,
   errorMessage,
+  fetchMetricsPeriod,
   fetchOwnerProfile,
   listAddOns,
   listServices,
@@ -20,7 +21,20 @@ import {
   type ServiceListItem,
   type Species,
 } from './api'
-import { todayISODate } from './dates'
+import {
+  addDays,
+  formatWeekRange,
+  mondayOf,
+  parseISODate,
+  todayISODate,
+  toISODate,
+} from './dates'
+import { haptic, withTransition } from './motion'
+import { PetAvatar } from './PetAvatar'
+import { SaveCelebration, type SavedWeek } from './SaveCelebration'
+import { TimerDial } from './TimerDial'
+import { play } from './sound'
+import { IconPlus, ListSkeleton, SlowOverlay, Toast } from './ui'
 import { SpeciesChips } from './SpeciesChips'
 import { speciesLabel } from './species'
 import {
@@ -35,13 +49,6 @@ import {
 import { PhotoPicker } from './PhotoPicker'
 import { ConditionPicker } from './ConditionPicker'
 import { PageBack } from './PageBack'
-
-function formatElapsed(ms: number): string {
-  const totalSec = Math.max(0, Math.floor(ms / 1000))
-  const m = Math.floor(totalSec / 60)
-  const s = totalSec % 60
-  return `${m}:${s.toString().padStart(2, '0')}`
-}
 
 function floorMinutes(ms: number): number {
   return Math.floor(ms / 60000)
@@ -59,6 +66,38 @@ type AfterSaveState = {
   saved_pet_name: string
   pets: OwnerPetItem[]
   statusLine: string
+  // What the "saved" screen shows back.
+  photoNote: string
+  serviceName: string | null
+  minutes: number
+  price: number
+  tip: number
+  week: SavedWeek | null
+}
+
+/** The dashboard's default daily cap; only passed along, never shown here. */
+const BUFFER_MINUTES = 240
+
+/**
+ * The take-home of the week a visit landed in, for the "saved" screen. Never
+ * throws: the visit is already saved, this is only the reward.
+ */
+async function loadSavedWeek(visitDate: string): Promise<SavedWeek | null> {
+  try {
+    const monday = mondayOf(parseISODate(visitDate))
+    const start = toISODate(monday)
+    const end = toISODate(addDays(monday, 6))
+    const data = await fetchMetricsPeriod(start, end, BUFFER_MINUTES)
+    return {
+      label: start === toISODate(mondayOf(new Date())) ? 'this week' : formatWeekRange(start, end),
+      takeHome: data.summary.revenue_inc_tip,
+      grooms: data.summary.visit_count,
+      allTimeGrooms: data.all_time?.summary.visit_count ?? null,
+    }
+  } catch (error) {
+    console.error(error)
+    return null
+  }
 }
 
 type CaptureProps = {
@@ -89,6 +128,9 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
   )
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<PetSearchItem[]>([])
+  // Apart from `results`, so the list can show its shape while it loads
+  // instead of looking empty.
+  const [petsLoaded, setPetsLoaded] = useState(false)
   const [mode, setMode] = useState<Mode>(
     draft !== null || startPet !== null ? 'visit' : 'search',
   )
@@ -130,6 +172,7 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
   // After a save: offer another dog from the same owner (#191).
   const [afterSave, setAfterSave] = useState<AfterSaveState | null>(null)
   const [nextPetName, setNextPetName] = useState('')
+  const [addingPet, setAddingPet] = useState(false)
 
   useEffect(() => {
     // No dog / not in visit wizard -> nothing to persist
@@ -193,6 +236,8 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
       } catch (error) {
         console.error(error)
         setMessage(errorMessage(error))
+      } finally {
+        setPetsLoaded(true)
       }
     })()
   }, [])
@@ -256,6 +301,8 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
     setTickNow(now)
     setTimerStatus('running')
     setMessage('')
+    haptic(18)
+    play('start')
   }
 
   function stopTimer() {
@@ -263,6 +310,8 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
     const now = Date.now()
     setTickNow(now)
     setTimerStatus('stopped')
+    haptic([24, 50, 24])
+    play('stop')
     const minutes = floorMinutes(now - startedAt)
     if (minutes < 1) {
       setActualMinutes('')
@@ -321,7 +370,8 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
     }
 
     setIsBusy(true)
-    setMessage('Saving...')
+    // The Save button shows that it's working; a message would only repeat it.
+    setMessage('')
     try {
       const visitBody: Record<string, unknown> = {
         owner_id: selectedPet.owner_id,
@@ -385,8 +435,12 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
       clearDraft()
       const statusLine = `Saved ${selectedPet.pet_name} · ${selectedPet.owner_name}${photoNote}`
       try {
-        const profile = await fetchOwnerProfile(selectedPet.owner_id)
-        setAfterSave({
+        const [profile, week] = await Promise.all([
+          fetchOwnerProfile(selectedPet.owner_id),
+          loadSavedWeek(visitDate),
+        ])
+        const service = services.find((s) => String(s.service_id) === serviceId)
+        const saved: AfterSaveState = {
           owner_id: selectedPet.owner_id,
           owner_name: selectedPet.owner_name,
           visit_date: visitDate,
@@ -394,11 +448,23 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
           saved_pet_name: selectedPet.pet_name,
           pets: profile.pets,
           statusLine,
-        })
-        setSelectedPet(null)
-        setMode('after_save')
-        setNextPetName('')
-        setMessage(statusLine)
+          photoNote: photoNote.replace(/^ · /, ''),
+          serviceName: service?.name_en ?? service?.slug ?? null,
+          minutes: Number(actualMinutes),
+          price: Number(finalPrice),
+          tip: tip.trim() === '' ? 0 : Number(tip),
+          week,
+        }
+        // The saved screen's own line is the announcement, so the message is
+        // cleared in the same step: there is never a second status on screen.
+        withTransition(() => {
+          setAfterSave(saved)
+          setSelectedPet(null)
+          setMode('after_save')
+          setNextPetName('')
+          setAddingPet(false)
+          setMessage('')
+        }, 'fade')
       } catch (profileError) {
         // Visit is saved; if the follow-up list fails, still leave with success.
         console.error(profileError)
@@ -418,23 +484,26 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
     owner: { owner_id: number; name: string },
     keepDate: string,
   ): void {
-    setSelectedPet({
-      pet_id: dog.pet_id,
-      owner_id: owner.owner_id,
-      pet_name: dog.name,
-      owner_name: owner.name,
-      species: dog.species,
-    })
-    setVisitDate(keepDate)
-    resetVisitDetails()
-    setVisitStep(1)
-    setIntakeFile(null)
-    setAfterFile(null)
-    resetTimer()
-    setAfterSave(null)
-    setNextPetName('')
-    setMode('visit')
-    setMessage(`Next: ${dog.name} · ${owner.name}`)
+    withTransition(() => {
+      setSelectedPet({
+        pet_id: dog.pet_id,
+        owner_id: owner.owner_id,
+        pet_name: dog.name,
+        owner_name: owner.name,
+        species: dog.species,
+      })
+      setVisitDate(keepDate)
+      resetVisitDetails()
+      setVisitStep(1)
+      setIntakeFile(null)
+      setAfterFile(null)
+      resetTimer()
+      setAfterSave(null)
+      setNextPetName('')
+      setAddingPet(false)
+      setMode('visit')
+      setMessage(`Next: ${dog.name} · ${owner.name}`)
+    }, 'forward')
   }
 
   async function addPetThenVisitFromAfterSave(): Promise<void> {
@@ -474,9 +543,7 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
   function requestExitCapture(): void {
     if (isBusy) return
     if (mode === 'after_save' && afterSave !== null) {
-      const line = afterSave.statusLine
-      setAfterSave(null)
-      onDone(line)
+      finishAfterSave()
       return
     }
     if (
@@ -486,6 +553,17 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
       return
     }
     exitCapture()
+  }
+
+  /** Leave the saved screen. It has already said "saved", so home stays quiet. */
+  function finishAfterSave(): void {
+    setAfterSave(null)
+    onDone('')
+  }
+
+  /** Move between the wizard's steps; the body slides the way you're going. */
+  function goStep(next: VisitStep): void {
+    withTransition(() => setVisitStep(next), next > visitStep ? 'forward' : 'back')
   }
 
   function requestResetTimer(): void {
@@ -499,9 +577,11 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
   }
 
   function startVisitForPet(dog: SelectedPet): void {
-    setSelectedPet(dog)
-    setMode('visit')
-    setMessage('')
+    withTransition(() => {
+      setSelectedPet(dog)
+      setMode('visit')
+      setMessage('')
+    }, 'forward')
   }
 
   function pickExistingOwner(hit: OwnerSearchItem | OwnerConflictCandidate): void {
@@ -538,7 +618,7 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
     }
 
     setIsBusy(true)
-    setMessage('Creating...')
+    setMessage('')
     setNameConflicts([])
     try {
       let owner: CreatedOwner
@@ -565,28 +645,30 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
 
       const dog = await createPet(owner.owner_id, dogTyped, newPetSpecies)
 
-      setSelectedPet({
-        pet_id: dog.pet_id,
-        owner_id: owner.owner_id,
-        pet_name: dog.name,
-        owner_name: owner.name,
-        species: dog.species,
-      })
-      resetVisitDetails()
-      setVisitStep(1)
-      setIntakeFile(null)
-      setAfterFile(null)
-      setVisitDate(todayISODate())
-      resetTimer()
-      setMode('visit')
-      setMessage(`Ready: ${dog.name} · ${owner.name} (${ownerNote})`)
-      setPendingOwner(null)
-      setPickedOwner(null)
-      setOwnerHits([])
-      setNameConflicts([])
-      setOwnerName('')
-      setOwnerPhone('')
-      setPetName('')
+      withTransition(() => {
+        setSelectedPet({
+          pet_id: dog.pet_id,
+          owner_id: owner.owner_id,
+          pet_name: dog.name,
+          owner_name: owner.name,
+          species: dog.species,
+        })
+        resetVisitDetails()
+        setVisitStep(1)
+        setIntakeFile(null)
+        setAfterFile(null)
+        setVisitDate(todayISODate())
+        resetTimer()
+        setMode('visit')
+        setMessage(`Ready: ${dog.name} · ${owner.name} (${ownerNote})`)
+        setPendingOwner(null)
+        setPickedOwner(null)
+        setOwnerHits([])
+        setNameConflicts([])
+        setOwnerName('')
+        setOwnerPhone('')
+        setPetName('')
+      }, 'forward')
     } catch (error) {
       if (error instanceof OwnerNameConflictError) {
         setNameConflicts(error.candidates)
@@ -619,6 +701,9 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
     )
   }, [query, results])
 
+  const otherPets =
+    afterSave === null ? [] : afterSave.pets.filter((d) => d.pet_id !== afterSave.saved_pet_id)
+
   const ownerHitsVisible =
     mode === 'new' &&
     pickedOwner === null &&
@@ -641,11 +726,11 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
             </h1>
           </header>
 
-          {message !== '' && (
-            <p className="status" role="status">
-              {message}
-            </p>
-          )}
+          <Toast message={message} onClear={() => setMessage('')} />
+          <SlowOverlay
+            active={isBusy}
+            label={mode === 'visit' ? 'Saving the visit' : 'One moment'}
+          />
 
       {mode === 'search' && (
         <section className="panel">
@@ -670,19 +755,29 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
               aria-label="New client"
               title="New client"
               onClick={() => {
-                setMode('new')
-                setMessage('')
-                setPickedOwner(null)
-                setOwnerHits([])
-                setNameConflicts([])
-                setOwnerPhone('')
-                setPendingOwner(null)
+                withTransition(() => {
+                  setMode('new')
+                  setMessage('')
+                  setPickedOwner(null)
+                  setOwnerHits([])
+                  setNameConflicts([])
+                  setOwnerPhone('')
+                  setPendingOwner(null)
+                }, 'forward')
               }}
             >
-              +
+              <IconPlus size={22} />
             </button>
           </div>
-          <ul className="dir-card-list">
+          {!petsLoaded && <ListSkeleton rows={6} label="Loading pets…" />}
+          {petsLoaded && captureMatches.length === 0 && (
+            <p className="step-meta empty-state">
+              {results.length === 0
+                ? 'No clients yet. Tap + to add the first one.'
+                : 'No matches. Tap + to add a new client.'}
+            </p>
+          )}
+          <ul className="dir-card-list pick-list">
             {captureMatches.map((dog) => (
               <li key={dog.pet_id}>
                 <button
@@ -698,6 +793,7 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
                     })
                   }}
                 >
+                  <PetAvatar photoId={null} name={dog.name} />
                   <div className="dir-card-body">
                     <span className="dir-card-title">{dog.name}</span>
                     <span className="dir-card-meta">
@@ -849,109 +945,122 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
               className="step-back"
               disabled={isBusy}
               onClick={() => {
-                setMode('search')
-                setMessage('')
-                setPickedOwner(null)
-                setOwnerHits([])
-                setNameConflicts([])
-                setOwnerPhone('')
+                withTransition(() => {
+                  setMode('search')
+                  setMessage('')
+                  setPickedOwner(null)
+                  setOwnerHits([])
+                  setNameConflicts([])
+                  setOwnerPhone('')
+                }, 'back')
               }}
             >
               ← Back
             </button>
             <button
               type="button"
-              className="primary"
+              className={isBusy ? 'primary btn-busy' : 'primary'}
+              aria-busy={isBusy}
               onClick={() => void continueNewClient()}
               disabled={isBusy}
             >
-              {isBusy
-                ? 'Creating…'
-                : pickedOwner !== null
-                  ? 'Add pet & continue'
-                  : 'Continue to visit'}
+              {pickedOwner !== null ? 'Add pet & continue' : 'Continue to visit'}
             </button>
           </div>
         </section>
       )}
 
       {mode === 'after_save' && afterSave !== null && (
-        <section className="panel capture-narrow">
-          <p className="step-meta">
-            Next: another pet from {afterSave.owner_name}? Same visit date (
-            {afterSave.visit_date}). Each pet gets its own timer.
-          </p>
-          <ul className="dir-card-list">
-            {afterSave.pets
-              .filter((d) => d.pet_id !== afterSave.saved_pet_id)
-              .map((d) => (
-                <li key={d.pet_id}>
-                  <button
-                    type="button"
-                    className="dir-card"
-                    disabled={isBusy}
-                    onClick={() =>
-                      beginVisitForOwnerPet(
-                        d,
-                        {
-                          owner_id: afterSave.owner_id,
-                          name: afterSave.owner_name,
-                        },
-                        afterSave.visit_date,
-                      )
-                    }
-                  >
-                    <div className="dir-card-body">
-                    <span className="dir-card-title">{d.name}</span>
-                    <span className="dir-card-meta">
-                      {speciesLabel(d.species)} · Start visit
-                    </span>
-                    </div>
-                    <span className="dir-card-action">Visit</span>
-                  </button>
-                </li>
-              ))}
-          </ul>
-          {afterSave.pets.filter((d) => d.pet_id !== afterSave.saved_pet_id)
-            .length === 0 && (
-            <p className="step-meta">No other pets yet — add one below.</p>
-          )}
-          <SpeciesChips
-            name="next_pet_species"
-            value={newPetSpecies}
-            onChange={setNewPetSpecies}
-            disabled={isBusy}
+        <section className="panel capture-narrow saved-panel">
+          <SaveCelebration
+            petName={afterSave.saved_pet_name}
+            ownerName={afterSave.owner_name}
+            photoNote={afterSave.photoNote}
+            serviceName={afterSave.serviceName}
+            minutes={afterSave.minutes}
+            price={afterSave.price}
+            tip={afterSave.tip}
+            week={afterSave.week}
           />
-          <div className="field">
-            <label htmlFor="next_pet_name">Add a pet</label>
-            <input
-              id="next_pet_name"
-              type="text"
-              value={nextPetName}
-              onChange={(e) => setNextPetName(e.target.value)}
-              disabled={isBusy}
-              placeholder="New pet name"
-            />
+
+          {/* Secondary: the same owner often brings a second pet. */}
+          <div className="saved-next">
+            <h2 className="saved-next-title">Another pet from {afterSave.owner_name}?</h2>
+            <p className="step-meta">Same date, its own timer.</p>
+            {otherPets.length > 0 && (
+              <ul className="dir-card-list">
+                {otherPets.map((d) => (
+                  <li key={d.pet_id}>
+                    <button
+                      type="button"
+                      className="dir-card"
+                      disabled={isBusy}
+                      onClick={() =>
+                        beginVisitForOwnerPet(
+                          d,
+                          {
+                            owner_id: afterSave.owner_id,
+                            name: afterSave.owner_name,
+                          },
+                          afterSave.visit_date,
+                        )
+                      }
+                    >
+                      <PetAvatar photoId={null} name={d.name} />
+                      <div className="dir-card-body">
+                        <span className="dir-card-title">{d.name}</span>
+                        <span className="dir-card-meta">{speciesLabel(d.species)}</span>
+                      </div>
+                      <span className="dir-card-action">Visit</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {!addingPet ? (
+              <button
+                type="button"
+                className="linkish saved-add-toggle"
+                disabled={isBusy}
+                onClick={() => setAddingPet(true)}
+              >
+                + Add a pet
+              </button>
+            ) : (
+              <div className="saved-add">
+                <SpeciesChips
+                  name="next_pet_species"
+                  value={newPetSpecies}
+                  onChange={setNewPetSpecies}
+                  disabled={isBusy}
+                />
+                <div className="field">
+                  <label htmlFor="next_pet_name">Pet name</label>
+                  <input
+                    id="next_pet_name"
+                    type="text"
+                    value={nextPetName}
+                    onChange={(e) => setNextPetName(e.target.value)}
+                    disabled={isBusy}
+                    autoFocus
+                  />
+                </div>
+                <button
+                  type="button"
+                  className={isBusy ? 'btn-busy' : undefined}
+                  aria-busy={isBusy}
+                  disabled={isBusy || nextPetName.trim() === ''}
+                  onClick={() => void addPetThenVisitFromAfterSave()}
+                >
+                  Add pet &amp; start visit
+                </button>
+              </div>
+            )}
           </div>
+
           <div className="actions action-bar">
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => {
-                const line = afterSave.statusLine
-                setAfterSave(null)
-                onDone(line)
-              }}
-            >
+            <button type="button" className="primary" disabled={isBusy} onClick={finishAfterSave}>
               Done
-            </button>
-            <button
-              type="button"
-              className="primary"
-              disabled={isBusy || nextPetName.trim() === ''}
-              onClick={() => void addPetThenVisitFromAfterSave()}
-            >
-              {isBusy ? 'Adding…' : 'Add pet & start visit'}
             </button>
           </div>
         </section>
@@ -991,12 +1100,7 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
           {visitStep === 2 && (
             <>
               <div className={`timer timer-${timerStatus}`}>
-                <p className="timer-state">
-                  {timerStatus === 'idle' && 'Not started'}
-                  {timerStatus === 'running' && 'Timing'}
-                  {timerStatus === 'stopped' && 'Stopped'}
-                </p>
-                <p className="timer-clock">{formatElapsed(elapsedMs)}</p>
+                <TimerDial status={timerStatus} elapsedMs={elapsedMs} startedAt={startedAt} />
                 {timerStatus === 'idle' && (
                   <button type="button" className="primary timer-main" onClick={startTimer}>
                     Start timer
@@ -1166,14 +1270,14 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
             <button
               type="button"
               className={`step-back${visitStep === 1 ? ' slot-placeholder' : ''}`}
-              onClick={() => setVisitStep((visitStep - 1) as VisitStep)}
+              onClick={() => goStep((visitStep - 1) as VisitStep)}
               disabled={isBusy || visitStep === 1}
               aria-hidden={visitStep === 1 ? true : undefined}
             >
               ← Back
             </button>
             {visitStep === 1 && (
-              <button type="button" className="primary" onClick={() => setVisitStep(2)}>
+              <button type="button" className="primary" onClick={() => goStep(2)}>
                 Continue
               </button>
             )}
@@ -1191,15 +1295,21 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
                     return
                   }
                   setMessage('')
-                  setVisitStep(3)
+                  goStep(3)
                 }}
               >
                 Continue
               </button>
             )}
             {visitStep === 3 && (
-              <button type="button" className="primary" onClick={saveVisit} disabled={isBusy}>
-                {isBusy ? 'Saving…' : 'Save visit'}
+              <button
+                type="button"
+                className={isBusy ? 'primary btn-busy' : 'primary'}
+                aria-busy={isBusy}
+                onClick={saveVisit}
+                disabled={isBusy}
+              >
+                Save visit
               </button>
             )}
           </div>

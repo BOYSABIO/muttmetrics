@@ -10,6 +10,8 @@ import {
 } from './api'
 import { ConditionPicker } from './ConditionPicker'
 import { PageBack } from './PageBack'
+import { PixelDog } from './PixelDogs'
+import { ListSkeleton, Toast } from './ui'
 
 const STATUS_OPTIONS = [
   { value: '', label: '—' },
@@ -74,7 +76,8 @@ type VisitEditViewProps = {
   petName: string
   onBack: () => void
   /** After save or delete — parent reloads the dog profile. */
-  onDone: () => void
+  /** After a save or a delete; `message` says which, for the screen behind. */
+  onDone: (message: string) => void
 }
 
 /**
@@ -168,8 +171,7 @@ export function VisitEditView({
       const updated = await patchVisit(visitId, body)
       setVisit(updated)
       setForm(formFromVisit(updated))
-      setMessage('Saved')
-      onDone()
+      onDone('Saved the visit')
     } catch (err) {
       setMessage(errorMessage(err))
     } finally {
@@ -188,7 +190,7 @@ export function VisitEditView({
     setMessage('')
     try {
       await deleteVisit(visitId)
-      onDone()
+      onDone('Deleted the visit')
     } catch (err) {
       setMessage(errorMessage(err))
       setIsBusy(false)
@@ -198,7 +200,7 @@ export function VisitEditView({
   if (form === null && message === '') {
     return (
       <section className="panel profile-panel">
-        <p className="step-meta">Loading visit…</p>
+        <ListSkeleton rows={5} label="Loading visit…" />
       </section>
     )
   }
@@ -206,9 +208,7 @@ export function VisitEditView({
   if (form === null) {
     return (
       <>
-        <p className="status" role="alert">
-          {message}
-        </p>
+        <Toast message={message} />
         <section className="panel profile-panel">
           <PageBack onClick={onBack} />
         </section>
@@ -218,11 +218,7 @@ export function VisitEditView({
 
   return (
     <>
-      {message !== '' && (
-        <p className="status" role="status">
-          {message}
-        </p>
-      )}
+      <Toast message={message} onClear={() => setMessage('')} />
       <section className="panel profile-panel">
         <PageBack onClick={onBack} disabled={isBusy} />
         <header className="profile-hero profile-hero-owner">
@@ -388,6 +384,7 @@ export function VisitEditView({
 
         {/* Destructive actions live at the end of the page, never in the action bar. */}
         <div className="danger-zone">
+          <PixelDog who="guard" className="danger-zone-guard" />
           <div>
             <p className="danger-zone-title">Delete this visit</p>
             <p className="step-meta">Removes the visit and its photos. It can't be undone in the app.</p>
@@ -398,8 +395,14 @@ export function VisitEditView({
         </div>
 
         <div className="actions action-bar">
-          <button type="submit" form="visit-edit-form" className="primary" disabled={isBusy}>
-            {isBusy ? 'Saving…' : 'Save changes'}
+          <button
+            type="submit"
+            form="visit-edit-form"
+            className={isBusy ? 'primary btn-busy' : 'primary'}
+            aria-busy={isBusy}
+            disabled={isBusy}
+          >
+            Save changes
           </button>
         </div>
       </section>

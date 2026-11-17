@@ -10,6 +10,36 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-11-17
+
+The whole app, polished: it moves, it answers every tap, and saving a visit is worth looking at. Frontend only: **no migration, no API change, nothing to do on the box beyond the deploy.** The rules are in `docs/architecture/ui-conventions.md` ("Motion").
+
+### Added
+
+- **A "Saved" screen worth finishing a visit for.** After *Save visit*: a stamp with a check, a short burst of confetti, the visit read back like a receipt (service, minutes, price, tip), and the week's take-home counting up by what this groom earned, with the next groom-count milestone under it. *Done* is the main action; another pet from the same owner (or adding one) is one tap below it
+- **The timer is a stopwatch face** (`TimerDial`): sixty ticks light up through each minute, a hand goes round once a minute, and the middle shows the time, when it was started, and the minutes once stopped. Readable from across the room; the phone gives a short buzz on start and stop where it can
+- **Screens move the way you're going.** Opening a client or the next wizard step slides in from the right, back slides the other way, New visit rises from the bottom. The header, the step tracker and the bottom bar hold still while the content between them changes; the nav pill slides between *Home* and *Clients*; a pet's avatar travels from its row to its profile. Uses the browser's View Transitions, with a plain cut where they aren't available
+- **Messages are toasts.** Status lines ("Saved", "Nothing changed", problems) float above the bottom bar instead of pushing the page down. Good news leaves by itself; a problem stays until the next action or its ✕. The toast moves up with the on-screen keyboard where the browser reports it
+- **Loading shows the shape of what's coming** (dashboard cards, client rows, the pet list in New visit) instead of the word "Loading". **When a wait runs long** (about a second), the two dogs look over a line at you: the black-and-white one pants with his tongue hanging over it, the black one gives him a look now and then, and both tails wag. The same scene covers the whole screen when opening a profile or saving a visit takes its time
+- **Two pixel-art dogs live in the app** (`PixelDogs.tsx`, drawings in `pixelSprites.ts`; made of squares in code, no image files). The black-and-white one, tongue always out, is the happy one: he waits in the corner of an empty week and sits on the milestone line of the Saved screen, where he hops when the money lands. The black one, with the same look whatever happens, guards things: he looks over the top of the take-home card (his tail wagging beside his head gives him away), sits next to his friend on the Saved screen, and sits in the *Delete this visit* box
+- **Quiet sound effects** (`sound.ts`; made in the browser, no audio files): two notes up when the timer starts and the same two down when it stops, a soft stamp and three notes when a visit is saved, one note when something small goes through, one low note when something needs attention. **Sound on / off** is next to the version at the bottom of Home and Clients, and is remembered on that device. On an iPhone the silent switch mutes it too; on Android it follows the media volume
+- **Home-screen app:** a web manifest and icons (`frontend/public/manifest.json`). A shortcut added to the phone's home screen from 0.8.0 on has the paw icon and opens full screen. Shortcuts made earlier keep working as before (`groomer-access.md` says how to switch)
+
+### Changed
+
+- **Dashboard:** the take-home, grooms and € / hour count to their value (from the previous value when you change week or month), the day bars, coat bars and milestone line draw themselves, and the take-home card gets the paw from the app icon
+- **New visit on a phone is a labelled button** ("+ New visit") that shrinks to the round "+" once you scroll, so it stops covering what you're reading
+- **Pets without a photo show their initial on one of six colours** (the same pet always gets the same one), in the client list, the pet list in New visit and on profiles, instead of the same stock icon on every row. Owners get the same avatar
+- **The photo steps** show an empty frame you can tap to take the picture, and the photo arrives like a print
+- **Buttons that are working show a spinner in place** instead of changing their label to "Saving…", so nothing jumps; chips pop when picked; the "Unsaved changes" note slides in next to *Save changes*
+- After saving or deleting a visit from a pet's profile, the profile says so ("Saved the visit" / "Deleted the visit")
+
+### Accessibility
+
+- **Reduced motion is respected everywhere:** with the device setting on, screens cut instead of slide, numbers show their value at once, nothing loops and the phone doesn't buzz. The e2e smoke runs this way (`playwright.config.ts`), because it reads numbers the moment they appear
+- Toasts are `role="status"` (problems `role="alert"`); skeletons carry a hidden "Loading…" label and `aria-busy`; working buttons set `aria-busy`
+- The dogs are decoration (`aria-hidden`) and hold still under reduced motion. No sound is ever the only signal: each one comes with something on screen
+
 ## [0.7.1] — 2026-11-14
 
 Deploy fix found while deploying 0.7.0. No migration, nothing to do on the box beyond the deploy.
@@ -171,7 +201,8 @@ baseline the groomer's screen and `/health` can name.
 
 - Insecure / short `API_KEY` values refused at API (and proxy) startup
 
-[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.8.0
 [0.7.1]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.7.1
 [0.7.0]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.7.0
 [0.6.7]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.6.7

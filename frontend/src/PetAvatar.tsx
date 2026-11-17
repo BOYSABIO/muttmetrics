@@ -4,26 +4,37 @@ type PetAvatarProps = {
   photoId: number | null | undefined
   name: string
   size?: 'md' | 'lg'
+  /** Which word gives the initial: a pet's last ("Mr Biscuit" → B), a person's first. */
+  initialFrom?: 'first' | 'last'
   /** When set, tapping the avatar opens the device photo picker. */
   onPickFile?: (file: File) => void
   disabled?: boolean
 }
 
-function StockDogIcon() {
+const TINTS = ['sun', 'pine', 'clay', 'sky', 'plum', 'moss'] as const
+
+/** The same name always gets the same colour. */
+function tintFor(name: string): (typeof TINTS)[number] {
+  let h = 0
+  for (const ch of name) h = (h * 31 + ch.codePointAt(0)!) >>> 0
+  return TINTS[h % TINTS.length]
+}
+
+/** "Bella" → B; "Mr Biscuit" → B (the last word is the one people say). */
+function initialOf(name: string, from: 'first' | 'last'): string {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  const word = (from === 'first' ? words[0] : words[words.length - 1]) ?? ''
+  const first = [...word][0] ?? '?'
+  return first.toLocaleUpperCase()
+}
+
+/** No photo yet: the pet's initial on its own colour, so a list isn't a wall
+ *  of identical faces. */
+function Initial({ name, from }: { name: string; from: 'first' | 'last' }) {
   return (
-    <svg
-      className="dog-avatar-stock"
-      viewBox="0 0 64 64"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <circle cx="32" cy="32" r="30" fill="currentColor" opacity="0.12" />
-      <path
-        fill="currentColor"
-        d="M20 28c-3 0-5-2.5-5-5.5S17 17 20 17s5 2.5 5 5.5S23 28 20 28zm24 0c-3 0-5-2.5-5-5.5S41 17 44 17s5 2.5 5 5.5S47 28 44 28zM18 36c2 8 8 12 14 12s12-4 14-12c-4 2-9 3-14 3s-10-1-14-3z"
-        opacity="0.55"
-      />
-    </svg>
+    <span className="dog-avatar-initial" aria-hidden="true">
+      {initialOf(name, from)}
+    </span>
   )
 }
 
@@ -41,6 +52,7 @@ export function PetAvatar({
   photoId,
   name,
   size = 'md',
+  initialFrom = 'last',
   onPickFile,
   disabled = false,
 }: PetAvatarProps) {
@@ -65,7 +77,11 @@ export function PetAvatar({
     .join(' ')
 
   const face = (
-    <span className="dog-avatar-face">
+    <span
+      className={
+        src !== null ? 'dog-avatar-face' : `dog-avatar-face dog-avatar-tint-${tintFor(name)}`
+      }
+    >
       {src !== null ? (
         <img
           src={src}
@@ -78,7 +94,7 @@ export function PetAvatar({
           }}
         />
       ) : (
-        <StockDogIcon />
+        <Initial name={name} from={initialFrom} />
       )}
     </span>
   )

@@ -12,11 +12,13 @@ import {
   type OwnerProfile,
 } from './api'
 import { formatLastVisit } from './dates'
+import { withTransition } from './motion'
 import { PetAvatar } from './PetAvatar'
 import { PetProfileView } from './PetProfileView'
 import type { SelectedPet } from './draft'
 import { OwnerProfileView } from './OwnerProfileView'
 import { speciesLabel } from './species'
+import { ListSkeleton, SlowOverlay, Toast } from './ui'
 
 type DirectoryProps = {
   onStartVisit?: (dog: SelectedPet) => void
@@ -36,6 +38,8 @@ export function Directory({ onStartVisit }: DirectoryProps) {
   )
   const [openPet, setOpenPet] = useState<PetProfile | null>(null)
   const [openOwner, setOpenOwner] = useState<OwnerProfile | null>(null)
+  // The pet whose photo travels between its row and its profile (motion.css).
+  const [morphPetId, setMorphPetId] = useState<number | null>(null)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -76,12 +80,14 @@ export function Directory({ onStartVisit }: DirectoryProps) {
   async function openDirectoryPet(dogId: number): Promise<void> {
     if (isBusy) return
     setIsBusy(true)
-    setMessage('Loading…')
+    setMorphPetId(dogId)
     try {
       const profile = await fetchPetProfile(dogId)
-      setOpenOwner(null)
-      setOpenPet(profile)
-      setMessage('')
+      withTransition(() => {
+        setOpenOwner(null)
+        setOpenPet(profile)
+        setMessage('')
+      }, 'forward')
     } catch (error) {
       console.error(error)
       setMessage(errorMessage(error))
@@ -93,12 +99,13 @@ export function Directory({ onStartVisit }: DirectoryProps) {
   async function openDirectoryOwner(ownerId: number): Promise<void> {
     if (isBusy) return
     setIsBusy(true)
-    setMessage('Loading…')
     try {
       const profile = await fetchOwnerProfile(ownerId)
-      setOpenPet(null)
-      setOpenOwner(profile)
-      setMessage('')
+      withTransition(() => {
+        setOpenPet(null)
+        setOpenOwner(profile)
+        setMessage('')
+      }, 'forward')
     } catch (error) {
       console.error(error)
       setMessage(errorMessage(error))
@@ -108,17 +115,19 @@ export function Directory({ onStartVisit }: DirectoryProps) {
   }
 
   function closeProfiles(): void {
-    setOpenPet(null)
-    setOpenOwner(null)
-    setMessage('')
+    withTransition(() => {
+      setOpenPet(null)
+      setOpenOwner(null)
+      setMessage('')
+    }, 'back')
   }
 
-  const status =
-    message !== '' ? (
-      <p className="status" role="status">
-        {message}
-      </p>
-    ) : null
+  const status = (
+    <>
+      <Toast message={message} onClear={() => setMessage('')} />
+      <SlowOverlay active={isBusy} label="Opening" />
+    </>
+  )
 
   if (openPet !== null) {
     return (
@@ -161,11 +170,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
 
   return (
     <>
-      {message !== '' && (
-        <p className="status" role="status">
-          {message}
-        </p>
-      )}
+      {status}
       <section className="panel home-panel">
         <div className="search-bar">
           <label className="visually-hidden" htmlFor="directory_dog_search">
@@ -181,7 +186,7 @@ export function Directory({ onStartVisit }: DirectoryProps) {
           />
         </div>
         {listStatus === 'loading' ? (
-          <p className="step-meta empty-state">Loading clients…</p>
+          <ListSkeleton rows={7} label="Loading clients…" />
         ) : listStatus === 'error' && results.length === 0 ? (
           <div className="empty-state">
             <p className="step-meta">Could not load clients.</p>
@@ -218,12 +223,22 @@ export function Directory({ onStartVisit }: DirectoryProps) {
                       button is the keyboard / screen-reader way in, with its
                       own handler; the avatar is decoration. */}
                   <div
-                    className="dir-card dir-card-row client-row"
+                    className={
+                      isBusy && morphPetId === dog.pet_id
+                        ? 'dir-card dir-card-row client-row is-opening'
+                        : 'dir-card dir-card-row client-row'
+                    }
                     onClick={() => {
                       if (!isBusy) void openDirectoryPet(dog.pet_id)
                     }}
                   >
-                    <span className="dir-card-avatar-hit" aria-hidden="true">
+                    <span
+                      className="dir-card-avatar-hit"
+                      aria-hidden="true"
+                      style={
+                        morphPetId === dog.pet_id ? { viewTransitionName: 'pet-avatar' } : undefined
+                      }
+                    >
                       <PetAvatar photoId={null} name={dog.name} />
                     </span>
                     <div className="dir-card-body">

@@ -31,7 +31,7 @@ Caddy → API → Postgres, all on the box's localhost
 1. Install the Tailscale app and sign in with the account that's in `group:<groomer-group>` (as a **Member**, not an Admin).
 2. Owner: in the admin console, disable key expiry on that device.
 3. With Tailscale on, open **`https://muttmetrics.<tailnet>`**. Type `https://`: without it the browser tries `http://` (port 80), which isn't allowed, and the page just hangs.
-4. **Add to Home Screen** from that page, so `https://` is saved and he never types it again. Delete any old shortcut.
+4. **Add to Home Screen** from that page, so `https://` is saved and he never types it again. Delete any old shortcut. Since 0.8.0 a shortcut added this way has the paw icon and opens full screen, without the browser's bars (`frontend/public/manifest.json`). A shortcut made before 0.8.0 keeps working as it was; to get the new one, delete it and add it again **between grooms** (a full-screen shortcut keeps its own storage, so a visit in progress in the old one would not carry over).
 
 **Check:** Owner, Admin console → Access controls → **Preview rules** → his account shows `tag:muttmetrics:443`.
 
@@ -39,12 +39,12 @@ Caddy → API → Postgres, all on the box's localhost
 
 Send this part to User; it is all he needs.
 
-1. **Open** the MuttMetrics shortcut (Tailscale must be on). The first screen is **This week**; tap **+** to start a visit.
+1. **Open** the MuttMetrics shortcut (Tailscale must be on). The first screen is **This week**; tap **New visit** (bottom right; it shrinks to a round **+** when you scroll) to start a visit.
 2. **Find the dog:** type part of the name → tap the right row (the owner name is shown next to it).
 3. **New client** (first visit only): tap **+** next to the search → type the owner name. If they already exist, tap **Use**. Otherwise continue with the pet's name (phone optional). After **Save visit**, you can start another dog from the same owner without searching again.
 4. **Step 1 — before photo:** **Take photo** or **Choose photo**. Optional, but it's the picture of how the dog arrived.
-5. **Step 2 — timer:** **Start** when you start the groom, **Stop** when you finish. If you forget, type the minutes in by hand. Minutes is the one number that matters.
-6. **Step 3 — details and after photo:** the date is already today. Condition score and "what surprised me" are optional but useful. Tap **Save visit** and wait for the confirmation.
+5. **Step 2 — timer:** **Start timer** when you start the groom, **Stop timer** when you finish (the dial's ticks fill up each minute while it runs). If you forget, type the minutes in by hand. Minutes is the one number that matters.
+6. **Step 3 — details and after photo:** the date is already today. Condition score and "what surprised me" are optional but useful. Tap **Save visit** and wait for the **Saved** screen (the green check), then **Done**.
 7. **If anything fails:** nothing is lost. A visit that didn't save stays on the phone as a draft; open the app again later and save it. If in doubt, write the dog and the minutes on paper and tell Owner.
 
 **Must fill:** the dog and the minutes. **Everything else, photos included, can be skipped.** A failed photo upload never blocks the save; don't re-enter the visit.
