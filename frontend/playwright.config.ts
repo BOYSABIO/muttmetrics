@@ -15,6 +15,10 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:5174',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    // The smoke reads numbers the moment they appear. With motion on they
+    // count up to their value, so the tests ask for reduced motion (which the
+    // app honours everywhere: docs/architecture/ui-conventions.md, "Motion").
+    contextOptions: { reducedMotion: 'reduce' },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   // Starts preview if you forgot; does not start the API.

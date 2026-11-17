@@ -16,6 +16,8 @@ import {
 } from './dates'
 import './ThisWeek.css'
 import { AllTimeLink, DayStrip, HeroCard, RecentCard, TimingCard } from './ThisWeekCards'
+import { PixelDog } from './PixelDogs'
+import { DashboardSkeleton } from './ui'
 import { monthColumns, nextMilestone, weekColumns } from './thisWeekModel'
 
 const DEFAULT_BUFFER_MINUTES = 240
@@ -359,19 +361,22 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
       )}
 
       {loading && (
-        <p className="step-meta">
-          {mode === 'all'
-            ? 'Loading all time…'
-            : mode === 'week'
-              ? 'Loading week…'
-              : 'Loading month…'}
-        </p>
+        <DashboardSkeleton
+          label={
+            mode === 'all'
+              ? 'Loading all time…'
+              : mode === 'week'
+                ? 'Loading week…'
+                : 'Loading month…'
+          }
+        />
       )}
 
       {showBody && (
         <div className="this-week-body" key={periodKey}>
           {empty ? (
             <section className="tw-card this-week-empty" aria-label="Empty period">
+              <PixelDog who="collie" className="this-week-empty-dog" />
               <p className="this-week-empty-title">
                 {mode === 'all'
                   ? 'No grooms logged yet'

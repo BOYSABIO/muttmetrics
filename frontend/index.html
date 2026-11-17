@@ -7,7 +7,22 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <title>MuttMetrics Capture</title>
+    <!-- Added to the phone's home screen, the app opens full screen with its
+         own icon; the bar above it takes the paper colour. -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#f3ebdc" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="MuttMetrics" />
+    <title>MuttMetrics</title>
+    <!-- Paper from the first frame, so opening the app never flashes white. -->
+    <style>
+      html {
+        background: #f3ebdc;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

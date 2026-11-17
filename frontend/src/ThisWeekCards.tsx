@@ -6,6 +6,9 @@
 import type { CSSProperties } from 'react'
 import type { AllTimeOut, MetricsPeriodBlock, PeriodSummary } from './api'
 import { formatShortDate } from './dates'
+import { useCountUp } from './motion'
+import { PixelDog } from './PixelDogs'
+import { PawMark } from './ui'
 import {
   type Delta,
   type StripColumn,
@@ -76,50 +79,61 @@ export function HeroCard({
   const rate = rateText(summary.eur_per_hour_inc_tip)
   const aria =
     mode === 'week' ? 'Week headlines' : mode === 'month' ? 'Month headlines' : 'All-time headlines'
+  // The headline numbers count to their value (from the last period's, when
+  // you step between weeks), so a change reads as a change.
+  const takeHome = useCountUp(summary.revenue_inc_tip, 'hero.takeHome')
+  const grooms = useCountUp(summary.visit_count, 'hero.grooms')
+  const rateValue = useCountUp(summary.eur_per_hour_inc_tip.value ?? 0, 'hero.rate')
   return (
-    <section className="tw-card tw-hero" aria-label={aria}>
-      <h2 className="tw-label">Take-home</h2>
-      <p className="tw-hero-value">{formatMoney(summary.revenue_inc_tip)}</p>
-      <p className="tw-hero-sub">
-        {tips > 0 ? (
-          `${formatMoney(summary.revenue_ex_tip)} + ${formatMoney(tips)} tips`
-        ) : (
-          'incl. tips'
-        )}
-        {mode !== 'all' && deltas ? (
-          <>
-            {' · '}
-            <DeltaTag delta={deltas.takeHome} label={comparisonLabel(mode, partial)} />
-          </>
-        ) : mode !== 'all' && previous ? (
-          <span className="tw-delta-label">
-            {' · '}none last {mode}
-            {partial ? ' by now' : ''}
-          </span>
-        ) : null}
-      </p>
-      <div className="tw-hero-stats">
-        <MiniStat title="Grooms" value={String(summary.visit_count)} delta={deltas?.grooms ?? null} />
-        <MiniStat title="Hours" value={formatHours(summary.groomed_minutes)} delta={deltas?.hours ?? null} />
-        <MiniStat
-          title="€ / hour"
-          value={rate ?? `${summary.eur_per_hour_n}/${minN}`}
-          delta={deltas?.eurPerHour ?? null}
-          thin={rate === null}
-        />
-      </div>
-      {milestone ? (
-        <div className="tw-milestone tw-hero-milestone">
-          <div className="tw-milestone-track" aria-hidden>
-            <span className="tw-milestone-fill" style={{ width: `${milestone.progress * 100}%` }} />
-          </div>
-          <p className="tw-milestone-text">
-            <strong>{milestone.toGo}</strong> more {milestone.toGo === 1 ? 'groom' : 'grooms'} to{' '}
-            <strong>{milestone.next}</strong>
-          </p>
+    // The wrapper only gives the guard dog an edge to look over: he keeps an
+    // eye on the take-home from behind the card.
+    <div className="tw-hero-wrap">
+      <PixelDog who="guard" peek className="tw-hero-guard" />
+      <section className="tw-card tw-hero" aria-label={aria}>
+        <PawMark className="tw-hero-mark" />
+        <h2 className="tw-label">Take-home</h2>
+        <p className="tw-hero-value">{formatMoney(takeHome)}</p>
+        <p className="tw-hero-sub">
+          {tips > 0 ? (
+            `${formatMoney(summary.revenue_ex_tip)} + ${formatMoney(tips)} tips`
+          ) : (
+            'incl. tips'
+          )}
+          {mode !== 'all' && deltas ? (
+            <>
+              {' · '}
+              <DeltaTag delta={deltas.takeHome} label={comparisonLabel(mode, partial)} />
+            </>
+          ) : mode !== 'all' && previous ? (
+            <span className="tw-delta-label">
+              {' · '}none last {mode}
+              {partial ? ' by now' : ''}
+            </span>
+          ) : null}
+        </p>
+        <div className="tw-hero-stats">
+          <MiniStat title="Grooms" value={String(Math.round(grooms))} delta={deltas?.grooms ?? null} />
+          <MiniStat title="Hours" value={formatHours(summary.groomed_minutes)} delta={deltas?.hours ?? null} />
+          <MiniStat
+            title="€ / hour"
+            value={rate !== null ? formatMoney(rateValue) : `${summary.eur_per_hour_n}/${minN}`}
+            delta={deltas?.eurPerHour ?? null}
+            thin={rate === null}
+          />
         </div>
-      ) : null}
-    </section>
+        {milestone ? (
+          <div className="tw-milestone tw-hero-milestone">
+            <div className="tw-milestone-track" aria-hidden>
+              <span className="tw-milestone-fill" style={{ width: `${milestone.progress * 100}%` }} />
+            </div>
+            <p className="tw-milestone-text">
+              <strong>{milestone.toGo}</strong> more {milestone.toGo === 1 ? 'groom' : 'grooms'} to{' '}
+              <strong>{milestone.next}</strong>
+            </p>
+          </div>
+        ) : null}
+      </section>
+    </div>
   )
 }
 

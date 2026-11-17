@@ -41,8 +41,24 @@ export function PhotoPicker({
     <div className="photo-picker">
       <p className="photo-picker-label">{label}</p>
 
-      {previewUrl !== null && (
+      {previewUrl !== null ? (
         <img src={previewUrl} alt={label} className="photo-preview" />
+      ) : (
+        // The empty frame is itself the camera button: the biggest target on
+        // the step is the thing you came here to do.
+        <label className="photo-frame" htmlFor={`${inputId}-camera`}>
+          <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">
+            <path
+              d="M4 8.5h3.2l1.3-2h7l1.3 2H20a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5a1 1 0 0 1 1-1z"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinejoin="round"
+            />
+            <circle cx="12" cy="13.5" r="3.3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          </svg>
+          <span>No photo yet</span>
+        </label>
       )}
 
       <div className="photo-picker-buttons">

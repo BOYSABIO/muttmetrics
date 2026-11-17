@@ -1,4 +1,4 @@
 """MuttMetrics — duration intelligence for a grooming business."""
 
 # Keep equal to pyproject.toml + frontend/package.json (#197).
-__version__ = "0.7.1"
+__version__ = "0.8.0"

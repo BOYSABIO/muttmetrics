@@ -1,0 +1,323 @@
+/* The pixel dogs (0.8.0). Frames are stacked; CSS shows one at a time. */
+
+.pixel-dog {
+  display: block;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.pd-frame,
+.pd-tail {
+  opacity: 0;
+}
+
+.pd-rest,
+.pd-tail-a {
+  opacity: 1;
+}
+
+/* Tails: two drawings, swapped. The collie's never stops; the guard's goes
+   only where asked (and always when he looks over an edge). */
+.pixel-dog-wag .pd-tail-a {
+  animation: pd-wag-a 0.44s steps(1) infinite;
+}
+
+.pixel-dog-wag .pd-tail-b {
+  animation: pd-wag-b 0.44s steps(1) infinite;
+}
+
+.pixel-dog-collie .pd-tail-a,
+.pixel-dog-collie .pd-tail-b {
+  animation-duration: 0.3s;
+}
+
+@keyframes pd-wag-a {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes pd-wag-b {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* Collie: pants. Two frames, swapped a few times a second. */
+.pixel-dog-collie .pd-rest {
+  animation: pd-collie-rest 0.5s steps(1) infinite;
+}
+
+.pixel-dog-collie .pd-pant {
+  animation: pd-collie-pant 0.5s steps(1) infinite;
+}
+
+@keyframes pd-collie-rest {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes pd-collie-pant {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* Guard: holds still, blinks now and then. */
+.pixel-dog-guard .pd-rest {
+  animation: pd-guard-rest 5.2s steps(1) infinite;
+}
+
+.pixel-dog-guard .pd-blink {
+  animation: pd-guard-blink 5.2s steps(1) infinite;
+}
+
+@keyframes pd-guard-rest {
+  0%, 100% { opacity: 1; }
+  46% { opacity: 0; }
+  49% { opacity: 1; }
+  92% { opacity: 0; }
+  95% { opacity: 1; }
+}
+
+@keyframes pd-guard-blink {
+  0%, 100% { opacity: 0; }
+  46% { opacity: 1; }
+  49% { opacity: 0; }
+  92% { opacity: 1; }
+  95% { opacity: 0; }
+}
+
+/* White fur on a cream card would vanish: a thin ink edge keeps his shape. */
+.pixel-dog-collie {
+  filter: drop-shadow(1px 0 0 rgba(35, 29, 22, 0.4)) drop-shadow(-1px 0 0 rgba(35, 29, 22, 0.4))
+    drop-shadow(0 -1px 0 rgba(35, 29, 22, 0.4)) drop-shadow(0 1px 0 rgba(35, 29, 22, 0.4));
+}
+
+/* ------------------------------------------------------------------ */
+/* Waiting scene: both of them looking over the line                    */
+/* ------------------------------------------------------------------ */
+
+.dogs-waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 1rem;
+  animation: mm-fade 0.35s var(--ease-out) both;
+}
+
+.dogs-waiting-stage {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2.5rem;
+  width: 14rem;
+  max-width: 100%;
+  border-bottom: 3px solid var(--ink);
+}
+
+/* Now and then the guard looks at the dog next to him, then blinks. */
+.dogs-waiting .pixel-dog-guard .pd-rest {
+  animation: dogs-guard-rest 4.8s steps(1) infinite;
+}
+
+.dogs-waiting .pixel-dog-guard .pd-side {
+  animation: dogs-guard-side 4.8s steps(1) infinite;
+}
+
+.dogs-waiting .pixel-dog-guard .pd-blink {
+  animation: dogs-guard-blink 4.8s steps(1) infinite;
+}
+
+@keyframes dogs-guard-rest {
+  0%, 100% { opacity: 1; }
+  40% { opacity: 0; }
+  70% { opacity: 1; }
+}
+
+@keyframes dogs-guard-side {
+  0%, 100% { opacity: 0; }
+  40% { opacity: 1; }
+  66% { opacity: 0; }
+}
+
+@keyframes dogs-guard-blink {
+  0%, 100% { opacity: 0; }
+  66% { opacity: 1; }
+  70% { opacity: 0; }
+}
+
+.dogs-waiting-label {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.dogs-waiting-dots i {
+  font-style: normal;
+  animation: dogs-dot 1.2s steps(1) infinite;
+}
+
+.dogs-waiting-dots i:nth-child(2) { animation-delay: 0.2s; }
+.dogs-waiting-dots i:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dogs-dot {
+  0%, 100% { opacity: 0.2; }
+  40% { opacity: 1; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Where they live                                                      */
+/* ------------------------------------------------------------------ */
+
+/* Home: the guard looks over the top edge of the take-home card. */
+.tw-hero-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.tw-hero-wrap > .tw-card {
+  animation: none;
+}
+
+.tw-hero-guard {
+  position: absolute;
+  /* room on his right for his tail */
+  right: 2rem;
+  bottom: 100%;
+  margin-bottom: -2px;
+  animation: dogs-peek 0.5s steps(5) 1.3s backwards;
+}
+
+.tw-hero-wrap > .tw-hero {
+  z-index: 1;
+}
+
+@keyframes dogs-peek {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* Empty week: the collie waits by the button. */
+.this-week-empty-dog {
+  position: absolute;
+  right: 1rem;
+  bottom: 0;
+}
+
+/* Saved: both sit on the milestone line. The collie hops when the money lands. */
+.saved-milestone {
+  position: relative;
+}
+
+.saved-dogs {
+  position: absolute;
+  right: 0.35rem;
+  bottom: calc(100% - 0.4rem);
+  display: flex;
+  align-items: flex-end;
+  gap: 0.35rem;
+  animation: mm-fade 0.3s var(--ease-out) 0.9s backwards;
+}
+
+.saved-milestone-track {
+  position: relative;
+  margin-top: 0.4rem;
+}
+
+.saved-dog-collie {
+  animation: dogs-hop 0.9s steps(1) 1.45s 2;
+}
+
+@keyframes dogs-hop {
+  0%, 100% { transform: translateY(0); }
+  15% { transform: translateY(-9px); }
+  30% { transform: translateY(0); }
+  45% { transform: translateY(-6px); }
+  60% { transform: translateY(0); }
+}
+
+/* Delete: he sits in the box and doesn't move. */
+.danger-zone {
+  position: relative;
+}
+
+.danger-zone {
+  padding-right: 5.5rem;
+}
+
+.danger-zone-guard {
+  position: absolute;
+  /* his tail lies to his right: keep it inside the box */
+  right: 2rem;
+  bottom: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* A wait that got long: the scene over the whole screen                */
+/* ------------------------------------------------------------------ */
+
+.slow-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: mm-fade 0.25s var(--ease-out) both;
+}
+
+.slow-overlay-card {
+  border: var(--edge);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--pop-lg);
+  animation: mm-pop 0.4s var(--ease-spring) both;
+}
+
+.slow-overlay-card .dogs-waiting {
+  padding: 1.75rem 1.75rem 1.25rem;
+}
+
+/* In a loading page the scene sits above the skeleton, on the paper. */
+.skeleton-stack > .dogs-waiting {
+  padding: 0.5rem 1rem 0.75rem;
+}
+
+.skeleton-list > .dogs-waiting {
+  border-bottom: 1.5px dashed var(--line);
+}
+
+/* ------------------------------------------------------------------ */
+/* Footer: version and the sound switch                                 */
+/* ------------------------------------------------------------------ */
+
+.app-footer {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.app-footer .app-version {
+  margin: 0;
+}
+
+button.sound-toggle {
+  min-height: 0;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  text-decoration-color: var(--line);
+}
+
+button.sound-toggle[aria-pressed='true'] {
+  color: var(--ink);
+  text-decoration-color: var(--sun);
+}

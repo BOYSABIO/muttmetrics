@@ -10,6 +10,7 @@ import {
 import { PetAvatar } from './PetAvatar'
 import { SpeciesChips } from './SpeciesChips'
 import { PageBack } from './PageBack'
+import { Toast } from './ui'
 import { speciesLabel } from './species'
 
 type OwnerForm = {
@@ -60,6 +61,8 @@ export function OwnerProfileView({
   const [profile, setProfile] = useState(initial)
   const [form, setForm] = useState(() => formFromProfile(initial))
   const [isBusy, setIsBusy] = useState(false)
+  // Which button is working, so only that one shows it.
+  const [busyWith, setBusyWith] = useState<'save' | 'pet'>('save')
   const [message, setMessage] = useState('')
   const [addingPet, setAddingPet] = useState(false)
   const [newPetName, setNewPetName] = useState('')
@@ -76,7 +79,8 @@ export function OwnerProfileView({
       return
     }
     setIsBusy(true)
-    setMessage('Saving…')
+    setBusyWith('save')
+    setMessage('')
     try {
       const updated = await patchOwner(profile.owner_id, {
         name: form.name.trim(),
@@ -108,7 +112,8 @@ export function OwnerProfileView({
       return
     }
     setIsBusy(true)
-    setMessage('Adding pet…')
+    setBusyWith('pet')
+    setMessage('')
     try {
       const dog = await createPet(profile.owner_id, name, newPetSpecies)
       const updated = await fetchOwnerProfile(profile.owner_id)
@@ -127,19 +132,11 @@ export function OwnerProfileView({
 
   return (
     <>
-      {message !== '' && (
-        <p className="status" role="status">
-          {message}
-        </p>
-      )}
+      <Toast message={message} onClear={() => setMessage('')} />
       <section className="panel profile-panel">
         <PageBack onClick={onBack} disabled={isBusy} />
         <header className="profile-hero profile-hero-owner">
-          <div className="dog-avatar dog-avatar-lg owner-avatar" aria-hidden>
-            <span className="owner-avatar-initial">
-              {(profile.name.trim()[0] || '?').toUpperCase()}
-            </span>
-          </div>
+          <PetAvatar photoId={null} name={profile.name} size="lg" initialFrom="first" />
           <div className="profile-hero-text">
             <h2>{profile.name}</h2>
             <p className="step-meta">
@@ -322,11 +319,11 @@ export function OwnerProfileView({
                 </button>
                 <button
                   type="button"
-                  className="primary"
+                  className={isBusy && busyWith === 'pet' ? 'primary btn-busy' : 'primary'}
                   disabled={isBusy}
                   onClick={() => void addPet()}
                 >
-                  {isBusy ? 'Adding…' : 'Add pet'}
+                  Add pet
                 </button>
               </div>
             </div>
@@ -348,7 +345,13 @@ export function OwnerProfileView({
         </form>
 
         <div className="actions action-bar">
-          <button type="submit" form="owner-profile-form" className="primary" disabled={isBusy}>
+          <button
+            type="submit"
+            form="owner-profile-form"
+            className={isBusy && busyWith === 'save' ? 'primary btn-busy' : 'primary'}
+            aria-busy={isBusy && busyWith === 'save'}
+            disabled={isBusy}
+          >
             Save changes
           </button>
         </div>

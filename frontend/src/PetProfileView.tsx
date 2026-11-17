@@ -15,6 +15,8 @@ import { SpeciesChips } from './SpeciesChips'
 import { VisitEditView } from './VisitEditView'
 import { conditionWord } from './condition'
 import { PageBack } from './PageBack'
+import { withTransition } from './motion'
+import { Toast } from './ui'
 import { ChoiceChips, YesNo } from './ChoiceChips'
 import {
   COAT_THICKNESS,
@@ -231,11 +233,12 @@ export function PetProfileView({
     setForm(formFromProfile(updated))
   }
 
-  async function reloadAfterVisitChange(): Promise<void> {
-    setEditingVisitId(null)
+  async function reloadAfterVisitChange(done: string): Promise<void> {
+    withTransition(() => setEditingVisitId(null), 'back')
     try {
       const updated = await fetchPetProfile(profile.pet_id)
       show(updated)
+      setMessage(done)
       onSaved()
     } catch (err) {
       setMessage(errorMessage(err))
@@ -247,9 +250,9 @@ export function PetProfileView({
       <VisitEditView
         visitId={editingVisitId}
         petName={profile.name}
-        onBack={() => setEditingVisitId(null)}
-        onDone={() => {
-          void reloadAfterVisitChange()
+        onBack={() => withTransition(() => setEditingVisitId(null), 'back')}
+        onDone={(done) => {
+          void reloadAfterVisitChange(done)
         }}
       />
     )
@@ -267,7 +270,8 @@ export function PetProfileView({
       return
     }
     setIsBusy(true)
-    setMessage('Saving…')
+    // The Save button shows that it's working.
+    setMessage('')
     try {
       const changes = changedFields(
         payloadFromForm(formFromProfile(profile), weightOf(profile)),
@@ -360,11 +364,7 @@ export function PetProfileView({
 
   return (
     <>
-      {message !== '' && (
-        <p className="status" role="status">
-          {message}
-        </p>
-      )}
+      <Toast message={message} onClear={() => setMessage('')} />
       <section className="panel profile-panel">
         <PageBack onClick={leave} disabled={isBusy} />
         <header className="profile-hero">
@@ -568,7 +568,9 @@ export function PetProfileView({
                         type="button"
                         className="dir-visit-row"
                         disabled={isBusy}
-                        onClick={() => setEditingVisitId(v.visit_id)}
+                        onClick={() =>
+                          withTransition(() => setEditingVisitId(v.visit_id), 'forward')
+                        }
                         aria-label={`Edit visit on ${formatVisitDate(v.visit_date)}, ${v.actual_minutes} minutes`}
                       >
                         <span className="dir-visit-main">
@@ -697,7 +699,13 @@ export function PetProfileView({
 
         <div className="actions action-bar">
           {dirty && <span className="action-bar-note">Unsaved changes</span>}
-          <button type="submit" form="dog-profile-form" className="primary" disabled={isBusy}>
+          <button
+            type="submit"
+            form="dog-profile-form"
+            className={isBusy ? 'primary btn-busy' : 'primary'}
+            aria-busy={isBusy}
+            disabled={isBusy}
+          >
             Save changes
           </button>
         </div>

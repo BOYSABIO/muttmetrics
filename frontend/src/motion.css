@@ -1,0 +1,531 @@
+/* Motion layer (0.8.0). Loaded last. Rules: docs/architecture/ui-conventions.md
+   "Motion". Everything here is decoration: under prefers-reduced-motion the
+   guard at the end turns all of it off and the app works the same. */
+
+:root {
+  --dur-1: 120ms; /* a press, a tick */
+  --dur-2: 220ms; /* a chip, a toast, a small move */
+  --dur-3: 380ms; /* a card arriving, a screen change */
+  --dur-4: 650ms; /* a bar growing, a number counting */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --stagger: 55ms;
+}
+
+/* ------------------------------------------------------------------ */
+/* Keyframes                                                           */
+/* ------------------------------------------------------------------ */
+
+@keyframes mm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes mm-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mm-pop {
+  0% {
+    transform: scale(0.9);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes mm-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes mm-grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes mm-reveal-x {
+  from {
+    clip-path: inset(0 100% 0 0 round 999px);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 999px);
+  }
+}
+
+@keyframes mm-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes mm-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+@keyframes mm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Things arriving: cards rise in one after another                     */
+/* ------------------------------------------------------------------ */
+
+.this-week-body > *,
+.tw-grid > *,
+.profile-hero,
+.profile-layout .profile-block,
+.dir-card-list > li,
+.capture-visit > .visit-owner,
+.capture-visit > .wizard-steps,
+.mm-rise {
+  animation: mm-rise var(--dur-3) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+
+.this-week-body > :nth-child(2),
+.tw-grid > :nth-child(2),
+.profile-col > :nth-child(2),
+.dir-card-list > li:nth-child(2) { --i: 1; }
+.this-week-body > :nth-child(3),
+.tw-grid > :nth-child(3),
+.profile-col > :nth-child(3),
+.dir-card-list > li:nth-child(3) { --i: 2; }
+.this-week-body > :nth-child(4),
+.dir-card-list > li:nth-child(4) { --i: 3; }
+.this-week-body > :nth-child(5),
+.dir-card-list > li:nth-child(5) { --i: 4; }
+.dir-card-list > li:nth-child(6) { --i: 5; }
+.dir-card-list > li:nth-child(7) { --i: 6; }
+.dir-card-list > li:nth-child(8) { --i: 7; }
+.dir-card-list > li:nth-child(n + 9) { --i: 8; }
+.profile-col + .profile-col > * { --i: 2; }
+.profile-col + .profile-col > :nth-child(2) { --i: 3; }
+
+/* The dashboard's own older entrance rules give way to the shared ones. */
+.tw-card,
+.tw-grid > .tw-card:nth-child(2),
+.tw-grid > .tw-card:nth-child(3) {
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+
+/* ------------------------------------------------------------------ */
+/* Charts draw themselves                                               */
+/* ------------------------------------------------------------------ */
+
+.tw-strip-bar {
+  animation: mm-grow-y var(--dur-4) var(--ease-spring) both;
+  animation-delay: calc(180ms + var(--col, 0) * 45ms);
+}
+
+.tw-strip-col:nth-child(2) { --col: 1; }
+.tw-strip-col:nth-child(3) { --col: 2; }
+.tw-strip-col:nth-child(4) { --col: 3; }
+.tw-strip-col:nth-child(5) { --col: 4; }
+.tw-strip-col:nth-child(6) { --col: 5; }
+.tw-strip-col:nth-child(7) { --col: 6; }
+
+.tw-coat-fill {
+  transform-origin: left center;
+  animation: mm-grow-x var(--dur-4) var(--ease-out) both;
+  animation-delay: calc(260ms + var(--row, 0) * 60ms);
+}
+
+.tw-coat-row:nth-child(2) { --row: 1; }
+.tw-coat-row:nth-child(3) { --row: 2; }
+.tw-coat-row:nth-child(4) { --row: 3; }
+.tw-coat-row:nth-child(5) { --row: 4; }
+.tw-coat-row:nth-child(6) { --row: 5; }
+.tw-coat-row:nth-child(7) { --row: 6; }
+
+.tw-bands {
+  animation: mm-reveal-x 0.9s var(--ease-out) 0.3s both;
+}
+
+.tw-milestone-fill {
+  transform-origin: left center;
+  animation: mm-grow-x 0.9s var(--ease-out) 0.35s both;
+}
+
+/* Today's column breathes, so the eye lands on now. */
+@keyframes mm-today {
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--sun) 45%, transparent);
+  }
+}
+
+.tw-strip-col.is-today .tw-strip-track {
+  animation: mm-today 2.6s var(--ease-in-out) 1s 2;
+}
+
+/* The hero: a slow sheen across the take-home card, once, when it arrives. */
+.tw-hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.tw-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 250, 240, 0.14) 50%,
+    transparent 65%
+  );
+  background-size: 250% 100%;
+  background-position: 120% 0;
+  animation: mm-sheen 1.4s var(--ease-in-out) 0.5s both;
+  pointer-events: none;
+}
+
+@keyframes mm-sheen {
+  to {
+    background-position: -120% 0;
+  }
+}
+
+/* The paw watermark in the hero's corner. */
+.tw-hero-mark {
+  position: absolute;
+  right: -1.1rem;
+  top: -0.9rem;
+  z-index: -1;
+  width: 7.5rem;
+  height: 7.5rem;
+  color: rgba(255, 250, 240, 0.08);
+  transform: rotate(14deg);
+  pointer-events: none;
+}
+
+.tw-delta {
+  animation: mm-fade var(--dur-3) var(--ease-out) 0.45s both;
+}
+
+/* ------------------------------------------------------------------ */
+/* Loading: the shape of what's coming, not the word "Loading"          */
+/* ------------------------------------------------------------------ */
+
+.skeleton {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ink) 7%, transparent) 25%,
+    color-mix(in srgb, var(--ink) 13%, transparent) 37%,
+    color-mix(in srgb, var(--ink) 7%, transparent) 63%
+  );
+  background-size: 200% 100%;
+  animation: mm-shimmer 1.3s linear infinite;
+}
+
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1.1rem;
+  border: 2px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.skeleton-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  animation: mm-fade var(--dur-3) var(--ease-out) 0.15s both;
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Touch: everything you press answers                                  */
+/* ------------------------------------------------------------------ */
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+.chip,
+.dir-card,
+.dir-visit-row {
+  touch-action: manipulation;
+}
+
+.chip {
+  transition:
+    background-color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out),
+    transform var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-out);
+}
+
+.chip.chip-on {
+  animation: mm-pop var(--dur-3) var(--ease-spring);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.chip-static.chip-on {
+  animation: none;
+}
+
+.dir-card,
+.dir-visit-row {
+  transition:
+    transform var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out);
+}
+
+.dir-card:active,
+.dir-visit-row:active {
+  transform: scale(0.985);
+}
+
+input:not([type='checkbox']):not([type='radio']),
+select,
+textarea {
+  transition:
+    border-color var(--dur-2) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out);
+}
+
+/* A button that is working shows it, in place of its label jumping. */
+.btn-busy {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.btn-busy::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--spin, var(--ink)) 30%, transparent);
+  border-top-color: var(--spin, var(--ink));
+  animation: mm-spin 0.7s linear infinite;
+}
+
+.primary.btn-busy {
+  --spin: var(--surface);
+}
+
+/* "Unsaved changes" slides in next to Save. */
+.action-bar-note {
+  animation: mm-rise var(--dur-2) var(--ease-out) both;
+}
+
+.action-bar-note::before {
+  content: '';
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.4rem;
+  border-radius: 50%;
+  background: var(--warn);
+  vertical-align: 0.05rem;
+}
+
+details.profile-more[open] > .field-stack {
+  animation: mm-rise var(--dur-3) var(--ease-out) both;
+}
+
+.breed-picker-list {
+  animation: mm-rise var(--dur-2) var(--ease-out) both;
+  transform-origin: top center;
+}
+
+/* ------------------------------------------------------------------ */
+/* Screen changes (View Transitions; a plain cut where unsupported)     */
+/* ------------------------------------------------------------------ */
+
+@keyframes vt-out-left {
+  to {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+
+@keyframes vt-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+@keyframes vt-out-right {
+  to {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+@keyframes vt-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+
+@keyframes vt-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(36px) scale(0.985);
+  }
+}
+
+@keyframes vt-out-down {
+  to {
+    opacity: 0;
+    transform: translateY(36px) scale(0.985);
+  }
+}
+
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+  animation-timing-function: var(--ease-out);
+}
+
+html[data-vt='forward']::view-transition-old(root) {
+  animation: vt-out-left 180ms var(--ease-in-out) both;
+}
+html[data-vt='forward']::view-transition-new(root) {
+  animation: vt-in-right 300ms var(--ease-out) both;
+}
+html[data-vt='back']::view-transition-old(root) {
+  animation: vt-out-right 180ms var(--ease-in-out) both;
+}
+html[data-vt='back']::view-transition-new(root) {
+  animation: vt-in-left 300ms var(--ease-out) both;
+}
+html[data-vt='up']::view-transition-old(root) {
+  animation: vt-fade-out 160ms var(--ease-in-out) both;
+}
+html[data-vt='up']::view-transition-new(root) {
+  animation: vt-in-up 340ms var(--ease-out) both;
+}
+html[data-vt='down']::view-transition-old(root) {
+  animation: vt-out-down 220ms var(--ease-in-out) both;
+}
+html[data-vt='down']::view-transition-new(root) {
+  animation: mm-fade 260ms var(--ease-out) both;
+}
+
+/* Parts that stay put while the screen under them changes. */
+.app-header-home {
+  view-transition-name: app-header;
+}
+
+.app-header-capture {
+  view-transition-name: capture-header;
+}
+
+.wizard-steps {
+  view-transition-name: wizard-steps;
+}
+
+.wizard-bar {
+  view-transition-name: wizard-bar;
+}
+
+.wizard-body {
+  view-transition-name: wizard-body;
+}
+
+.fab {
+  view-transition-name: fab;
+}
+
+/* The nav pill slides between Home and Clients. */
+.home-link[aria-current='page'] {
+  view-transition-name: nav-pill;
+}
+
+::view-transition-group(nav-pill) {
+  animation-duration: 320ms;
+  animation-timing-function: var(--ease-spring);
+}
+
+/* Wizard: only the step's body slides; header, tracker and bar hold still. */
+html[data-vt='forward']::view-transition-old(wizard-body) {
+  animation: vt-out-left 170ms var(--ease-in-out) both;
+}
+html[data-vt='forward']::view-transition-new(wizard-body) {
+  animation: vt-in-right 300ms var(--ease-out) both;
+}
+html[data-vt='back']::view-transition-old(wizard-body) {
+  animation: vt-out-right 170ms var(--ease-in-out) both;
+}
+html[data-vt='back']::view-transition-new(wizard-body) {
+  animation: vt-in-left 300ms var(--ease-out) both;
+}
+
+/* A pet's photo travels from its row in the list to the top of its profile. */
+.profile-hero .dog-avatar-lg {
+  view-transition-name: pet-avatar;
+}
+
+::view-transition-group(pet-avatar) {
+  animation-duration: 380ms;
+  animation-timing-function: var(--ease-out);
+}
+
+/* ------------------------------------------------------------------ */
+/* Reduced motion: all of the above is optional                         */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
+  .skeleton {
+    animation: none;
+  }
+}
