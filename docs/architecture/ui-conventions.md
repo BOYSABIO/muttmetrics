@@ -84,6 +84,16 @@ Added in 0.8.0 (`frontend/src/PixelDogs.tsx`, `pixelSprites.ts`, `dogs.css`). Tw
 - Pixel art stays on its grid: move a dog by whole squares (its `scale` in px) and never rotate or stretch it.
 - Always `aria-hidden`; frames are swapped with `steps()` animations, which the reduced-motion guard stops.
 
+## Seasonal accents
+
+Added in 0.10.0 (`frontend/src/festive.ts`, `festive.css`, `Festive.tsx`). A *Christmas on / off* switch next to *Sound*; off by default, stored on the device.
+
+- **One attribute, one file.** The switch sets `html[data-festive='on']`. Every festive rule in `festive.css` starts with it, so off means none of it exists. No component asks "is it Christmas?" except `App` (to mount the snow) and `sound.ts` (to pick the jingle).
+- **Accents, not a theme.** The colours, type, layout and where buttons are don't change. What's added sits on top: hats on the dogs (drawn in `pixelSprites.ts`, always in the page, shown by CSS), lights under the header, snow on the take-home cards, a few flakes in the air, festive confetti and a jingle on the Saved screen.
+- **Never where the work happens.** No snow over New visit, nothing that covers a number or a button, nothing that takes a tap (`pointer-events: none`).
+- **Reduced motion:** the flakes are hidden and the lights stop glowing; the still parts (hats, snow on the cards) stay.
+- **Another season?** Same shape: a second attribute value and its own block of rules. Don't grow this into per-holiday components.
+
 ## Why these
 
 - **Back top left, never in the bottom bar.** The bottom bar is where saving
@@ -116,6 +126,8 @@ Added in 0.8.0 (`frontend/src/PixelDogs.tsx`, `pixelSprites.ts`, `dogs.css`). Tw
 - `frontend/src/TimerDial.tsx`, `frontend/src/SaveCelebration.tsx`: the two
   set pieces of New visit.
 - `frontend/src/sound.ts`: `play(name)`, the sounds, the on / off setting.
+- `frontend/src/festive.ts` + `festive.css` + `Festive.tsx`: the Christmas switch,
+  everything it turns on, and the snow.
 - `frontend/src/PixelDogs.tsx` + `dogs.css`: `PixelDog`, `DogsWaiting`, where
   the dogs sit; `SlowOverlay` (ui.tsx) and `useSlow` (motion.ts) decide when a
   wait is long enough to show them.

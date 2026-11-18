@@ -5,6 +5,8 @@
  * and one switch turns all of it off.
  */
 
+import { festiveEnabled } from './festive'
+
 const STORAGE_KEY = 'muttmetrics.sound'
 
 type AudioWindow = Window & { webkitAudioContext?: typeof AudioContext }
@@ -104,11 +106,26 @@ const SOUNDS: Record<SoundName, Note[]> = {
   problem: [{ freq: 233, to: 196, at: 0, length: 0.2, level: 1.2, type: 'triangle' }],
 }
 
+// With the Christmas switch on, a saved visit jingles: the stamp, then three
+// bright notes on one pitch (short, short, long), each with a quiet octave on
+// top so it rings like a small bell.
+const SAVED_JINGLE: Note[] = [
+  { freq: 150, to: 70, at: 0.42, length: 0.12, level: 1.6, type: 'triangle' },
+  ...[0.66, 0.82, 0.98].flatMap((at, i) => {
+    const length = i === 2 ? 0.5 : 0.14
+    return [
+      { freq: 1319, at, length, level: 0.8 },
+      { freq: 2637, at, length: length * 0.7, level: 0.25 },
+    ]
+  }),
+]
+
 export function play(name: SoundName): void {
   if (!enabled || ctx === null || ctx.state !== 'running') return
   try {
     const now = ctx.currentTime
-    for (const note of SOUNDS[name]) {
+    const notes = name === 'saved' && festiveEnabled() ? SAVED_JINGLE : SOUNDS[name]
+    for (const note of notes) {
       const start = now + note.at
       const end = start + note.length
       const osc = ctx.createOscillator()

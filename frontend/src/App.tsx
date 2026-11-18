@@ -6,6 +6,8 @@ import { Directory } from './Directory'
 import { loadDraft, type DraftVisit, type SelectedPet } from './draft'
 import { withTransition } from './motion'
 import { ThisWeek } from './ThisWeek'
+import { Snowfall } from './Festive'
+import { festiveEnabled, setFestiveEnabled } from './festive'
 import { setSoundEnabled, soundEnabled } from './sound'
 import { IconPlus, Toast } from './ui'
 
@@ -23,6 +25,7 @@ function App() {
   const [startPet, setStartPet] = useState<SelectedPet | null>(null)
   const [message, setMessage] = useState('')
   const [sound, setSound] = useState(() => soundEnabled())
+  const [festive, setFestive] = useState(() => festiveEnabled())
 
   // The New visit button is a labelled pill at the top of a page and shrinks
   // to a round "+" once you scroll, so it stops covering what you're reading.
@@ -115,6 +118,7 @@ function App() {
                 </button>
               </nav>
             </header>
+            {festive && <Snowfall />}
             <Toast message={message} onClear={() => setMessage('')} />
             {area === 'this_week' && <ThisWeek onLogVisit={openCapture} />}
             {area === 'directory' && (
@@ -134,6 +138,17 @@ function App() {
                 }}
               >
                 Sound {sound ? 'on' : 'off'}
+              </button>
+              <button
+                type="button"
+                className="linkish festive-toggle"
+                aria-pressed={festive}
+                onClick={() => {
+                  setFestiveEnabled(!festive)
+                  setFestive(!festive)
+                }}
+              >
+                Christmas {festive ? 'on' : 'off'}
               </button>
             </footer>
           </div>

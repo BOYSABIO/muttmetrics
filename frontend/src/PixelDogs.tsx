@@ -22,6 +22,8 @@ import {
   GUARD_SIDE_EYE,
   GUARD_TAIL_DOWN,
   GUARD_TAIL_UP,
+  SANTA_HAT,
+  SANTA_HAT_RISE,
   type Frame,
 } from './pixelSprites'
 
@@ -65,6 +67,9 @@ const headAndTongue = (row: number, ch: string): boolean =>
   row < PEEK_ROWS || ((ch === 'P' || ch === 'p') && row < 14)
 
 type Part = { name: string; runs: Run[] }
+
+// Same hat on every pose: last in the list, so it sits on top of the head.
+const HAT: Part = { name: 'hat', runs: runsOf(SANTA_HAT, 0, -SANTA_HAT_RISE) }
 type Pose = 'collie' | 'guard' | 'colliePeek' | 'guardPeek'
 
 // Drawn in order, so a tail comes first and the dog covers where they meet.
@@ -75,6 +80,7 @@ const PARTS: Record<Pose, Part[]> = {
     { name: 'tail pd-tail-b', runs: runsOf(COLLIE_TAIL_DOWN, -3, 11) },
     { name: 'frame pd-rest', runs: runsOf(COLLIE) },
     { name: 'frame pd-pant', runs: runsOf(COLLIE_PANT) },
+    HAT,
   ],
   guard: [
     { name: 'tail pd-tail-a', runs: runsOf(GUARD_TAIL_UP, 14, 11) },
@@ -82,12 +88,14 @@ const PARTS: Record<Pose, Part[]> = {
     { name: 'frame pd-rest', runs: runsOf(GUARD) },
     { name: 'frame pd-blink', runs: runsOf(GUARD_BLINK) },
     { name: 'frame pd-side', runs: runsOf(GUARD_SIDE_EYE) },
+    HAT,
   ],
   colliePeek: [
     { name: 'tail pd-tail-a', runs: runsOf(COLLIE_TAIL_UP, -3, 5) },
     { name: 'tail pd-tail-b', runs: runsOf(COLLIE_TAIL_DOWN, -3, 5) },
     { name: 'frame pd-rest', runs: runsOf(COLLIE, 0, 0, headAndTongue) },
     { name: 'frame pd-pant', runs: runsOf(COLLIE_PANT, 0, 0, headAndTongue) },
+    HAT,
   ],
   guardPeek: [
     { name: 'tail pd-tail-a', runs: runsOf(GUARD_TAIL_UP, 14, 5) },
@@ -95,6 +103,7 @@ const PARTS: Record<Pose, Part[]> = {
     { name: 'frame pd-rest', runs: runsOf(GUARD, 0, 0, head) },
     { name: 'frame pd-blink', runs: runsOf(GUARD_BLINK, 0, 0, head) },
     { name: 'frame pd-side', runs: runsOf(GUARD_SIDE_EYE, 0, 0, head) },
+    HAT,
   ],
 }
 
