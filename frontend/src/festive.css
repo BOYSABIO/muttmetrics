@@ -1,0 +1,164 @@
+/* Christmas accents (0.10.0). Every rule needs html[data-festive='on'], which
+   festive.ts sets from the switch next to the version. Off: none of this
+   applies. Loaded before motion.css, so the reduced-motion guard still wins. */
+
+:root {
+  --xmas-red: #c0392b;
+  --xmas-blue: #3f7fbf;
+}
+
+/* ------------------------------------------------------------------ */
+/* The dogs' hats (drawn in pixelSprites.ts, always there, shown here)  */
+/* ------------------------------------------------------------------ */
+
+.pd-hat {
+  display: none;
+}
+
+html[data-festive='on'] .pd-hat {
+  display: inline;
+}
+
+/* A white brim on a cream card would vanish, so with a hat on the black dog
+   gets the same thin ink edge the collie always has. On his black coat it
+   doesn't show; around the hat it does. */
+html[data-festive='on'] .pixel-dog-guard {
+  filter: drop-shadow(1px 0 0 rgba(35, 29, 22, 0.4)) drop-shadow(-1px 0 0 rgba(35, 29, 22, 0.4))
+    drop-shadow(0 -1px 0 rgba(35, 29, 22, 0.4)) drop-shadow(0 1px 0 rgba(35, 29, 22, 0.4));
+}
+
+/* ------------------------------------------------------------------ */
+/* A string of lights under the header                                  */
+/* ------------------------------------------------------------------ */
+
+html[data-festive='on'] .app-header-home {
+  position: relative;
+}
+
+html[data-festive='on'] .home-shell .app-header-home {
+  margin-bottom: 1.35rem;
+}
+
+/* Two layers of bulbs, every other one, so they can take turns glowing.
+   The header's own bottom line is the wire. */
+html[data-festive='on'] .app-header-home::before,
+html[data-festive='on'] .app-header-home::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 14px;
+  pointer-events: none;
+  background-repeat: repeat-x;
+  background-size: 96px 14px;
+}
+
+html[data-festive='on'] .app-header-home::before {
+  background-image:
+    radial-gradient(circle at 12px 8px, var(--xmas-red) 0 3.2px, var(--ink) 3.4px 4.8px, transparent 5px),
+    radial-gradient(circle at 60px 8px, var(--accent) 0 3.2px, var(--ink) 3.4px 4.8px, transparent 5px);
+  animation: xmas-glow 2.4s ease-in-out infinite;
+}
+
+html[data-festive='on'] .app-header-home::after {
+  background-image:
+    radial-gradient(circle at 36px 8px, var(--sun) 0 3.2px, var(--ink) 3.4px 4.8px, transparent 5px),
+    radial-gradient(circle at 84px 8px, var(--xmas-blue) 0 3.2px, var(--ink) 3.4px 4.8px, transparent 5px);
+  animation: xmas-glow 2.4s ease-in-out -1.2s infinite;
+}
+
+@keyframes xmas-glow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Snow lying along the top of the take-home cards                      */
+/* ------------------------------------------------------------------ */
+
+html[data-festive='on'] .tw-hero::before,
+html[data-festive='on'] .saved-week::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 13px;
+  pointer-events: none;
+  /* Two rows of bumps with different spacing, so the edge doesn't look stamped. */
+  background:
+    radial-gradient(circle at 50% 0, var(--surface) 0 9px, transparent 9.5px) 3px 0 / 26px 13px repeat-x,
+    radial-gradient(circle at 50% 0, var(--surface) 0 6px, transparent 6.5px) 12px 0 / 17px 13px repeat-x;
+}
+
+/* ------------------------------------------------------------------ */
+/* A little snow in the air (Festive.tsx)                               */
+/* ------------------------------------------------------------------ */
+
+.snowfall {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.snowfall i {
+  position: absolute;
+  top: -8px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(35, 29, 22, 0.16);
+  animation: xmas-fall var(--fall, 12s) linear var(--delay, 0s) infinite;
+}
+
+@keyframes xmas-fall {
+  to {
+    transform: translate(var(--drift, 0), 102vh);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snowfall {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Small things                                                         */
+/* ------------------------------------------------------------------ */
+
+/* The dot after the name becomes a red bauble. */
+html[data-festive='on'] .brand-home::after,
+html[data-festive='on'] .brand-sub::before {
+  background: var(--xmas-red);
+}
+
+/* Confetti on the saved screen: red, green, gold and white. */
+html[data-festive='on'] .saved-piece-clay {
+  background: var(--xmas-red);
+}
+
+html[data-festive='on'] .saved-piece-ink {
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(35, 29, 22, 0.25);
+}
+
+/* The switch itself, next to Sound. */
+button.festive-toggle {
+  min-height: 0;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  text-decoration-color: var(--line);
+}
+
+button.festive-toggle[aria-pressed='true'] {
+  color: var(--ink);
+  text-decoration-color: var(--xmas-red);
+}

@@ -18,6 +18,8 @@ export const COLOURS: Record<string, string> = {
   E: '#8a5526', // collie's eye
   A: '#b87a33', // guard's eye
   T: '#c98a45', // tan eyebrow dot
+  R: '#c0392b', // Santa hat
+  r: '#96281b', // its shaded side
   P: '#e96f8b', // tongue
   p: '#c44f6c', // tongue tip
 }
@@ -86,6 +88,23 @@ export const GUARD: Frame = [
 export const GUARD_BLINK: Frame = withRows(GUARD, { 4: 'KKKGGKKKKKKGGKKK' })
 /** A look to his right, at whoever is sitting next to him. */
 export const GUARD_SIDE_EYE: Frame = withRows(GUARD, { 4: 'KKAWKKKKKKAWKKKK' })
+
+/**
+ * A Santa hat (16 × 7), drawn over the top of either head and shown only
+ * while the Christmas switch is on (festive.css). Its brim covers the top two
+ * rows of the head; the rest stands above it.
+ */
+export const SANTA_HAT: Frame = [
+  '.........RRWW...',
+  '.......RRRRWW...',
+  '......RRRRRR....',
+  '.....RRRRRRRr...',
+  '....RRRRRRRRRr..',
+  '..WWWWWWWWWWWW..',
+  '..DWWWWWWWWWWD..',
+]
+/** How many of its rows stand above the head. */
+export const SANTA_HAT_RISE = 5
 
 // Tails (5 × 5), drawn beside the dog: one drawing with the tail up, one with
 // it down. Swapping them is the wag. The same two are used when a dog sits

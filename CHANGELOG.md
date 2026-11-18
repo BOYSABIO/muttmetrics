@@ -10,6 +10,20 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-11-18
+
+Christmas accents you can switch on and off. Frontend only: no migration, nothing to do on the box beyond the deploy.
+
+### Added
+
+- **A Christmas switch** next to *Sound* at the bottom of Home and Clients. Off by default, remembered on that device. On:
+  - both dogs wear a Santa hat everywhere they appear (over the take-home card, on the Saved screen, while waiting, in the empty week and the delete box)
+  - a string of lights hangs under the header, the bulbs taking turns to glow
+  - snow lies along the top of the take-home cards, and a few square flakes drift over Home and Clients (never over New visit)
+  - the Saved screen's confetti turns red, green, gold and white, and its sound becomes a three-note jingle
+  - the dot after the name becomes a red bauble
+- All of it hangs off one attribute (`html[data-festive='on']`, `festive.ts` / `festive.css`), so with the switch off none of it applies. The flakes and the glowing stop under reduced motion; the hats and the snow on the cards stay
+
 ## [0.9.0] — 2026-11-17
 
 The client list shows each pet's photo and what's still missing on it, and "Doodle" joins the breed list. No migration. **On the box, after deploying:** `python -m muttmetrics.seed --breeds-only` (never the plain seed there).
@@ -211,7 +225,8 @@ baseline the groomer's screen and `/health` can name.
 
 - Insecure / short `API_KEY` values refused at API (and proxy) startup
 
-[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/BOYSABIO/muttmetrics/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.10.0
 [0.9.0]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.9.0
 [0.8.0]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.8.0
 [0.7.1]: https://github.com/BOYSABIO/muttmetrics/releases/tag/v0.7.1
