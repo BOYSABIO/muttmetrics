@@ -126,6 +126,9 @@ Added in 0.10.0 (`frontend/src/festive.ts`, `festive.css`, `Festive.tsx`). A *Ch
 - `frontend/src/TimerDial.tsx`, `frontend/src/SaveCelebration.tsx`: the two
   set pieces of New visit.
 - `frontend/src/sound.ts`: `play(name)`, the sounds, the on / off setting.
+- `frontend/src/MoneyFields.tsx` + `money.ts`: price, tip and "the price changed"
+  on New visit and Edit visit, the *Customer paid* check line and the mix-up
+  note. What each box means: [`schema.md`](schema.md) → *Money on a visit*.
 - `frontend/src/festive.ts` + `festive.css` + `Festive.tsx`: the Christmas switch,
   everything it turns on, and the snow.
 - `frontend/src/PixelDogs.tsx` + `dogs.css`: `PixelDog`, `DogsWaiting`, where

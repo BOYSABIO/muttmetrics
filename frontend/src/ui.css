@@ -993,3 +993,59 @@ button.dog-avatar-editable:active:not(:disabled) {
 .pick-list .dog-avatar-img {
   object-fit: cover;
 }
+
+/* ------------------------------------------------------------------ */
+/* Money on a visit (0.10.1, MoneyFields.tsx): price, tip, and what the
+   customer was told only when the price changed. The total line is the check
+   that the tip isn't in the price too. */
+
+.money-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.field-note {
+  margin: -0.15rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: var(--ink-muted);
+}
+
+.money-total {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border: 1.5px dashed var(--ink-muted);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.money-warning {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  background: var(--sun-soft);
+  border: var(--edge);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+/* Computer: price and tip side by side, everything else across. */
+@media (min-width: 768px) {
+  .visit-details .money-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem 1.25rem;
+    align-items: start;
+  }
+
+  .visit-details .money-fields > :not(.field),
+  .visit-details .money-fields > .money-told {
+    grid-column: 1 / -1;
+  }
+}

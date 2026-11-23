@@ -9,6 +9,8 @@ import {
   type VisitDetail,
 } from './api'
 import { ConditionPicker } from './ConditionPicker'
+import { MoneyFields } from './MoneyFields'
+import { changedFrom, parseMoney, quoteToSave, type Money } from './money'
 import { PageBack } from './PageBack'
 import { PixelDog } from './PixelDogs'
 import { ListSkeleton, Toast } from './ui'
@@ -29,6 +31,8 @@ type VisitForm = {
   quotedPrice: string
   finalPrice: string
   tip: string
+  /** The price changed from what the customer was told (see money.ts). */
+  priceChanged: boolean
   shavedDown: boolean
   status: string
 }
@@ -44,21 +48,28 @@ function formFromVisit(v: VisitDetail): VisitForm {
     quotedPrice: v.quoted_price !== null ? String(v.quoted_price) : '',
     finalPrice: v.final_price !== null ? String(v.final_price) : '',
     tip: v.tip !== null ? String(v.tip) : '',
+    priceChanged: changedFrom(
+      v.quoted_price === null ? null : Number(v.quoted_price),
+      v.final_price === null ? null : Number(v.final_price),
+    ),
     shavedDown: v.shaved_down === true,
     status: v.status ?? '',
+  }
+}
+
+/** The form's three money boxes as one value for MoneyFields. */
+function moneyOf(form: VisitForm): Money {
+  return {
+    price: form.finalPrice,
+    tip: form.tip,
+    changed: form.priceChanged,
+    told: form.quotedPrice,
   }
 }
 
 function textOrNull(s: string): string | null {
   const t = s.trim()
   return t === '' ? null : t
-}
-
-function moneyOrNull(s: string): number | null {
-  const t = s.trim().replace(',', '.')
-  if (t === '') return null
-  const n = Number(t)
-  return Number.isFinite(n) && n >= 0 ? n : Number.NaN
 }
 
 function formatVisitDate(iso: string): string {
@@ -134,9 +145,10 @@ export function VisitEditView({
       return
     }
 
-    const quoted = moneyOrNull(form.quotedPrice)
-    const final = moneyOrNull(form.finalPrice)
-    const tip = moneyOrNull(form.tip)
+    const money = moneyOf(form)
+    const quoted = quoteToSave(money)
+    const final = parseMoney(form.finalPrice)
+    const tip = parseMoney(form.tip)
     if ([quoted, final, tip].some((n) => Number.isNaN(n))) {
       setMessage('Prices must be empty or ≥ 0')
       return
@@ -300,42 +312,24 @@ export function VisitEditView({
           <div className="profile-block">
             <h3 className="profile-section">Money</h3>
             <div className="field-stack">
-              <div className="field">
-                <label htmlFor="edit_final">Final price (€)</label>
-                <input
-                  id="edit_final"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.finalPrice}
-                  onChange={(e) => set('finalPrice', e.target.value)}
-                  disabled={isBusy}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="edit_tip">Tip (€)</label>
-                <input
-                  id="edit_tip"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.tip}
-                  onChange={(e) => set('tip', e.target.value)}
-                  disabled={isBusy}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="edit_quoted">Quoted price (€)</label>
-                <input
-                  id="edit_quoted"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.quotedPrice}
-                  onChange={(e) => set('quotedPrice', e.target.value)}
-                  disabled={isBusy}
-                />
-              </div>
+              <MoneyFields
+                idPrefix="edit_"
+                value={moneyOf(form)}
+                onChange={(m) =>
+                  setForm((f) =>
+                    f === null
+                      ? f
+                      : {
+                          ...f,
+                          finalPrice: m.price,
+                          tip: m.tip,
+                          priceChanged: m.changed,
+                          quotedPrice: m.told,
+                        },
+                  )
+                }
+                disabled={isBusy}
+              />
             </div>
           </div>
 

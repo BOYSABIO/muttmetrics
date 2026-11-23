@@ -150,6 +150,16 @@ Which fields exist, why, and the data rules (fixed lists, blank = nobody checked
 | Status | `status`, `cancelled_hours_before` |
 | System: when saved | `created_at` (set by Postgres, `DEFAULT now()`; never written by the API). **NULL = saved before 2026-11 ([#224](https://github.com/BOYSABIO/muttmetrics/issues/224)), unknown.** Compare with `visit_date` to tell a visit logged on the day from a backfilled one |
 
+**Money on a visit (0.10.1).** Take-home is `final_price + tip`, so the three money columns mean exactly this:
+
+| Column | Holds | Form label |
+|--------|-------|------------|
+| `final_price` | What the groom cost. **Never includes the tip.** | *Price for the groom (€)* |
+| `tip` | The tip alone. NULL = there wasn't one | *Tip (€)* |
+| `quoted_price` | What the groomer told the customer before the groom. Equal to `final_price` unless the price changed on the day | *What you told them before (€)*, shown only when *The price changed from what I told them* is ticked |
+
+The form shows *Customer paid €X in total* under the tip as a check, and warns when one box is exactly the other plus the tip ([`money.ts`](../../frontend/src/money.ts)). Before 0.10.1 the boxes were *Final price / Tip / Quoted price*, and the total the customer paid was sometimes typed into *Final price* (tip counted twice) or into *Quoted price*. Those rows were corrected by hand on the box on 2026-11-23; a visit where quote, final and tip still don't fit together is worth checking with the groomer before reading it as a price change.
+
 ### `pet_change`
 
 One row per tracked field a profile save changed (`pet_id`, `field`, `old_value`, `new_value` as text, `changed_at`). Tracked fields: `pet_vocab.TRACKED_PET_FIELDS` (structured facts only; no names or notes). Lets an analysis use what was known on a visit's date. `ON DELETE CASCADE` with the pet. SQL edits bypass it.
