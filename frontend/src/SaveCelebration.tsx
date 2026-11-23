@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { euro } from './money'
 import { haptic, reducedMotion, useCountUp } from './motion'
 import { PixelDog } from './PixelDogs'
 import { play } from './sound'
@@ -25,16 +26,6 @@ type SaveCelebrationProps = {
   price: number
   tip: number
   week: SavedWeek | null
-}
-
-/** "€60" or "€55.50": cents only when there are some. */
-function euro(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
-    maximumFractionDigits: 2,
-  }).format(n)
 }
 
 // Confetti in the brand's colours. Fixed, so it's the same burst every time

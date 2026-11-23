@@ -10,6 +10,22 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ## [Unreleased]
 
+## [0.10.1] — 2026-11-23
+
+The money boxes on a visit are now hard to mix up. Frontend only: no migration, nothing to do on the box beyond the deploy.
+
+### Fixed
+
+- **A tip could be counted twice.** The visit form's *Final price / Tip / Quoted price* boxes made it easy to type what the customer paid in total (price plus tip) as the final price, and take-home adds the tip on top. They are now:
+  - **Price for the groom (€)**, *without the tip*, with the price list's minimum for the chosen service and add-ons as a hint when prices are set on the box
+  - **Tip (€)**, *only the tip, empty if there wasn't one*
+  - a check line under them: *Customer paid €X in total · €Y groom + €Z tip*
+  - **The price changed from what I told them**: ticked, it asks *What you told them before (€)*; unticked, the quote is saved as the price
+  - a gentle note when one box is exactly the other plus the tip
+- The same boxes on *Edit visit*, which opens with the tick set when a visit's quote and price differ
+- Prices accept a comma (`45,50`) on New visit too, and a tip that isn't a number is caught before saving
+- Docs: [`schema.md`](docs/architecture/schema.md) says what each money column holds
+
 ## [0.10.0] — 2026-11-18
 
 Christmas accents you can switch on and off. Frontend only: no migration, nothing to do on the box beyond the deploy.

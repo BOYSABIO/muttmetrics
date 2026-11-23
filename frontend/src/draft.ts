@@ -37,6 +37,8 @@ export type DraftVisit = {
   finalPrice: string
   tip: string
   quotedPrice: string
+  /** The price changed from what the customer was told (0.10.1). Missing on older drafts. */
+  priceChanged?: boolean
   shavedDown: boolean
   hadIntakeFile: boolean
   hadAfterFile: boolean

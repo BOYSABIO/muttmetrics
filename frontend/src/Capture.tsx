@@ -49,6 +49,8 @@ import {
 import { PhotoPicker } from './PhotoPicker'
 import { ConditionPicker } from './ConditionPicker'
 import { PageBack } from './PageBack'
+import { MoneyFields } from './MoneyFields'
+import { parseMoney, quoteToSave, type Money } from './money'
 
 function floorMinutes(ms: number): number {
   return Math.floor(ms / 60000)
@@ -152,6 +154,11 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
   const [finalPrice, setFinalPrice] = useState(draft?.finalPrice ?? '')
   const [tip, setTip] = useState(draft?.tip ?? '')
   const [quotedPrice, setQuotedPrice] = useState(draft?.quotedPrice ?? '')
+  // Older drafts have no flag: a quote that differs from the price means it changed.
+  const [priceChanged, setPriceChanged] = useState(
+    draft?.priceChanged ??
+      (draft !== null && draft.quotedPrice !== '' && draft.quotedPrice !== draft.finalPrice),
+  )
   const [shavedDown, setShavedDown] = useState(draft?.shavedDown ?? false)
   // Owner created by a "new client" attempt whose dog step failed. A retry with
   // the same owner name reuses it instead of creating the owner again.
@@ -174,6 +181,25 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
   const [nextPetName, setNextPetName] = useState('')
   const [addingPet, setAddingPet] = useState(false)
 
+  // The three money boxes as one value for MoneyFields (state stays separate
+  // so drafts keep their old shape).
+  const money: Money = { price: finalPrice, tip, changed: priceChanged, told: quotedPrice }
+  function setMoney(next: Money): void {
+    setFinalPrice(next.price)
+    setTip(next.tip)
+    setPriceChanged(next.changed)
+    setQuotedPrice(next.told)
+  }
+  // Price list minimum for the chosen service plus its add-ons (private
+  // pricing.json on the box); null where no prices are set.
+  const listFrom = useMemo(() => {
+    const service = services.find((s) => String(s.service_id) === serviceId)
+    if (service?.price_base == null || service.price_base <= 0) return null
+    return addOns
+      .filter((a) => addOnIds.includes(a.add_on_id))
+      .reduce((sum, a) => sum + (a.price_base ?? 0), service.price_base)
+  }, [services, serviceId, addOns, addOnIds])
+
   useEffect(() => {
     // No dog / not in visit wizard -> nothing to persist
     if (selectedPet === null || mode !== 'visit') {
@@ -194,6 +220,7 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
       finalPrice,
       tip,
       quotedPrice,
+      priceChanged,
       shavedDown,
       hadIntakeFile: intakeFile !== null,
       hadAfterFile: afterFile !== null,
@@ -215,6 +242,7 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
     finalPrice,
     tip,
     quotedPrice,
+    priceChanged,
     shavedDown,
   ])
 
@@ -342,6 +370,7 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
     setFinalPrice('')
     setTip('')
     setQuotedPrice('')
+    setPriceChanged(false)
     setShavedDown(false)
   }
 
@@ -364,8 +393,19 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
       setMessage('Pick a service package.')
       return
     }
-    if (finalPrice.trim() === '' || Number(finalPrice) < 0 || Number.isNaN(Number(finalPrice))) {
-      setMessage('Enter a final price (€).')
+    const price = parseMoney(finalPrice)
+    const tipAmount = parseMoney(tip)
+    const told = quoteToSave(money)
+    if (price === null || Number.isNaN(price)) {
+      setMessage('Enter the price for the groom (€), without the tip.')
+      return
+    }
+    if (tipAmount !== null && Number.isNaN(tipAmount)) {
+      setMessage('The tip must be a number, or empty if there was none.')
+      return
+    }
+    if (told !== null && Number.isNaN(told)) {
+      setMessage('What you told them must be a number.')
       return
     }
 
@@ -382,7 +422,7 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
         actual_service_id: Number(serviceId),
         booked_service_id: Number(serviceId), // until booking exists: booked = actual
         add_on_ids: addOnIds,
-        final_price: Number(finalPrice),
+        final_price: price,
         shaved_down: shavedDown,
       }
       if (conditionScore.trim() !== '') {
@@ -391,11 +431,11 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
       if (surprise.trim() !== '') {
         visitBody.what_surprised_me = surprise.trim()
       }
-      if (tip.trim() !== '') {
-        visitBody.tip = Number(tip)
+      if (tipAmount !== null) {
+        visitBody.tip = tipAmount
       }
-      if (quotedPrice.trim() !== '') {
-        visitBody.quoted_price = Number(quotedPrice)
+      if (told !== null) {
+        visitBody.quoted_price = told
       }
 
       const visit = await createVisit(visitBody)
@@ -451,8 +491,8 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
           photoNote: photoNote.replace(/^ · /, ''),
           serviceName: service?.name_en ?? service?.slug ?? null,
           minutes: Number(actualMinutes),
-          price: Number(finalPrice),
-          tip: tip.trim() === '' ? 0 : Number(tip),
+          price,
+          tip: tipAmount ?? 0,
           week,
         }
         // The saved screen's own line is the announcement, so the message is
@@ -1193,39 +1233,13 @@ export function Capture({ draft, startPet, onDone }: CaptureProps) {
                   </div>
                 </div>
               )}
-              <div className="field">
-                <label htmlFor="final_price">Final price (€)</label>
-                <input
-                  id="final_price"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={finalPrice}
-                  onChange={(e) => setFinalPrice(e.target.value)}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="tip">Tip (€, optional)</label>
-                <input
-                  id="tip"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={tip}
-                  onChange={(e) => setTip(e.target.value)}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="quoted_price">Quoted price (€, optional)</label>
-                <input
-                  id="quoted_price"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={quotedPrice}
-                  onChange={(e) => setQuotedPrice(e.target.value)}
-                />
-              </div>
+              <MoneyFields
+                idPrefix=""
+                value={money}
+                onChange={setMoney}
+                disabled={isBusy}
+                listFrom={listFrom}
+              />
               <ConditionPicker
                 id="condition_score"
                 value={conditionScore}
