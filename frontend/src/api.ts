@@ -301,12 +301,28 @@ export type MetricsPeriodOut = MetricsPeriodBlock & {
   recent?: MetricsPeriodBlock | null
   /** Totals since the first completed visit; null before any. */
   all_time?: AllTimeOut | null
+  /** The month the range has reached, against its rent; null when no rent is set. */
+  rent?: RentMonth | null
 }
 
 export type AllTimeOut = {
   first_visit_date: string
   through: string
   summary: PeriodSummary
+  /** With rent set (#229): first month with rent, rent through this month, take-home minus it. */
+  rent_since?: string | null
+  rent_paid?: number | null
+  after_rent?: number | null
+}
+
+/** One month against its rent (#229). Rent is due on the 1st. */
+export type RentMonth = {
+  month_start: string
+  rent: number
+  /** The whole month's price + tip. */
+  take_home: number
+  /** First day the take-home reached the rent; null while it hasn't. */
+  covered_on: string | null
 }
 
 // ---------------------------------------------------------------------------

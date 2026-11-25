@@ -17,7 +17,7 @@ test('capture: search dog → service → Saved', async ({ page }) => {
 
   // Step 3 — pick first real service + price
   const service = page.locator('#service_id')
-  await expect(service.locator('option')).toHaveCount(6, { timeout: 15_000 }) // blank + 5 seeded
+  await expect(service.locator('option')).toHaveCount(8, { timeout: 15_000 }) // blank + 7 seeded
   await service.selectOption({ index: 1 })
   await page.locator('#final_price').fill('55')
 
@@ -44,7 +44,7 @@ test('capture: money boxes catch a tip typed into the price', async ({ page }) =
   await page.getByRole('button', { name: 'Continue' }).click()
 
   const service = page.locator('#service_id')
-  await expect(service.locator('option')).toHaveCount(6, { timeout: 15_000 })
+  await expect(service.locator('option')).toHaveCount(8, { timeout: 15_000 })
   await service.selectOption({ index: 1 })
 
   // The mix-up: what the customer paid in total typed as the price.

@@ -64,6 +64,24 @@ SEED_SERVICES: list[dict] = [
         "buffer_minutes": 15,
         "price_base": None,
     },
+    # Bath or trim on its own (0.11.0, the groomer's ask): about an hour each by
+    # his estimate, before size and coat; the prediction scales it per dog.
+    {
+        "slug": "bath",
+        "name_de": "Baden",
+        "name_en": "Bath",
+        "base_minutes": 60,
+        "buffer_minutes": 15,
+        "price_base": None,
+    },
+    {
+        "slug": "trim",
+        "name_de": "Scheren",
+        "name_en": "Trim",
+        "base_minutes": 60,
+        "buffer_minutes": 15,
+        "price_base": None,
+    },
     {
         "slug": "full_groom",
         "name_de": "Vollpflege",

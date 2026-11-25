@@ -4,7 +4,7 @@
  */
 
 import type { CSSProperties } from 'react'
-import type { AllTimeOut, MetricsPeriodBlock, PeriodSummary } from './api'
+import type { AllTimeOut, MetricsPeriodBlock, PeriodSummary, RentMonth } from './api'
 import { formatShortDate } from './dates'
 import { useCountUp } from './motion'
 import { PixelDog } from './PixelDogs'
@@ -18,9 +18,11 @@ import {
   estimateInsight,
   formatCap,
   formatHours,
+  afterRentLine,
   formatMoney,
   nextMilestone,
   rateText,
+  rentLine,
   sortCoatCells,
   summaryDeltas,
 } from './thisWeekModel'
@@ -64,6 +66,8 @@ export function HeroCard({
   partial,
   minN,
   milestone,
+  rent,
+  allTime,
 }: {
   mode: 'week' | 'month' | 'all'
   summary: PeriodSummary
@@ -73,7 +77,12 @@ export function HeroCard({
   minN: number
   /** Progress toward the next groom milestone — all-time mode only. */
   milestone?: { toGo: number; next: number; progress: number }
+  /** The month's rent against its take-home (#229) — week and month modes. */
+  rent?: RentMonth | null
+  /** All-time totals, for "after rent" — all-time mode only. */
+  allTime?: AllTimeOut | null
 }) {
+  const afterRent = mode === 'all' && allTime ? afterRentLine(allTime) : null
   const deltas = mode === 'all' ? null : summaryDeltas(summary, previous)
   const tips = summary.revenue_inc_tip - summary.revenue_ex_tip
   const rate = rateText(summary.eur_per_hour_inc_tip)
@@ -132,7 +141,31 @@ export function HeroCard({
             </p>
           </div>
         ) : null}
+        {mode !== 'all' && rent ? <RentBar rent={rent} /> : null}
+        {afterRent !== null ? <p className="tw-milestone-text tw-rent-after">{afterRent}</p> : null}
       </section>
+    </div>
+  )
+}
+
+/**
+ * Is the rent covered yet? (#229) The month's take-home filling its rent,
+ * which is due on the 1st; once covered, what's on top. The guard dog over
+ * the card is the one keeping an eye on it. Also on the empty week's card:
+ * on a Monday before the first groom, the month's rent still counts.
+ */
+export function RentBar({ rent, className }: { rent: RentMonth; className?: string }) {
+  const line = rentLine(rent)
+  return (
+    <div
+      className={`tw-milestone tw-hero-milestone tw-rent${line.covered ? ' tw-rent-covered' : ''}${className ? ` ${className}` : ''}`}
+    >
+      <div className="tw-milestone-track" aria-hidden>
+        <span className="tw-milestone-fill" style={{ width: `${line.progress * 100}%` }} />
+      </div>
+      <p className="tw-milestone-text">
+        {line.month} rent: <strong>{line.main}</strong> · {line.rest}
+      </p>
     </div>
   )
 }

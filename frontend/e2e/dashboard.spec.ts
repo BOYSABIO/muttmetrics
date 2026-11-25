@@ -48,6 +48,12 @@ test('dashboard: fixture week shows hand-computed Grooms', async ({ page }) => {
   expect(found, 'never reached fixture week with Grooms=11').toBe(true)
   await expect(grooms).toHaveText('11')
   await expect(takeHome).toContainText('633')
+
+  // The demo rent (made up, 2000 from March) against all of March: this
+  // week's 633 plus the month fixture's Mar 31 groom (60) = 693.
+  await expect(headlines.locator('.tw-rent')).toHaveText(
+    'March rent: €693 of €2,000 · €1,307 to go',
+  )
 })
 
 test('dashboard: All time mode shows lifetime headlines', async ({ page }) => {

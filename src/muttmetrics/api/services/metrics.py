@@ -26,6 +26,7 @@ from muttmetrics.api.schemas.metrics import (
     PeriodKind,
     PeriodSummaryOut,
     PivotOut,
+    RentMonthOut,
     UtilizationDayOut,
     UtilizationWeekOut,
 )
@@ -380,8 +381,41 @@ def recent_range(end: date, today: date) -> tuple[date, date]:
     return recent_end - timedelta(days=RECENT_DAYS - 1), recent_end
 
 
+def rent_month_for(start: date, end: date, today: date) -> date:
+    """The month a range's rent line is about: the day the range has reached
+    (today while it runs, its end once it's over, its start if it's ahead)."""
+    anchor = min(end, max(start, today))
+    return anchor.replace(day=1)
+
+
+def load_rent_month(session: Session, month_start: date) -> RentMonthOut | None:
+    """One month against its rent via metric_rent(); None when no rent is set."""
+    row = (
+        session.execute(
+            text(
+                """
+                SELECT month_start, rent, take_home, covered_on
+                FROM metric_rent(:m, :m)
+                """
+            ),
+            {"m": month_start},
+        )
+        .mappings()
+        .first()
+    )
+    if row is None or row["rent"] is None or row["rent"] <= 0:
+        return None
+    return RentMonthOut(
+        month_start=row["month_start"],
+        rent=float(row["rent"]),
+        take_home=float(row["take_home"]),
+        covered_on=row["covered_on"],
+    )
+
+
 def load_all_time(session: Session, today: date) -> AllTimeOut | None:
-    """Totals since the first completed visit (glossary rules, via metric_summary)."""
+    """Totals since the first completed visit (glossary rules, via metric_summary),
+    and what's left after rent when rent is set (metric_rent)."""
     first = session.execute(
         text(
             """
@@ -393,8 +427,37 @@ def load_all_time(session: Session, today: date) -> AllTimeOut | None:
     ).scalar()
     if first is None:
         return None
+    rent = (
+        session.execute(
+            text(
+                """
+                WITH r AS (
+                    SELECT month_start, rent
+                    FROM metric_rent(
+                        LEAST(:first, (SELECT MIN(valid_from) FROM fixed_cost WHERE kind = 'rent')),
+                        :today
+                    )
+                    WHERE rent > 0
+                )
+                SELECT
+                    MIN(month_start) AS rent_since,
+                    SUM(rent) AS rent_paid,
+                    (SELECT revenue_inc_tip FROM metric_summary(:first, :today)) - SUM(rent)
+                        AS after_rent
+                FROM r
+                """
+            ),
+            {"first": first, "today": today},
+        )
+        .mappings()
+        .first()
+    )
+    has_rent = rent is not None and rent["rent_since"] is not None
     return AllTimeOut(
         first_visit_date=first,
         through=today,
         summary=_load_summary(session, first, today),
+        rent_since=rent["rent_since"] if has_rent else None,
+        rent_paid=float(rent["rent_paid"]) if has_rent else None,
+        after_rent=float(rent["after_rent"]) if has_rent else None,
     )

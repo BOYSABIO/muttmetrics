@@ -2,6 +2,7 @@
 
 from muttmetrics.models.add_on import AddOn
 from muttmetrics.models.breed import Breed
+from muttmetrics.models.fixed_cost import FixedCost
 from muttmetrics.models.owner import Owner
 from muttmetrics.models.pet import Pet
 from muttmetrics.models.pet_change import PetChange
@@ -13,6 +14,7 @@ from muttmetrics.models.visit_add_on import VisitAddOn
 __all__ = [
     "AddOn",
     "Breed",
+    "FixedCost",
     "Owner",
     "Pet",
     "PetChange",

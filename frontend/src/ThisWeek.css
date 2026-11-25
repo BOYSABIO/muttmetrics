@@ -218,6 +218,18 @@
   color: var(--surface);
 }
 
+/* Rent (#229): the same bar as the milestone; full and a touch brighter once
+   the month's rent is covered. */
+.tw-hero .tw-rent + .tw-rent-after,
+.tw-hero .tw-rent-after {
+  margin-top: 0.45rem;
+}
+
+.tw-hero .tw-rent-covered .tw-milestone-fill {
+  background: var(--sun, var(--accent));
+  box-shadow: inset 0 0 0 1px rgba(255, 250, 240, 0.45);
+}
+
 /* ---------------------------------------------------------------- */
 /* Day / week strip                                                 */
 /* ---------------------------------------------------------------- */
@@ -671,4 +683,11 @@
   .tw-milestone-fill {
     animation: none;
   }
+}
+
+/* The rent bar on the empty week's card (paper, not the green hero). */
+.this-week-empty-rent {
+  align-self: stretch;
+  margin: 0.25rem 0 0.5rem;
+  text-align: left;
 }

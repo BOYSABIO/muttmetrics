@@ -7,15 +7,24 @@
  */
 
 import type {
+  AllTimeOut,
   EstimateBands,
   EurPerHourCell,
   MetricValue,
   PeriodSummary,
+  RentMonth,
   UtilizationDay,
   UtilizationWeek,
 } from './api'
 import { conditionWord } from './condition'
-import { addDays, formatWeekday, mondayOf, parseISODate, toISODate } from './dates'
+import {
+  addDays,
+  formatShortDate,
+  formatWeekday,
+  mondayOf,
+  parseISODate,
+  toISODate,
+} from './dates'
 
 // ---------------------------------------------------------------------------
 // Numbers
@@ -264,4 +273,57 @@ export function nextMilestone(count: number): Milestone {
 /** "€42" or null while under MIN_N. */
 export function rateText(mv: MetricValue): string | null {
   return mv.value === null ? null : formatMoney(mv.value)
+}
+
+// ---------------------------------------------------------------------------
+// Rent (#229)
+// ---------------------------------------------------------------------------
+
+export type RentLine = {
+  /** 0..1, how much of the month's rent the take-home has covered. */
+  progress: number
+  covered: boolean
+  /** "November" */
+  month: string
+  /** "€840 of €2,000" or "covered on Nov 18" */
+  main: string
+  /** "€460 to go" or "€420 on top" */
+  rest: string
+}
+
+/** What the rent bar says. The amounts all come from the API (metric_rent). */
+export function rentLine(rent: RentMonth): RentLine {
+  const covered = rent.covered_on !== null
+  const month = parseISODate(rent.month_start).toLocaleDateString(undefined, { month: 'long' })
+  const progress = rent.rent > 0 ? Math.min(1, rent.take_home / rent.rent) : 1
+  if (covered) {
+    return {
+      progress: 1,
+      covered,
+      month,
+      main: `covered on ${formatShortDate(rent.covered_on as string)}`,
+      rest: `${formatMoney(Math.round(rent.take_home) - Math.round(rent.rent))} on top`,
+    }
+  }
+  return {
+    progress,
+    covered,
+    month,
+    main: `${formatMoney(rent.take_home)} of ${formatMoney(rent.rent)}`,
+    // From the rounded figures, so the two always add up on screen.
+    rest: `${formatMoney(Math.round(rent.rent) - Math.round(rent.take_home))} to go`,
+  }
+}
+
+/** All time: "Rent since October: €2,600 · €1,040 left after rent". */
+export function afterRentLine(allTime: AllTimeOut): string | null {
+  if (allTime.rent_since == null || allTime.rent_paid == null || allTime.after_rent == null) {
+    return null
+  }
+  const since = parseISODate(allTime.rent_since).toLocaleDateString(undefined, { month: 'long' })
+  const left =
+    allTime.after_rent >= 0
+      ? `${formatMoney(allTime.after_rent)} left after rent`
+      : `${formatMoney(-allTime.after_rent)} still to cover`
+  return `Rent since ${since}: ${formatMoney(allTime.rent_paid)} · ${left}`
 }

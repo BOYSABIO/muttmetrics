@@ -107,6 +107,7 @@ erDiagram
 | `service` | Reference groom types (slug, minutes, **price floor**). | ← `visit.booked_service_id`, `visit.actual_service_id` |
 | `add_on` | Technique / add-on catalog (hand stripping, etc.) ([#192](https://github.com/BOYSABIO/muttmetrics/issues/192)). | ← `visit_add_on` |
 | `visit_add_on` | Which techniques were used on a visit. | → `visit`, → `add_on` |
+| `fixed_cost` | Monthly fixed costs, one row per change "from this month on" (only `rent` for now, utilities included; [#229](https://github.com/BOYSABIO/muttmetrics/issues/229)). Amounts are the salon's own: set on the box with `ops/rent.py`, never in the repo | none (read by `metric_rent`) |
 | `photo` | One row per stored image file. Bytes live on disk under `PHOTO_ROOT`, **not** in the database ([ADR-002](./adr/002-photo-storage.md)). | → `pet` (required), → `visit` (optional — a profile photo has no visit) |
 
 ## Column groups (by table)
@@ -190,6 +191,7 @@ Metrics are **SQL functions** (plus one constants view), not tables ([ADR-003](.
 |--------|------|---------|
 | `metric_constants` | one-row view | `min_n`, the small-sample threshold (5) |
 | `metric_summary(p_start, p_end)` | function | visit count, minutes, revenue, overall €/hour |
+| `metric_rent(p_start, p_end)` | function | per calendar month touching the range: its rent, its whole-month take-home, the day the rent was covered (2026-11, #229) |
 | `metric_eur_per_hour(p_start, p_end)` | function | €/hour by `condition_score`, with every shave-down in one cell (2026-11-14) |
 | `metric_pivot_rate` / `metric_overrun` / `metric_p90_miss` `(p_start, p_end)` | functions | timing checks against the stored prediction |
 | `metric_utilization(buffer_minutes, p_start, p_end)` | function | one row per day: planned vs actual vs buffer |
