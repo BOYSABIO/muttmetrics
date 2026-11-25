@@ -196,6 +196,22 @@ We publish **two** named rates so pricing power and take-home are never confused
 
 **Executable (#178):** `SELECT * FROM metric_utilization_weeks(240, p_start, p_end)`. Returned by the API as `utilization_weeks`; the month view takes each week's grooms and minutes from it as they are. Only the "days over the cap" count comes from the daily rows (actual minutes, see above).
 
+### Rent covered (2026-11, [#229](https://github.com/BOYSABIO/muttmetrics/issues/229))
+
+| Piece | Definition |
+|-------|------------|
+| **Rent** | `fixed_cost` row with `kind = 'rent'` and the latest `valid_from` on or before the month's 1st. None before the first row. Utilities are included in it for now |
+| **Due** | On the 1st: a month counts in full from its first day, also in "after rent" |
+| **Take-home against it** | The **whole calendar month's** price + tip, same eligibility as `revenue_inc_tip` (completed visits with a price). Tips count: rent is paid out of everything that came in |
+| **Covered on** | The first visit date on which the month's running take-home reaches the rent; NULL while it hasn't |
+| **After rent (all time)** | All-time take-home (inc tip) minus every month's rent from the first rent month through this month |
+
+**Executable:** `SELECT * FROM metric_rent(p_start, p_end)`. The API adds `rent` (one month) to `/metrics/period`: the range's month for a month view, otherwise the month the range has reached (today while it runs, its end once it's over). `all_time` gains `rent_since`, `rent_paid`, `after_rent`.
+
+**On the screen:** a bar under the take-home (week and month views, and on an empty week's card): *November rent: €840 of €2,000 · €1,160 to go*, then *covered on Nov 18 · €420 on top*. All time: *Rent since March: €X · €Y left after rent* (or *still to cover*). Nothing shows while no rent is set.
+
+**Setting it (on the box, as `muttmetrics`):** `.venv/bin/python ops/rent.py` shows what's set; `--set <amount> --from YYYY-MM` is a dry run, `--apply` saves. A change later adds a row from its month, so earlier months keep the rent they had. The amount is never committed (privacy: same as prices).
+
 ## Named constants
 
 | Name | Value | Used by |

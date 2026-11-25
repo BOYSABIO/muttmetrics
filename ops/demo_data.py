@@ -17,13 +17,14 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import date
 from pathlib import Path
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from muttmetrics.db.session import session_scope
-from muttmetrics.models import Visit
+from muttmetrics.models import FixedCost, Visit
 
 # The fixtures live in tests/, importable from the repo root. Running
 # `python ops/demo_data.py` puts ops/ on the path instead, so add the root.
@@ -31,6 +32,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from ops.demo_recent import load_recent  # noqa: E402
 from tests.fixtures.load_metric_month import load_metric_month  # noqa: E402
 from tests.fixtures.load_metric_week import load_metric_week  # noqa: E402
+
+DEMO_RENT = 2000
+DEMO_RENT_FROM = date(2026, 3, 1)
 
 
 def load_demo(session: Session, *, recent: bool = False) -> int:
@@ -47,6 +51,9 @@ def load_demo(session: Session, *, recent: bool = False) -> int:
         )
     load_metric_week(session)
     load_metric_month(session)
+    # A made-up rent from the fixtures' first month, so the rent bar shows
+    # (#229). Not the salon's: that one is set on the box with ops/rent.py.
+    session.add(FixedCost(kind="rent", monthly_amount=DEMO_RENT, valid_from=DEMO_RENT_FROM))
     if recent:
         load_recent(session)
     session.flush()

@@ -10,6 +10,7 @@ def test_all_models_exported() -> None:
     assert set(models.__all__) == {
         "AddOn",
         "Breed",
+        "FixedCost",
         "Owner",
         "Pet",
         "PetChange",
@@ -26,6 +27,7 @@ def test_metadata_registers_all_tables() -> None:
     assert table_names == {
         "add_on",
         "breed",
+        "fixed_cost",
         "owner",
         "pet",
         "pet_change",

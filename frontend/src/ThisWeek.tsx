@@ -15,7 +15,7 @@ import {
   todayISODate,
 } from './dates'
 import './ThisWeek.css'
-import { AllTimeLink, DayStrip, HeroCard, RecentCard, TimingCard } from './ThisWeekCards'
+import { AllTimeLink, DayStrip, HeroCard, RecentCard, RentBar, TimingCard } from './ThisWeekCards'
 import { PixelDog } from './PixelDogs'
 import { DashboardSkeleton } from './ui'
 import { monthColumns, nextMilestone, weekColumns } from './thisWeekModel'
@@ -385,6 +385,9 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
                     : 'No grooms logged this month'}
               </p>
               <p className="step-meta">Log a visit and this screen fills in.</p>
+              {mode !== 'all' && data?.rent ? (
+                <RentBar rent={data.rent} className="this-week-empty-rent" />
+              ) : null}
               <button type="button" className="primary" onClick={onLogVisit}>
                 Log a visit
               </button>
@@ -402,6 +405,8 @@ export function ThisWeek({ onLogVisit }: ThisWeekProps) {
                     ? nextMilestone(allTime.summary.visit_count)
                     : undefined
                 }
+                rent={data.rent ?? null}
+                allTime={allTime}
               />
               {mode !== 'all' && (
                 <DayStrip mode={mode} columns={columns} capMinutes={capMinutes} />

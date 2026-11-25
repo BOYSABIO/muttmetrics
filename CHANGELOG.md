@@ -10,6 +10,30 @@ Do **not** put client names, phone numbers, prices, or salon counts in this file
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-11-25
+
+Bath and Trim as their own services, and "is the rent covered?" on the take-home card. **Two migrations** (run by the deploy). **On the box, after deploying:** set the rent once with `ops/rent.py` (below). No seed.
+
+### Added
+
+- **Bath** and **Trim** as services of their own, next to *Bath and trim*, for the days it's only one of them. About an hour each before size and coat (the groomer's estimate); the prediction scales it per dog. Added by a migration, so they appear on the box with the deploy; also in the seed for dev and CI
+- **Rent on the take-home card** ([#229](https://github.com/BOYSABIO/muttmetrics/issues/229), step 1):
+  - week and month views: a bar with the month's take-home against its rent, *November rent: €X of €Y · €Z to go*, then *covered on Nov 18 · €Z on top*. Also on an empty week's card, so it's there on a Monday before the first groom
+  - All time: *Rent since March: €X · €Y left after rent* (or *still to cover*)
+  - rent is due on the 1st, so a month counts in full from its first day; take-home includes tips
+  - nothing shows until a rent is set
+- `fixed_cost` table (one row per change, "from this month on") and the `metric_rent(p_start, p_end)` range function; `/metrics/period` returns `rent` and `all_time.rent_since` / `rent_paid` / `after_rent`
+- `ops/rent.py`: show or set the rent on the box (dry run unless `--apply`). The amount lives in the box's database only, never in the repo
+- Demo data has a made-up rent, so the bar shows in dev and in the e2e test
+
+### On the box (as `muttmetrics` in `/opt/muttmetrics`, after hours)
+
+```bash
+.venv/bin/python ops/deploy.py --to v0.11.0
+.venv/bin/python ops/rent.py --set <amount> --from <YYYY-MM>          # dry run
+.venv/bin/python ops/rent.py --set <amount> --from <YYYY-MM> --apply
+```
+
 ## [0.10.1] — 2026-11-23
 
 The money boxes on a visit are now hard to mix up. Frontend only: no migration, nothing to do on the box beyond the deploy.

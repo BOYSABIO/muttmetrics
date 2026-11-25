@@ -24,9 +24,11 @@ from muttmetrics.api.services.metrics import (
     comparison_range,
     load_all_time,
     load_period_metrics,
+    load_rent_month,
     load_week_metrics,
     monday_on_or_before,
     recent_range,
+    rent_month_for,
 )
 
 router = APIRouter(tags=["metrics"])
@@ -104,4 +106,5 @@ def get_metrics_period(
         recent_days=RECENT_DAYS,
         recent=recent,
         all_time=load_all_time(session, today),
+        rent=load_rent_month(session, rent_month_for(start, end, today)),
     )

@@ -134,12 +134,35 @@ class MetricsWeekOut(MetricsPeriodBlock):
     previous_week: MetricsPeriodBlock | None = None
 
 
+class RentMonthOut(BaseModel):
+    """One month against its rent (#229, ``metric_rent``).
+
+    ``take_home`` is the whole month's price + tip (completed visits), the
+    same rule as ``revenue_inc_tip``. ``covered_on`` is the first day it
+    reached ``rent``; null while it hasn't. Rent is due on the 1st.
+    """
+
+    month_start: date
+    rent: float
+    take_home: float
+    covered_on: date | None
+
+
 class AllTimeOut(BaseModel):
-    """Totals from the first completed visit through ``through`` (today)."""
+    """Totals from the first completed visit through ``through`` (today).
+
+    With rent set (#229): ``rent_paid`` is every month's rent from
+    ``rent_since`` through this month (due on the 1st, so this month counts in
+    full), and ``after_rent`` is the take-home (inc tip) minus that. All three
+    are null when no rent has been set.
+    """
 
     first_visit_date: date
     through: date
     summary: PeriodSummaryOut
+    rent_since: date | None = None
+    rent_paid: float | None = None
+    after_rent: float | None = None
 
 
 class MetricsPeriodOut(MetricsPeriodBlock):
@@ -160,3 +183,7 @@ class MetricsPeriodOut(MetricsPeriodBlock):
     recent_days: int | None = None
     recent: MetricsPeriodBlock | None = None
     all_time: AllTimeOut | None = None
+    # The month whose rent the take-home card shows: the range's month for a
+    # month, the month the range reaches today (or its end) in otherwise.
+    # Null when that month has no rent set.
+    rent: RentMonthOut | None = None
